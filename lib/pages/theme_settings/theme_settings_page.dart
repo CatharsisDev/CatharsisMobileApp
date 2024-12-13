@@ -12,14 +12,14 @@ class ThemeSettingsPage extends ConsumerWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background gradient
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color.fromARGB(235, 208, 164, 180),
-                  Color.fromARGB(255, 140, 198, 255),
-                ],
+                colors: ref.watch(themeProvider).themeName == 'dark' 
+    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor]
+    : ref.watch(themeProvider).themeName == 'light'
+    ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
+    : [Color.fromARGB(235, 208, 164, 180), Color.fromRGBO(140, 198, 255, 1)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),

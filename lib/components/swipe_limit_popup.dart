@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SwipeLimitPopup extends StatelessWidget {
+import '../provider/theme_provider.dart';
+
+class SwipeLimitPopup extends ConsumerWidget {
   final DateTime? resetTime;
   final VoidCallback onDismiss;
   final VoidCallback onPurchase;
@@ -17,7 +20,7 @@ class SwipeLimitPopup extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const double borderRadiusValue = 15;
 
     return Stack(
@@ -55,11 +58,15 @@ class SwipeLimitPopup extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
-                    'assets/images/resized_400x400_gradient.png',
-                    fit: BoxFit.cover,
-                    width: 405,
-                    height: 555,
-                  ),
+ ref.watch(themeProvider).themeName == 'dark'
+   ? 'assets/images/dark_mode_card_background.png'
+   : ref.watch(themeProvider).themeName == 'light'
+     ? 'assets/images/light_mode_card_background.png'  
+     : 'assets/images/catharsis_signature_theme_card_background.png',
+ fit: BoxFit.cover,
+ width: 405,
+ height: 555,
+),
                 ),
                 // Close button
                 Positioned(

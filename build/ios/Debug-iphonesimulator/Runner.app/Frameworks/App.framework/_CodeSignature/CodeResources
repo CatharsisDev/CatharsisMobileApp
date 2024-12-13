@@ -10,11 +10,11 @@
 		</data>
 		<key>flutter_assets/AssetManifest.bin</key>
 		<data>
-		9bhQY0gYe7MrO9+JthkMCgLQKSo=
+		EoDtMvZlm8fGTKa429zOdYkA/no=
 		</data>
 		<key>flutter_assets/AssetManifest.json</key>
 		<data>
-		nJyYZMCassTerkBZTkoC87JN6W0=
+		B/wMN5Fm8lqaVcN5XbKrWuwDEFA=
 		</data>
 		<key>flutter_assets/FontManifest.json</key>
 		<data>
@@ -44,9 +44,21 @@
 		<data>
 		YaZ3V+0+ASndzNpun6DfJV7pKWI=
 		</data>
+		<key>flutter_assets/assets/images/.DS_Store</key>
+		<data>
+		3y++sUAKzaCQmjLBz2v0kvESHgc=
+		</data>
+		<key>flutter_assets/assets/images/catharsis_signature_theme_card_background.png</key>
+		<data>
+		td9OyoXbiGMmMwMEw7JGFdFKa0E=
+		</data>
 		<key>flutter_assets/assets/images/catharsis_word_only.png</key>
 		<data>
 		oVG8+Ga9BXewTjL/Wd4bJ8U5R58=
+		</data>
+		<key>flutter_assets/assets/images/dark_mode_card_background.png</key>
+		<data>
+		Y616kuQDjXibhL4h9XAcOLAZjN8=
 		</data>
 		<key>flutter_assets/assets/images/favicon.png</key>
 		<data>
@@ -56,13 +68,13 @@
 		<data>
 		TKqtVcQ9h41jTTaep7QY6RqX5kw=
 		</data>
+		<key>flutter_assets/assets/images/light_mode_card_background.png</key>
+		<data>
+		LLqD6m6+nteYXFdXLZxsiR3wwpU=
+		</data>
 		<key>flutter_assets/assets/images/love_intimacy_icon.png</key>
 		<data>
 		BtefHlGtsZnX6O5fS78JrCaN9O4=
-		</data>
-		<key>flutter_assets/assets/images/resized_400x400_gradient.png</key>
-		<data>
-		td9OyoXbiGMmMwMEw7JGFdFKa0E=
 		</data>
 		<key>flutter_assets/assets/images/society_icon.png</key>
 		<data>
@@ -98,7 +110,7 @@
 		</data>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<data>
-		oW8z6KL0wLCLP2w5iPl1kOgOzZY=
+		NbdrsMwniJCdOa3fjlZwKaIY7qc=
 		</data>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -131,14 +143,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Vb8I/gIXbDVr2Y34f0bFV6VE7RO/Sz5wtP+VqSCT8dE=
+			fY/HobZUi5EwueFeVnSoXfnl0apNjiTiqNus5Dnsu6w=
 			</data>
 		</dict>
 		<key>flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			u3CUzpRnBL8ac0wDaFqthf/AafDNBvAAxREAaxpgDwY=
+			3T0RgqSvwTLJqymi6DnQj4EfkEnFAWUIiA5KOnMuPBo=
 			</data>
 		</dict>
 		<key>flutter_assets/FontManifest.json</key>
@@ -190,11 +202,25 @@
 			erJSX0uGtl0+THA1ihfloar29Df5nLzARtrXPVm7kBU=
 			</data>
 		</dict>
+		<key>flutter_assets/assets/images/catharsis_signature_theme_card_background.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			7lqCSJ+iIDOvK/RkpoiwJq+va7L2ziBLM3FzzdvbIKs=
+			</data>
+		</dict>
 		<key>flutter_assets/assets/images/catharsis_word_only.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			2ADs2TRCfFf7gZHpHv/tKYKxFJ6yqRZomwLB5oxbrAg=
+			</data>
+		</dict>
+		<key>flutter_assets/assets/images/dark_mode_card_background.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			vCI2mkT9qG8I7Zu6OxCzcjR1oRVqkYAAJAgbeFApKxs=
 			</data>
 		</dict>
 		<key>flutter_assets/assets/images/favicon.png</key>
@@ -211,18 +237,18 @@
 			K2zMD7vQbPaY47//s7YV4+tHR/L8RWmFFjHgjzntsG8=
 			</data>
 		</dict>
+		<key>flutter_assets/assets/images/light_mode_card_background.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			1dEUHE1Mj7TrxYyW+X2BGBGpT6fZt9U34cNw8iRejCE=
+			</data>
+		</dict>
 		<key>flutter_assets/assets/images/love_intimacy_icon.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			1lPm9RplmOXuP02yuhQrNDgXByvHDz4J+uqJvBgsLLo=
-			</data>
-		</dict>
-		<key>flutter_assets/assets/images/resized_400x400_gradient.png</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			7lqCSJ+iIDOvK/RkpoiwJq+va7L2ziBLM3FzzdvbIKs=
 			</data>
 		</dict>
 		<key>flutter_assets/assets/images/society_icon.png</key>
@@ -285,7 +311,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			bq8Mrl3o5wu/6iX381EoLRFYv6/ADs+2n12NEx5Q5SQ=
+			xo/8u1cLIBeSjVmB62801+jp3EewaoO5iIglt4AKTmI=
 			</data>
 		</dict>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>

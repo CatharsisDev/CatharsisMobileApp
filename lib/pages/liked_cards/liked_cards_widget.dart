@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../provider/theme_provider.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '../../provider/app_state_provider.dart';
@@ -14,7 +15,11 @@ class LikedCardsWidget extends ConsumerWidget {
     final notifier = ref.read(cardStateProvider.notifier);
 
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(208, 164, 180, 0.922),
+      backgroundColor: ref.watch(themeProvider).themeName == 'dark'
+    ? Theme.of(context).scaffoldBackgroundColor 
+    : ref.watch(themeProvider).themeName == 'light'
+    ? Theme.of(context).scaffoldBackgroundColor 
+    : const Color.fromRGBO(208, 164, 180, 0.95),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -30,12 +35,17 @@ class LikedCardsWidget extends ConsumerWidget {
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color.fromRGBO(208, 164, 180, 0.922), Color.fromARGB(255, 140, 198, 255)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+    colors: ref.watch(themeProvider).themeName == 'dark' 
+    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor]
+    : ref.watch(themeProvider).themeName == 'light'
+    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor]
+    : [Color.fromARGB(235, 208, 164, 180), Color.fromRGBO(140, 198, 255, 1)],
+                        stops: [0.0, 1.0],
+                        begin: AlignmentDirectional(1.0, -0.34),
+                        end: AlignmentDirectional(-1.0, 0.34),
+                      ),
         ),
         child: appState.likedQuestions.isEmpty
             ? Center(
@@ -67,7 +77,11 @@ class LikedCardsWidget extends ConsumerWidget {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 237, 213, 203),
+                      color: ref.watch(themeProvider).themeName == 'dark'
+   ? Color(0xFF2D2D2D) 
+   : ref.watch(themeProvider).themeName == 'light'
+       ? Color.fromARGB(255, 215, 211, 211)
+       : Color.fromARGB(255, 222, 202, 202),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(

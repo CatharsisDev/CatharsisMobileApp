@@ -51,27 +51,28 @@ class CardState {
     );
   }
 
-List<Question> get activeQuestions {
-  // Normalize the current category while preserving spaces
-  final normalizedCurrentCategory = currentCategory
-      .replaceAll(RegExp(r'[^\x20-\x7E]'), '') 
-      .replaceAll(RegExp(r'\s+'), ' ') // Normalize multiple spaces to single space
-      .trim();
+  List<Question> get activeQuestions {
+    final normalizedCurrentCategory = currentCategory
+        .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
 
-  List<Question> available = currentCategory == 'all'
-      ? allQuestions
-      : allQuestions.where((q) {
-          // Normalize each question's category the same way
-          final normalizedQuestionCategory = q.category
-              .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
-              .replaceAll(RegExp(r'\s+'), ' ') // Normalize multiple spaces to single space
-              .trim();
-              
-          return normalizedQuestionCategory == normalizedCurrentCategory;
-        }).toList();
+    List<Question> available = currentCategory == 'all'
+        ? allQuestions
+        : allQuestions.where((q) {
+            final normalizedQuestionCategory = q.category
+                .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+            return normalizedQuestionCategory == normalizedCurrentCategory;
+          }).toList();
 
-  return available;
-}
+    available = available.where((q) => !likedQuestions.contains(q)).toList();
+    List<Question> unseen = available.where((q) => !seenQuestions.contains(q)).toList();
+    List<Question> seen = available.where((q) => seenQuestions.contains(q)).toList();
+
+    return [...unseen, ...seen]; // Prioritize unseen questions
+  }
 
   Question? get currentQuestion {
     final questions = activeQuestions;
@@ -134,17 +135,22 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void updateCategory(String category) {
-  // Normalize spaces while preserving them
-  String normalizedCategory = category
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
-      
-  state = state.copyWith(
-    currentCategory: normalizedCategory,
-    currentIndex: 0,
-    seenQuestions: [],
-  );
-}
+    String normalizedCategory = category
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    state = state.copyWith(
+      currentCategory: normalizedCategory,
+      currentIndex: 0,
+      seenQuestions: [],
+    );
+  }
+
+  void resetCardState() {
+    state = state.copyWith(
+      seenQuestions: [],
+      currentIndex: 0,
+    );
+  }
 
   Future<void> _checkSwipeReset() async {
     final storedTimestamp = swipeBox.get('swipe_limit_reached') as String?;
@@ -171,20 +177,13 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
     int normalizedIndex = index % questions.length;
     Question currentQuestion = questions[normalizedIndex];
-    
-    if (!state.likedQuestions.contains(currentQuestion)) {
-      state = state.copyWith(
-        seenQuestions: List.from(state.seenQuestions)..add(currentQuestion),
-      );
-    }
-
-    final newSwipeCount = state.swipeCount + 1;
     state = state.copyWith(
+      seenQuestions: List.from(state.seenQuestions)..add(currentQuestion),
       currentIndex: normalizedIndex,
-      swipeCount: newSwipeCount,
+      swipeCount: state.swipeCount + 1,
     );
 
-    if (newSwipeCount >= SWIPE_LIMIT) {
+    if (state.swipeCount >= SWIPE_LIMIT) {
       final now = DateTime.now();
       await swipeBox.put('swipe_limit_reached', now.toIso8601String());
       final resetTime = now.add(RESET_DURATION);
@@ -194,12 +193,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> toggleLiked(Question question) async {
-    if (state.hasReachedSwipeLimit) {
-      ref.read(popUpProvider.notifier).showPopUp(state.swipeResetTime);
-      return;
-    }
-
     final likedQuestions = List<Question>.from(state.likedQuestions);
+
     if (likedQuestions.any((q) => q.text == question.text && q.category == question.category)) {
       likedQuestions.removeWhere((q) => q.text == question.text && q.category == question.category);
     } else {
@@ -208,7 +203,10 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
     await likedBox.clear();
     await likedBox.addAll(likedQuestions);
-    state = state.copyWith(likedQuestions: likedQuestions);
+
+    state = state.copyWith(
+      likedQuestions: likedQuestions,
+    );
   }
 }
 

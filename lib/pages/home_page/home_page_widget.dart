@@ -1,3 +1,4 @@
+import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/gamecard_widget.dart';
@@ -104,7 +105,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
           onTap: () => FocusScope.of(context).unfocus(),
           child: Scaffold(
             key: scaffoldKey,
-            backgroundColor: const Color.fromRGBO(208, 164, 180, 0.95),
+            backgroundColor: ref.watch(themeProvider).themeName == 'dark'
+    ? Theme.of(context).scaffoldBackgroundColor 
+    : ref.watch(themeProvider).themeName == 'light'
+    ? Color.fromARGB(235, 201, 197, 197)
+    : const Color.fromRGBO(208, 164, 180, 0.95),
             drawer: AnimatedOpacity(
               opacity: 0.8,
               duration: 300.0.ms,
@@ -114,9 +119,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                 child: Drawer(
                   elevation: 16.0,
                   child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color.fromARGB(235, 208, 164, 180), Color.fromRGBO(140, 198, 255, 1)],
+                    decoration: BoxDecoration(
+  gradient: LinearGradient(
+    colors: ref.watch(themeProvider).themeName == 'dark'
+    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor] 
+    : ref.watch(themeProvider).themeName == 'light'
+        ? [Color.fromARGB(235, 211, 209, 210), Color.fromARGB(255, 185, 204, 224)]
+        : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
                         stops: [0.0, 1.0],
                         begin: AlignmentDirectional(1.0, -0.34),
                         end: AlignmentDirectional(-1.0, 0.34),
@@ -263,17 +272,21 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
               child: Stack(
                 children: [
                   Container(
-                    width: MediaQuery.sizeOf(context).width * 1.0,
-                    height: MediaQuery.sizeOf(context).height * 1.029,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
-                        stops: [0.0, 1.0],
-                        begin: AlignmentDirectional(0.6, -0.34),
-                        end: AlignmentDirectional(-1.0, 0.34),
-                      ),
-                    ),
-                  ),
+  width: MediaQuery.sizeOf(context).width * 1.0,
+  height: MediaQuery.sizeOf(context).height * 1.029,
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: ref.watch(themeProvider).themeName == 'dark'
+   ? [Color(0xFF1E1E1E), Color(0xFF121212)]
+   : ref.watch(themeProvider).themeName == 'light'
+       ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
+       : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
+      stops: [0.0, 1.0],
+      begin: AlignmentDirectional(0.6, -0.34),
+      end: AlignmentDirectional(-1.0, 0.34),
+    ),
+  ),
+),
                   if (cardState.isLoading)
                     const Center(child: CircularProgressIndicator())
                   else
