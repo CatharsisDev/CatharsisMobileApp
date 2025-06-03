@@ -5,20 +5,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
+import 'flutter_flow/flutter_flow_util.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'flutter_flow/nav/nav.dart';
 import 'index.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'provider/app_state_provider.dart';
-import 'provider/pop_up_provider.dart';
-import 'provider/theme_provider.dart';
-import 'flutter_flow/flutter_flow_icon_button.dart';
+import '../../provider/app_state_provider.dart';
+import '../../provider/pop_up_provider.dart';
+import '/flutter_flow/flutter_flow_icon_button.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
   await Hive.initFlutter();
+
+  // Register the Question adapter
   Hive.registerAdapter(QuestionAdapter());
+
+  // Remove duplicate runApp and only run after initialization
   runApp(ProviderScope(child: MyApp()));
 }
 
@@ -31,6 +38,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = FlutterFlowTheme.themeMode;
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
 
@@ -41,24 +49,31 @@ class _MyAppState extends State<MyApp> {
     _router = createRouter(_appStateNotifier);
   }
 
+  void setThemeMode(ThemeMode mode) => safeSetState(() {
+        _themeMode = mode;
+        FlutterFlowTheme.saveThemeMode(mode);
+      });
+
   @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final themeState = ref.watch(themeProvider);
-        
-        return MaterialApp.router(
-          title: 'CatharsisCards',
-          localizationsDelegates: [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('en', '')],
-          theme: themeState.themeData,
-          routerConfig: _router,
-        );
-      }
+    return MaterialApp.router(
+      title: 'CatharsisCards',
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en', '')],
+      theme: ThemeData(
+        brightness: Brightness.light,
+        useMaterial3: false,
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: false,
+      ),
+      themeMode: _themeMode,
+      routerConfig: _router,
     );
   }
 }
@@ -94,6 +109,7 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
 
+    // Check if current question is liked
     final isCurrentQuestionLiked = cardState.currentQuestion != null &&
         cardState.likedQuestions.any((q) =>
             q.text == cardState.currentQuestion!.text &&
@@ -105,25 +121,20 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
         alignment: Alignment.bottomCenter,
         children: [
           BottomNavigationBar(
-  currentIndex: currentIndex == 0 ? 0 : 2,
-  onTap: (i) {
-    if (i == 1) return;
-    setState(() {
-      _currentPage = null;
-      _currentPageName = i == 0 ? 'HomePage' : 'LikedCards';
-    });
-  },
-  backgroundColor: ref.watch(themeProvider).themeName == 'dark'
-      ? Theme.of(context).appBarTheme.backgroundColor
-      : ref.watch(themeProvider).themeName == 'light'
-      ? Color.fromRGBO(183, 183, 183, 0.69)
-      : Color.fromRGBO(140, 198, 255, 0.7),
-  selectedItemColor: Theme.of(context).colorScheme.onPrimary,
-  unselectedItemColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.6),
-  showSelectedLabels: true,
-  showUnselectedLabels: false,
-  type: BottomNavigationBarType.fixed,
-  // rest of the code remains same
+            currentIndex: currentIndex == 0 ? 0 : 2,
+            onTap: (i) {
+              if (i == 1) return;
+              setState(() {
+                _currentPage = null;
+                _currentPageName = i == 0 ? 'HomePage' : 'LikedCards';
+              });
+            },
+            backgroundColor: Color.fromRGBO(140, 198, 255, 0.7),
+            selectedItemColor: Colors.white,
+            unselectedItemColor: FlutterFlowTheme.of(context).secondaryText,
+            showSelectedLabels: true,
+            showUnselectedLabels: false,
+            type: BottomNavigationBarType.fixed,
             items: [
               BottomNavigationBarItem(
                 icon: Icon(
@@ -164,17 +175,17 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
                       ? FontAwesomeIcons.solidHeart
                       : FontAwesomeIcons.heart,
                   color: isCurrentQuestionLiked 
-    ? Colors.red 
-    : Colors.white,
+                      ? Colors.red
+                      : FlutterFlowTheme.of(context).info,
                   size: 45.0,
                 ),
                 onPressed: () {
-                  if (cardState.hasReachedSwipeLimit) {
-                    ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
-                  } else if (cardState.currentQuestion != null) {
-                    notifier.toggleLiked(cardState.currentQuestion!);
-                  }
-                },
+  if (cardState.hasReachedSwipeLimit) {
+    ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+  } else if (cardState.currentQuestion != null) {
+    notifier.toggleLiked(cardState.currentQuestion!);
+  }
+},
               ),
             ),
         ],
