@@ -3,27 +3,39 @@
   "packages": [
     {
       "name": "_fe_analyzer_shared",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-47.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-76.0.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "_flutterfire_internals",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/_flutterfire_internals-1.3.58",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "_macros",
+      "rootUri": "file:///Users/william/development/flutter/bin/cache/dart-sdk/pkg/_macros",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
     },
     {
       "name": "analyzer",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/analyzer-4.7.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/analyzer-6.11.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.3"
     },
     {
       "name": "args",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/args-2.6.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/args-2.7.0",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
     {
       "name": "async",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/async-2.11.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/async-2.13.0",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.4"
     },
     {
       "name": "auto_size_text",
@@ -33,45 +45,45 @@
     },
     {
       "name": "boolean_selector",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/boolean_selector-2.1.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/boolean_selector-2.1.2",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.1"
     },
     {
       "name": "build",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build-2.4.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build-2.5.4",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.7"
     },
     {
       "name": "build_config",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_config-1.1.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_config-1.1.2",
       "packageUri": "lib/",
-      "languageVersion": "2.14"
+      "languageVersion": "3.6"
     },
     {
       "name": "build_daemon",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_daemon-4.0.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_daemon-4.0.4",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "build_resolvers",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_resolvers-2.0.10",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_resolvers-2.5.4",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.7"
     },
     {
       "name": "build_runner",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_runner-2.4.13",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_runner-2.5.4",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.7"
     },
     {
       "name": "build_runner_core",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_runner_core-7.2.10",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/build_runner_core-9.1.2",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.7"
     },
     {
       "name": "built_collection",
@@ -81,7 +93,7 @@
     },
     {
       "name": "built_value",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/built_value-8.9.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/built_value-8.10.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -105,21 +117,21 @@
     },
     {
       "name": "characters",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/characters-1.3.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/characters-1.4.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.4"
     },
     {
       "name": "checked_yaml",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/checked_yaml-2.0.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/checked_yaml-2.0.4",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.8"
     },
     {
       "name": "clock",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/clock-1.1.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/clock-1.1.2",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.4"
     },
     {
       "name": "code_builder",
@@ -129,9 +141,9 @@
     },
     {
       "name": "collection",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/collection-1.18.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.4"
     },
     {
       "name": "convert",
@@ -147,7 +159,7 @@
     },
     {
       "name": "csv",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/csv-5.1.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/csv-6.0.0",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -159,27 +171,63 @@
     },
     {
       "name": "dart_style",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/dart_style-2.2.4",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/dart_style-2.3.8",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.0"
     },
     {
       "name": "fake_async",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/fake_async-1.3.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.3"
     },
     {
       "name": "ffi",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/ffi-2.1.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/ffi-2.1.4",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "file",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/file-7.0.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "firebase_auth",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_auth-5.6.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_auth_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_auth_platform_interface-7.7.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_auth_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_auth_web-5.15.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "firebase_core",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_core-3.15.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_core_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_core_platform_interface-6.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_core_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_core_web-2.24.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "fixnum",
@@ -191,11 +239,11 @@
       "name": "flutter",
       "rootUri": "file:///Users/william/development/flutter/packages/flutter",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "flutter_animate",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_animate-4.5.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_animate-4.5.2",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -207,9 +255,9 @@
     },
     {
       "name": "flutter_card_swiper",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_card_swiper-6.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_card_swiper-7.0.2",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "flutter_countdown_timer",
@@ -218,16 +266,22 @@
       "languageVersion": "2.12"
     },
     {
-      "name": "flutter_lints",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_lints-4.0.0",
+      "name": "flutter_dotenv",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_dotenv-5.2.1",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_lints",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_lints-6.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
     },
     {
       "name": "flutter_localizations",
       "rootUri": "file:///Users/william/development/flutter/packages/flutter_localizations",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.7"
     },
     {
       "name": "flutter_riverpod",
@@ -245,17 +299,17 @@
       "name": "flutter_test",
       "rootUri": "file:///Users/william/development/flutter/packages/flutter_test",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "flutter_web_plugins",
       "rootUri": "file:///Users/william/development/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.7"
     },
     {
       "name": "font_awesome_flutter",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.7.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.8.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -273,21 +327,57 @@
     },
     {
       "name": "glob",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/glob-2.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/glob-2.1.3",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.3"
     },
     {
       "name": "go_router",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-12.1.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-16.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.6"
     },
     {
       "name": "google_fonts",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_fonts-6.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_fonts-6.2.1",
       "packageUri": "lib/",
       "languageVersion": "2.14"
+    },
+    {
+      "name": "google_identity_services_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_identity_services_web-0.3.3+1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "google_sign_in",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in-6.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "google_sign_in_android",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_android-6.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "google_sign_in_ios",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_ios-5.9.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "google_sign_in_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_platform_interface-2.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "google_sign_in_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_web-0.12.4+4",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "graphs",
@@ -309,39 +399,39 @@
     },
     {
       "name": "hive_generator",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/hive_generator-1.1.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/hive_generator-2.0.1",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
     {
       "name": "http",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http-1.2.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http-1.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "http_multi_server",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http_multi_server-3.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "http_parser",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http_parser-4.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "intl",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/intl-0.20.2",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
     {
-      "name": "http_multi_server",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http_multi_server-3.2.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
-      "name": "http_parser",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http_parser-4.0.2",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
-      "name": "intl",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/intl-0.19.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "io",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/io-1.0.4",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/io-1.0.5",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.4"
     },
     {
       "name": "iregexp",
@@ -351,9 +441,9 @@
     },
     {
       "name": "js",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/js-0.7.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/js-0.6.7",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "2.19"
     },
     {
       "name": "json_annotation",
@@ -363,19 +453,19 @@
     },
     {
       "name": "json_path",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/json_path-0.7.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/json_path-0.7.6",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "leak_tracker",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/leak_tracker-10.0.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/leak_tracker-10.0.9",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
     {
       "name": "leak_tracker_flutter_testing",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/leak_tracker_flutter_testing-3.0.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/leak_tracker_flutter_testing-3.0.9",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -387,9 +477,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/lints-4.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/lints-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "3.8"
     },
     {
       "name": "logging",
@@ -398,10 +488,16 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "matcher",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/matcher-0.12.16+1",
+      "name": "macros",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/macros-0.1.3-main.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "matcher",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/matcher-0.12.17",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "material_color_utilities",
@@ -417,7 +513,7 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/meta-1.15.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/meta-1.16.0",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -441,39 +537,39 @@
     },
     {
       "name": "package_config",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/package_config-2.1.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
-      "name": "page_transition",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/page_transition-2.1.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.17"
-    },
-    {
-      "name": "path",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path-1.9.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
-      "name": "path_provider",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider-2.1.4",
-      "packageUri": "lib/",
-      "languageVersion": "3.2"
-    },
-    {
-      "name": "path_provider_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_android-2.2.10",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/package_config-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
     {
-      "name": "path_provider_foundation",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_foundation-2.4.0",
+      "name": "page_transition",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/page_transition-2.2.1",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "path",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path-1.9.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "path_provider",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider-2.1.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "path_provider_android",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_android-2.2.17",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "path_provider_foundation",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_foundation-2.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
     },
     {
       "name": "path_provider_linux",
@@ -489,15 +585,15 @@
     },
     {
       "name": "path_provider_windows",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_windows-2.2.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.2"
     },
     {
       "name": "petitparser",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/petitparser-6.0.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/petitparser-6.1.0",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.5"
     },
     {
       "name": "platform",
@@ -519,21 +615,21 @@
     },
     {
       "name": "provider",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/provider-6.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/provider-6.1.5",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
     {
       "name": "pub_semver",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/pub_semver-2.1.4",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/pub_semver-2.2.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
     },
     {
       "name": "pubspec_parse",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/pubspec_parse-1.3.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/pubspec_parse-1.5.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.6"
     },
     {
       "name": "rfc_6901",
@@ -555,21 +651,21 @@
     },
     {
       "name": "shared_preferences",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences-2.3.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences-2.5.3",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.5"
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_android-2.3.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.10",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "shared_preferences_foundation",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.4",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.4"
     },
     {
       "name": "shared_preferences_linux",
@@ -585,7 +681,7 @@
     },
     {
       "name": "shared_preferences_web",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -597,13 +693,31 @@
     },
     {
       "name": "shelf",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shelf-1.4.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shelf-1.4.2",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
     },
     {
       "name": "shelf_web_socket",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shelf_web_socket-2.0.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shelf_web_socket-3.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "sign_in_with_apple",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sign_in_with_apple-6.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "sign_in_with_apple_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sign_in_with_apple_platform_interface-1.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "sign_in_with_apple_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sign_in_with_apple_web-2.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
@@ -611,25 +725,25 @@
       "name": "sky_engine",
       "rootUri": "file:///Users/william/development/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.7"
     },
     {
       "name": "source_gen",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_gen-1.2.6",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_gen-1.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.0"
     },
     {
       "name": "source_helper",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_helper-1.3.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_helper-1.3.5",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
     },
     {
       "name": "source_span",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_span-1.10.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/source_span-1.10.1",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.1"
     },
     {
       "name": "sprintf",
@@ -639,21 +753,39 @@
     },
     {
       "name": "sqflite",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite-2.3.3+1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite-2.4.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "sqflite_android",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_android-2.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "sqflite_common",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_common-2.5.4+3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_common-2.5.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "sqflite_darwin",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "sqflite_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_platform_interface-2.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "stack_trace",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stack_trace-1.11.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stack_trace-1.12.1",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.4"
     },
     {
       "name": "state_notifier",
@@ -663,51 +795,51 @@
     },
     {
       "name": "stream_channel",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stream_channel-2.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stream_channel-2.1.4",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.3"
     },
     {
       "name": "stream_transform",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stream_transform-2.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/stream_transform-2.1.1",
       "packageUri": "lib/",
-      "languageVersion": "2.14"
+      "languageVersion": "3.1"
     },
     {
       "name": "string_scanner",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/string_scanner-1.2.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/string_scanner-1.4.1",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.1"
     },
     {
       "name": "synchronized",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/synchronized-3.3.0+3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/synchronized-3.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "term_glyph",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/term_glyph-1.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "test_api",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/test_api-0.7.4",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
-      "name": "term_glyph",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/term_glyph-1.2.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
-      "name": "test_api",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/test_api-0.7.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.2"
-    },
-    {
       "name": "timeago",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/timeago-3.6.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/timeago-3.7.1",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
     {
       "name": "timing",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/timing-1.0.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/timing-1.0.2",
       "packageUri": "lib/",
-      "languageVersion": "2.14"
+      "languageVersion": "3.4"
     },
     {
       "name": "typed_data",
@@ -717,31 +849,31 @@
     },
     {
       "name": "url_launcher",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher-6.3.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher-6.3.1",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.3"
     },
     {
       "name": "url_launcher_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_android-6.3.10",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_android-6.3.16",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.6"
     },
     {
       "name": "url_launcher_ios",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_ios-6.3.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_ios-6.3.3",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.4"
     },
     {
       "name": "url_launcher_linux",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_linux-3.2.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_linux-3.2.1",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
     {
       "name": "url_launcher_macos",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_macos-3.2.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_macos-3.2.2",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
@@ -753,15 +885,15 @@
     },
     {
       "name": "url_launcher_web",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_web-2.3.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_web-2.4.1",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.6"
     },
     {
       "name": "url_launcher_windows",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_windows-3.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_windows-3.1.4",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.4"
     },
     {
       "name": "uuid",
@@ -777,39 +909,33 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/vm_service-14.2.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/vm_service-15.0.0",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
     {
       "name": "watcher",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/watcher-1.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/watcher-1.1.2",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.1"
     },
     {
       "name": "web",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web-1.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
     {
       "name": "web_socket",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web_socket-0.1.6",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web_socket-1.0.1",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.4"
     },
     {
       "name": "web_socket_channel",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web_socket_channel-3.0.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web_socket_channel-3.0.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
-    },
-    {
-      "name": "win32",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/win32-5.8.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
     },
     {
       "name": "xdg_directories",
@@ -819,21 +945,20 @@
     },
     {
       "name": "yaml",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/yaml-3.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/yaml-3.1.3",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.4"
     },
     {
       "name": "catharsis_cards",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.5"
     }
   ],
-  "generated": "2024-12-13T16:51:10.366602Z",
   "generator": "pub",
-  "generatorVersion": "3.5.4",
+  "generatorVersion": "3.8.1",
   "flutterRoot": "file:///Users/william/development/flutter",
-  "flutterVersion": "3.24.5",
+  "flutterVersion": "3.32.5",
   "pubCache": "file:///Users/william/.pub-cache"
 }

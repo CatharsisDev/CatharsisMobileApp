@@ -1,4 +1,6 @@
+import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
+import 'package:catharsis_cards/question_categories.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/gamecard_widget.dart';
@@ -16,6 +18,7 @@ import '/components/swipe_limit_popup.dart';
 import '../../provider/tutorial_state_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme_settings/theme_settings_page.dart';
+import 'package:catharsis_cards/questions_model.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -24,7 +27,8 @@ class HomePageWidget extends ConsumerStatefulWidget {
   ConsumerState<HomePageWidget> createState() => _HomePageWidgetState();
 }
 
-class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProviderStateMixin {
+class _HomePageWidgetState extends ConsumerState<HomePageWidget>
+    with TickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late CardSwiperController _cardController;
   late AnimationController _handController;
@@ -58,32 +62,105 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
   }
 
   void _handleCategorySelection(String category, CardStateNotifier notifier) {
-    notifier.updateCategory(category == 'All Categories' ? 'all' : category);
+    notifier.updateCategory(
+        category == 'All Categories' ? 'all' : category.replaceAll('\n', ' '));
     Navigator.pop(context); // Close the drawer after category selection
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return SwipeLimitPopup(
-        resetTime: resetTime,
-        onDismiss: () {
-          Navigator.of(context).pop();
-          ref.read(popUpProvider.notifier).hidePopUp();
-        },
-        onPurchase: () {
-          // Add purchase logic
-        },
-        onTimerEnd: () {
-          Navigator.of(context).pop();
-          ref.read(popUpProvider.notifier).hidePopUp();
-        },
-      );
-    },
-  );
-}
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return SwipeLimitPopup(
+          resetTime: resetTime,
+          onDismiss: () {
+            Navigator.of(context).pop();
+            ref.read(popUpProvider.notifier).hidePopUp();
+          },
+          onPurchase: () {
+            // Add purchase logic
+          },
+          onTimerEnd: () {
+            Navigator.of(context).pop();
+            ref.read(popUpProvider.notifier).hidePopUp();
+          },
+        );
+      },
+    );
+  }
+
+  void _openPreferences() {
+    final notifier = ref.read(cardStateProvider.notifier);
+    final current = ref.read(cardStateProvider).selectedCategories;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        // Use the official category list instead of extracting from questions
+        final categories = QuestionCategories.getAllCategories();
+        final tempSelected = Set<String>.from(current);
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Filter Categories',
+                        style: GoogleFonts.raleway(
+                          fontSize: 24.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        )),
+                  ),
+                  ...categories.map((cat) {
+                    return CheckboxListTile(
+                      title: Text(cat),
+                      value: tempSelected.contains(cat),
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true) {
+                            tempSelected.add(cat);
+                          } else {
+                            tempSelected.remove(cat);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              tempSelected.clear();
+                            });
+                          },
+                          child: Text('Clear All'),
+                        ),
+                        Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            notifier.updateSelectedCategories(tempSelected);
+                            Navigator.pop(context);
+                          },
+                          child: Text('Apply'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +168,12 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
     final notifier = ref.read(cardStateProvider.notifier);
     final showTutorial = ref.watch(tutorialProvider);
     final tutorialNotifier = ref.read(tutorialProvider.notifier);
+
+    // Check if current question is liked
+    final isCurrentQuestionLiked = cardState.currentQuestion != null &&
+        cardState.likedQuestions.any((q) =>
+            q.text == cardState.currentQuestion!.text &&
+            q.category == cardState.currentQuestion!.category);
 
     // Listen for popup trigger
     ref.listen<bool>(popUpProvider, (previous, next) {
@@ -106,187 +189,36 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
           child: Scaffold(
             key: scaffoldKey,
             backgroundColor: ref.watch(themeProvider).themeName == 'dark'
-    ? Theme.of(context).scaffoldBackgroundColor 
-    : ref.watch(themeProvider).themeName == 'light'
-    ? Color.fromARGB(235, 201, 197, 197)
-    : const Color.fromRGBO(208, 164, 180, 0.95),
-            drawer: AnimatedOpacity(
-              opacity: 0.8,
-              duration: 300.0.ms,
-              curve: Curves.easeInOut,
-              child: Container(
-                width: 250.0,
-                child: Drawer(
-                  elevation: 16.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-  gradient: LinearGradient(
-    colors: ref.watch(themeProvider).themeName == 'dark'
-    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor] 
-    : ref.watch(themeProvider).themeName == 'light'
-        ? [Color.fromARGB(235, 211, 209, 210), Color.fromARGB(255, 185, 204, 224)]
-        : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
-                        stops: [0.0, 1.0],
-                        begin: AlignmentDirectional(1.0, -0.34),
-                        end: AlignmentDirectional(-1.0, 0.34),
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Align(
-                          alignment: AlignmentDirectional(0.0, 0.0),
-                          child: SingleChildScrollView(
- child: Column(
-   mainAxisSize: MainAxisSize.max,
-   mainAxisAlignment: MainAxisAlignment.center,
-   crossAxisAlignment: CrossAxisAlignment.start,
-   children: [
-     Padding(
-       padding: const EdgeInsetsDirectional.fromSTEB(10.0, 40.0, 40.0, 35.0),
-       child: InkWell(
-         onTap: () => _handleCategorySelection('All Categories', notifier),
-         child: Text(
-           'All Categories',
-           style: GoogleFonts.raleway(
-             color: cardState.currentCategory == 'all'
-                 ? const Color.fromARGB(255, 227, 95, 66)
-                 : Colors.white,
-             fontSize: 25.0,
-             fontWeight: FontWeight.bold,
-             letterSpacing: 0.0,
-             shadows: [
-               Shadow(
-                 color: FlutterFlowTheme.of(context).secondaryText,
-                 offset: const Offset(2.0, 2.0),
-                 blurRadius: 2.0,
-               )
-             ],
-           ),
-         ),
-       ),
-     ),
-     const SizedBox(height: 20),
-     ...{
-       'Love and Intimacy': 'assets/images/love_intimacy_icon.png',
-       'Spirituality': 'assets/images/spirituality_icon.png',
-       'Society': 'assets/images/society_icon.png',
-       'Interactions and\nRelationships': 'assets/images/interactions_relationships_icon.png'
-     }.entries
-         .map((entry) {
-           final category = entry.key;
-           final iconPath = entry.value;
-           bool isSelected = category.replaceAll('\n', ' ').trim() == 
-                           cardState.currentCategory.replaceAll(RegExp(r'\s+'), ' ').trim();
-           
-           return Padding(
-             padding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 20.0, 0.0),
-             child: InkWell(
-               onTap: () => _handleCategorySelection(category, notifier),
-               child: Row(
-                 children: [
-                   if (iconPath != null)
-                     Padding(
-                       padding: const EdgeInsets.only(right: 8.0),
-                       child: Image.asset(
-                         iconPath,
-                         width: 47,
-                         height: 47,
-                       ),
-                     ),
-                   if (category.contains('\n'))
-                     Text.rich(
-                       TextSpan(
-                         children: category.split('\n').map((line) {
-                           return TextSpan(
-                             text: '$line\n',
-                             style: GoogleFonts.raleway(
-                               color: isSelected
-                                   ? const Color(0xFFE35F42)
-                                   : Colors.white,
-                               fontSize: 20.0,
-                               fontWeight: FontWeight.bold,
-                               letterSpacing: 0.0,
-                               shadows: [
-                                 Shadow(
-                                   color: FlutterFlowTheme.of(context).secondaryText,
-                                   offset: const Offset(2.0, 2.0),
-                                   blurRadius: 2.0,
-                                 )
-                               ],
-                             ),
-                           );
-                         }).toList(),
-                       ),
-                     )
-                   else
-                     Text(
-                       category,
-                       style: GoogleFonts.raleway(
-                         color: isSelected
-                             ? const Color(0xFFE35F42)
-                             : Colors.white,
-                         fontSize: 20.0,
-                         fontWeight: FontWeight.bold,
-                         letterSpacing: 0.0,
-                         shadows: [
-                           Shadow(
-                             color: FlutterFlowTheme.of(context).secondaryText,
-                             offset: const Offset(2.0, 2.0),
-                             blurRadius: 2.0,
-                           )
-                         ],
-                       ),
-                     ),
-                 ],
-               ),
-             ),
-           );
-         })
-         .toList()
-         .divide(const SizedBox(height: 40.0))
-         .addToEnd(const SizedBox(height: 120.0)),
-   ],
- ),
-)
-                        ),
-                        Align(
-                          alignment: const AlignmentDirectional(-2.0, 1.8),
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 0.0, 20.0),
-                            child: Image.asset(
-                              'assets/images/catharsis_word_only.png',
-                              width: 200.0,
-                              height: 400.0,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+                ? Theme.of(context).scaffoldBackgroundColor
+                : ref.watch(themeProvider).themeName == 'light'
+                    ? Color.fromARGB(235, 201, 197, 197)
+                    : const Color.fromRGBO(208, 164, 180, 0.95),
             body: SafeArea(
               top: true,
               child: Stack(
                 children: [
                   Container(
-  width: MediaQuery.sizeOf(context).width * 1.0,
-  height: MediaQuery.sizeOf(context).height * 1.029,
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: ref.watch(themeProvider).themeName == 'dark'
-   ? [Color(0xFF1E1E1E), Color(0xFF121212)]
-   : ref.watch(themeProvider).themeName == 'light'
-       ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
-       : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
-      stops: [0.0, 1.0],
-      begin: AlignmentDirectional(0.6, -0.34),
-      end: AlignmentDirectional(-1.0, 0.34),
-    ),
-  ),
-),
+                    width: MediaQuery.sizeOf(context).width * 1.0,
+                    height: MediaQuery.sizeOf(context).height * 1.029,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: ref.watch(themeProvider).themeName == 'dark'
+                            ? [Color(0xFF1E1E1E), Color(0xFF121212)]
+                            : ref.watch(themeProvider).themeName == 'light'
+                                ? [
+                                    Color.fromARGB(235, 201, 197, 197),
+                                    Color.fromARGB(255, 255, 255, 255)
+                                  ]
+                                : [
+                                    Color.fromARGB(235, 208, 164, 180),
+                                    Color.fromARGB(255, 140, 198, 255)
+                                  ],
+                        stops: [0.0, 1.0],
+                        begin: AlignmentDirectional(0.6, -0.34),
+                        end: AlignmentDirectional(-1.0, 0.34),
+                      ),
+                    ),
+                  ),
                   if (cardState.isLoading)
                     const Center(child: CircularProgressIndicator())
                   else
@@ -299,39 +231,38 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                           alignment: const AlignmentDirectional(0.0, 0.0),
                           children: [
                             FlutterFlowSwipeableStack(
-                              onSwipeFn: (index) => notifier.handleCardSwiped(index),
-                              onLeftSwipe: notifier.handleCardSwiped,
-                              onRightSwipe: notifier.handleCardSwiped,
-                              onUpSwipe: notifier.handleCardSwiped,
-                              onDownSwipe: notifier.handleCardSwiped,
+                              controller: _cardController,
+                              itemCount: cardState.activeQuestions.isEmpty
+                                  ? 1
+                                  : cardState.activeQuestions.length,
                               itemBuilder: (context, index) {
-                                final currentQuestions = cardState.activeQuestions;
-                                if (currentQuestions.isEmpty) {
+                                final questions = cardState.activeQuestions;
+                                if (questions.isEmpty) {
                                   return Center(
                                     child: Text(
                                       'No questions available',
                                       style: GoogleFonts.raleway(
-                                            color: Colors.white,
-                                            fontSize: 20.0,
-                                          ),
+                                        color: Colors.white,
+                                        fontSize: 20.0,
+                                      ),
                                     ),
                                   );
                                 }
-
-                                final normalizedIndex = index % currentQuestions.length;
-                                final question = currentQuestions[normalizedIndex];
-
+                                final normalizedIndex =
+                                    index % questions.length;
+                                final question = questions[normalizedIndex];
                                 return Stack(
                                   children: [
                                     Align(
-                                      alignment: const AlignmentDirectional(0.0, 0.0),
+                                      alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.2),
+                                              color:
+                                                  Colors.black.withOpacity(0.2),
                                               blurRadius: 10,
-                                              offset: const Offset(0, 5),
+                                              offset: Offset(0, 5),
                                               spreadRadius: 1,
                                             ),
                                           ],
@@ -340,7 +271,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                                       ),
                                     ),
                                     Align(
-                                      alignment: const AlignmentDirectional(0.0, 0.0),
+                                      alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Container(
                                         width: 400.0,
                                         height: 400.0,
@@ -348,21 +279,27 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                                           fit: StackFit.expand,
                                           children: [
                                             Align(
-                                              alignment: const AlignmentDirectional(0.0, 0.0),
+                                              alignment: AlignmentDirectional(
+                                                  0.0, 0.0),
                                               child: Padding(
-                                                padding: const EdgeInsetsDirectional.fromSTEB(20.0, 20.0, 20.0, 60.0),
+                                                padding: EdgeInsetsDirectional
+                                                    .fromSTEB(
+                                                        20.0, 20.0, 20.0, 60.0),
                                                 child: Text(
                                                   question.text,
                                                   textAlign: TextAlign.center,
                                                   style: GoogleFonts.raleway(
-                                          
                                                     color: Colors.white,
                                                     fontSize: 28.0,
                                                     letterSpacing: 0.2,
                                                     shadows: [
                                                       Shadow(
-                                                        color: FlutterFlowTheme.of(context).secondaryText,
-                                                        offset: const Offset(2.0, 2.0),
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .secondaryText,
+                                                        offset:
+                                                            Offset(2.0, 2.0),
                                                         blurRadius: 2.0,
                                                       )
                                                     ],
@@ -384,8 +321,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                                                   letterSpacing: 0.0,
                                                   shadows: [
                                                     Shadow(
-                                                      color: FlutterFlowTheme.of(context).secondaryText,
-                                                      offset: const Offset(2.0, 2.0),
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .secondaryText,
+                                                      offset: Offset(2.0, 2.0),
                                                       blurRadius: 2.0,
                                                     )
                                                   ],
@@ -399,8 +339,19 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                                   ],
                                 );
                               },
-                              itemCount: cardState.activeQuestions.isEmpty ? 1 : cardState.activeQuestions.length,
-                              controller: _cardController,
+                              onLeftSwipe: (index) {
+                                // Left swipe: skip without liking
+                                notifier.handleCardSwiped(index);
+                              },
+                              onRightSwipe: (index) {
+                                // Right swipe: like then advance
+                                final questions = cardState.activeQuestions;
+                                if (questions.isNotEmpty) {
+                                  final q = questions[index % questions.length];
+                                  notifier.toggleLiked(q);
+                                }
+                                notifier.handleCardSwiped(index);
+                              },
                               loop: true,
                               cardDisplayCount: 4,
                               scale: 0.9,
@@ -410,42 +361,71 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                         ),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(10.0, 10.0, 0.0, 0.0),
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        scaffoldKey.currentState!.openDrawer();
-                      },
-                      child: Icon(
-                        Icons.menu,
-                        color: Colors.white,
-                        size: 40.0,
-                      ),
+
+                  // Heart and Share Icons below card stack
+                  // Heart and Share Icons below card stack
+                  Positioned(
+                    bottom: 50, // Changed from 100 to 50 to avoid overlap
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Heart Icon
+                        IconButton(
+                          icon: FaIcon(
+                            isCurrentQuestionLiked
+                                ? FontAwesomeIcons.solidHeart
+                                : FontAwesomeIcons.heart,
+                            color: isCurrentQuestionLiked
+                                ? Colors.red
+                                : Colors.white,
+                            size: 30.0,
+                          ),
+                          onPressed: () {
+                            if (cardState.hasReachedSwipeLimit) {
+                              ref
+                                  .read(popUpProvider.notifier)
+                                  .showPopUp(cardState.swipeResetTime);
+                            } else if (cardState.currentQuestion != null) {
+                              notifier.toggleLiked(cardState.currentQuestion!);
+                            }
+                          },
+                        ),
+                        SizedBox(width: 40),
+                        // Share Icon
+                        IconButton(
+                          icon: Icon(
+                            Icons
+                                .ios_share, // Changed from share_outlined to ios_share
+                            color: Colors.white,
+                            size: 30.0,
+                          ),
+                          onPressed: () {
+                            if (cardState.currentQuestion != null) {
+                              // TODO: Implement share functionality
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Share feature coming soon!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
+
+                  // Filter preferences icon
                   Positioned(
-  right: 10,
-  top: 10,
-  child: InkWell(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ThemeSettingsPage(), // Ensure this page is defined and imported
-        ),
-      );
-    },
-    child: Icon(
-      Icons.palette_outlined,
-      color: Colors.white, // Change color to match your theme
-      size: 40.0,
-    ),
-  ),
-),
+                    right: 10,
+                    top: 10,
+                    child: IconButton(
+                      icon: Icon(Icons.tune, color: Colors.white, size: 32),
+                      onPressed: _openPreferences,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -480,12 +460,12 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                       color: Colors.white,
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Text(
                       "Tap the heart icon to like a card and save it for later!",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: GoogleFonts.raleway(
                         color: Colors.white,
                         fontSize: 18.0,
                         fontWeight: FontWeight.bold,
@@ -507,9 +487,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget> with TickerProv
                         vertical: 10.0,
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       "Got it!",
-                      style: TextStyle(
+                      style: GoogleFonts.raleway(
                         color: Colors.white,
                         fontSize: 16.0,
                         fontWeight: FontWeight.bold,

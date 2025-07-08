@@ -12,6 +12,12 @@ import 'package:json_path/json_path.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// Add these imports for auth
+import '../pages/auth/login_page.dart';
+import '../provider/auth_provider.dart';
 
 import '../main.dart';
 
@@ -25,7 +31,6 @@ export 'dart:math' show min, max;
 export 'dart:typed_data' show Uint8List;
 export 'dart:convert' show jsonEncode, jsonDecode;
 export 'package:intl/intl.dart';
-export 'package:page_transition/page_transition.dart';
 export 'nav/nav.dart';
 
 T valueOrDefault<T>(T? value, T defaultValue) =>

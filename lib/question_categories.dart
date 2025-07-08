@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'questions_model.dart';
 
@@ -21,6 +23,7 @@ class QuestionCategories {
   static const String spirituality = 'Spirituality';
   static const String society = 'Society';
   static const String interactionsAndRelationships = 'Interactions and Relationships';
+  static const String personalDevelopment = 'Personal \nDevelopment';
 
   // Map using exact CSV names
   static const Map<String, String> categoryDisplayNames = {
@@ -28,6 +31,7 @@ class QuestionCategories {
     spirituality: 'Spirituality',
     society: 'Society',
     interactionsAndRelationships: 'Interactions and Relationships',
+    personalDevelopment: 'Personal Development', 
   };
 
   // Get display name for category
@@ -47,6 +51,7 @@ class QuestionCategories {
       spirituality,
       society,
       interactionsAndRelationships,
+      personalDevelopment, 
     ];
   }
 
@@ -61,6 +66,8 @@ class QuestionCategories {
         return Color(0xFF64B5F6).withOpacity(opacity); // Blue
       case interactionsAndRelationships:
         return Color(0xFFFFB74D).withOpacity(opacity); // Orange
+       case personalDevelopment:
+        return Color.fromARGB(255, 202, 78, 209).withOpacity(opacity); // purple
       default:
         return Color(0xFF9E9E9E).withOpacity(opacity); // Grey
     }

@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../questions_model.dart';
-import '../questions_service.dart';
+import 'package:catharsis_cards/services/questions_service.dart';
 import 'pop_up_provider.dart';
 
 const int SWIPE_LIMIT = 20;
@@ -16,6 +16,7 @@ class CardState {
   final bool isLoading;
   final int currentIndex;
   final int swipeCount;
+  final Set<String> selectedCategories; // ← New!
   final DateTime? swipeResetTime;
 
   CardState({
@@ -26,6 +27,7 @@ class CardState {
     required this.isLoading,
     required this.currentIndex,
     required this.swipeCount,
+    required this.selectedCategories, // ← New!
     this.swipeResetTime,
   });
 
@@ -37,6 +39,7 @@ class CardState {
     bool? isLoading,
     int? currentIndex,
     int? swipeCount,
+    Set<String>? selectedCategories, // ← New!
     DateTime? swipeResetTime,
   }) {
     return CardState(
@@ -47,38 +50,57 @@ class CardState {
       isLoading: isLoading ?? this.isLoading,
       currentIndex: currentIndex ?? this.currentIndex,
       swipeCount: swipeCount ?? this.swipeCount,
+      selectedCategories:
+          selectedCategories ?? this.selectedCategories, // ← New!
       swipeResetTime: swipeResetTime ?? this.swipeResetTime,
     );
   }
 
   List<Question> get activeQuestions {
+  List<Question> filtered = allQuestions;
+
+  if (selectedCategories.isNotEmpty) {
+    filtered = filtered.where((q) {
+      // Normalize both the question category and selected categories for comparison
+      final normalizedQuestionCategory = q.category
+          .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      
+      return selectedCategories.any((selected) {
+        final normalizedSelected = selected
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        return normalizedQuestionCategory == normalizedSelected;
+      });
+    }).toList();
+  } else if (currentCategory != 'all') {
     final normalizedCurrentCategory = currentCategory
         .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-
-    List<Question> available = currentCategory == 'all'
-        ? allQuestions
-        : allQuestions.where((q) {
-            final normalizedQuestionCategory = q.category
-                .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
-                .replaceAll(RegExp(r'\s+'), ' ')
-                .trim();
-            return normalizedQuestionCategory == normalizedCurrentCategory;
-          }).toList();
-
-    available = available.where((q) => !likedQuestions.contains(q)).toList();
-    List<Question> unseen = available.where((q) => !seenQuestions.contains(q)).toList();
-    List<Question> seen = available.where((q) => seenQuestions.contains(q)).toList();
-
-    return [...unseen, ...seen]; // Prioritize unseen questions
+    
+    filtered = filtered.where((q) {
+      final normalizedQuestionCategory = q.category
+          .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      return normalizedQuestionCategory == normalizedCurrentCategory;
+    }).toList();
   }
 
+  filtered = filtered.where((q) => !likedQuestions.contains(q)).toList();
+  List<Question> unseen = filtered.where((q) => !seenQuestions.contains(q)).toList();
+  List<Question> seen = filtered.where((q) => seenQuestions.contains(q)).toList();
+
+  return [...unseen, ...seen];
+}
+
   Question? get currentQuestion {
-    final questions = activeQuestions;
-    if (questions.isEmpty) return null;
-    final validIndex = currentIndex.clamp(0, questions.length - 1);
-    return questions[validIndex];
+    final list = activeQuestions;
+    if (list.isEmpty) return null;
+    final idx = currentIndex.clamp(0, list.length - 1);
+    return list[idx];
   }
 
   bool get hasReachedSwipeLimit => swipeCount >= SWIPE_LIMIT;
@@ -94,6 +116,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
           isLoading: true,
           currentIndex: 0,
           swipeCount: 0,
+          selectedCategories: {}, // ← initialize empty set
         )) {
     initializeApp();
   }
@@ -101,31 +124,50 @@ class CardStateNotifier extends StateNotifier<CardState> {
   final Ref ref;
   late Box<Question> likedBox;
   late Box swipeBox;
+  late Box<Question> cachedQuestionsBox;
 
+  /// boots up Hive boxes, loads cache/likes, and triggers any pending reset
   Future<void> initializeApp() async {
+    state = state.copyWith(isLoading: true);
     likedBox = await Hive.openBox<Question>('likedQuestions');
     swipeBox = await Hive.openBox('swipeData');
+    cachedQuestionsBox = await Hive.openBox<Question>('cachedQuestions');
+
     await _loadLikedQuestions();
-    await loadQuestions();
+    await _loadCachedQuestions();
     await _checkSwipeReset();
+    _generateMoreIfNeeded();
+
+    state = state.copyWith(isLoading: false);
   }
 
   Future<void> _loadLikedQuestions() async {
-    final likedQuestions = likedBox.values.toList();
-    state = state.copyWith(likedQuestions: likedQuestions);
+    state = state.copyWith(likedQuestions: likedBox.values.toList());
   }
 
-  Future<void> loadQuestions() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final loadedQuestions = await QuestionsService.loadQuestions();
-      var questions = List<Question>.from(loadedQuestions)..shuffle(Random());
-      state = state.copyWith(
-        allQuestions: questions,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(isLoading: false);
+  Future<void> _loadCachedQuestions() async {
+    final cached = cachedQuestionsBox.values.toList();
+    if (cached.isNotEmpty) {
+      state = state.copyWith(allQuestions: cached..shuffle());
+    } else {
+      await _generateAndCacheQuestions();
+    }
+  }
+
+  Future<void> _generateAndCacheQuestions() async {
+    final newQs = await QuestionsService.loadQuestionsWithAI();
+    await cachedQuestionsBox.clear();
+    await cachedQuestionsBox.addAll(newQs);
+    state = state.copyWith(allQuestions: newQs..shuffle());
+  }
+
+  void _generateMoreIfNeeded() {
+    if (state.allQuestions.isEmpty) return;
+    final seenPct = state.seenQuestions.length / state.allQuestions.length;
+    if (seenPct > 0.8) {
+      _generateAndCacheQuestions().catchError((e) {
+        // ignore background errors
+      });
     }
   }
 
@@ -134,82 +176,86 @@ class CardStateNotifier extends StateNotifier<CardState> {
     await swipeBox.delete('swipe_limit_reached');
   }
 
-  void updateCategory(String category) {
-    String normalizedCategory = category
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    state = state.copyWith(
-      currentCategory: normalizedCategory,
-      currentIndex: 0,
-      seenQuestions: [],
-    );
-  }
+ void updateCategory(String category) {
+  final normalizedCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
+  state = state.copyWith(
+    currentCategory: normalizedCategory,
+    currentIndex: 0,
+    seenQuestions: [],
+    // Sync the bottom‐sheet selection:
+    selectedCategories: { normalizedCategory },
+  );
+}
 
-  void resetCardState() {
+  /// ← new: call this when the user hits “Apply” in your bottom-sheet
+  void updateSelectedCategories(Set<String> cats) {
     state = state.copyWith(
-      seenQuestions: [],
+      selectedCategories: cats,
       currentIndex: 0,
+      seenQuestions: [],
     );
   }
 
   Future<void> _checkSwipeReset() async {
-    final storedTimestamp = swipeBox.get('swipe_limit_reached') as String?;
-    if (storedTimestamp != null) {
-      final resetTime = DateTime.parse(storedTimestamp).add(RESET_DURATION);
-      final now = DateTime.now();
-      if (now.isAfter(resetTime)) {
-        state = state.copyWith(swipeCount: 0, swipeResetTime: null);
-        await swipeBox.delete('swipe_limit_reached');
+    final raw = swipeBox.get('swipe_limit_reached') as String?;
+    if (raw != null) {
+      final reset = DateTime.parse(raw).add(RESET_DURATION);
+      if (DateTime.now().isAfter(reset)) {
+        await resetSwipeCount();
       } else {
-        state = state.copyWith(swipeResetTime: resetTime);
+        state = state.copyWith(swipeResetTime: reset);
       }
     }
   }
 
-  void handleCardSwiped(int index) async {
-    if (state.hasReachedSwipeLimit) {
-      ref.read(popUpProvider.notifier).showPopUp(state.swipeResetTime);
-      return;
-    }
+  void handleCardSwiped(num index) async {
+    final qs = state.activeQuestions;
+    if (qs.isEmpty) return;
 
-    final questions = state.activeQuestions;
-    if (questions.isEmpty) return;
+    // normalize index to an int
+    final i = index.toInt() % qs.length;
+    final currentQuestion = qs[i];
 
-    int normalizedIndex = index % questions.length;
-    Question currentQuestion = questions[normalizedIndex];
+    // build a new seen‐list, only appending if it isn't already in there
+    final alreadySeen = state.seenQuestions;
+    final newSeen = alreadySeen.contains(currentQuestion)
+        ? alreadySeen
+        : [...alreadySeen, currentQuestion];
+
     state = state.copyWith(
-      seenQuestions: List.from(state.seenQuestions)..add(currentQuestion),
-      currentIndex: normalizedIndex,
-      swipeCount: state.swipeCount + 1,
+      seenQuestions: newSeen,
+      currentIndex: i,
     );
 
-    if (state.swipeCount >= SWIPE_LIMIT) {
-      final now = DateTime.now();
-      await swipeBox.put('swipe_limit_reached', now.toIso8601String());
-      final resetTime = now.add(RESET_DURATION);
-      state = state.copyWith(swipeResetTime: resetTime);
-      ref.read(popUpProvider.notifier).showPopUp(state.swipeResetTime);
-    }
+    _generateMoreIfNeeded();
   }
 
-  Future<void> toggleLiked(Question question) async {
-    final likedQuestions = List<Question>.from(state.likedQuestions);
-
-    if (likedQuestions.any((q) => q.text == question.text && q.category == question.category)) {
-      likedQuestions.removeWhere((q) => q.text == question.text && q.category == question.category);
+  Future<void> toggleLiked(Question q) async {
+    final list = [...state.likedQuestions];
+    final exists =
+        list.any((x) => x.text == q.text && x.category == q.category);
+    if (exists) {
+      list.removeWhere((x) => x.text == q.text && x.category == q.category);
     } else {
-      likedQuestions.add(question);
+      list.add(q);
     }
-
     await likedBox.clear();
-    await likedBox.addAll(likedQuestions);
+    await likedBox.addAll(list);
+    state = state.copyWith(likedQuestions: list);
+  }
 
-    state = state.copyWith(
-      likedQuestions: likedQuestions,
-    );
+  Future<void> clearCache() async {
+    await cachedQuestionsBox.clear();
+    await _generateAndCacheQuestions();
+  }
+
+  Future<void> regenerateQuestions() async {
+    await cachedQuestionsBox.clear();
+    await _generateAndCacheQuestions();
   }
 }
 
-final cardStateProvider = StateNotifierProvider<CardStateNotifier, CardState>((ref) {
+final cardStateProvider =
+    StateNotifierProvider<CardStateNotifier, CardState>((ref) {
   return CardStateNotifier(ref);
 });
