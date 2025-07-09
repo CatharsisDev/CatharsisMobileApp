@@ -11,9 +11,11 @@
         "cached_network_image",
         "cached_network_image_platform_interface",
         "cached_network_image_web",
+        "cloud_firestore",
         "collection",
         "csv",
         "cupertino_icons",
+        "firebase_analytics",
         "firebase_auth",
         "firebase_core",
         "flutter",
@@ -365,7 +367,7 @@
     },
     {
       "name": "sign_in_with_apple",
-      "version": "6.1.4",
+      "version": "7.0.1",
       "dependencies": [
         "flutter",
         "meta",
@@ -382,6 +384,30 @@
         "google_sign_in_ios",
         "google_sign_in_platform_interface",
         "google_sign_in_web"
+      ]
+    },
+    {
+      "name": "cloud_firestore",
+      "version": "5.6.11",
+      "dependencies": [
+        "cloud_firestore_platform_interface",
+        "cloud_firestore_web",
+        "collection",
+        "firebase_core",
+        "firebase_core_platform_interface",
+        "flutter",
+        "meta"
+      ]
+    },
+    {
+      "name": "firebase_analytics",
+      "version": "11.5.2",
+      "dependencies": [
+        "firebase_analytics_platform_interface",
+        "firebase_analytics_web",
+        "firebase_core",
+        "firebase_core_platform_interface",
+        "flutter"
       ]
     },
     {
@@ -864,10 +890,8 @@
     },
     {
       "name": "js",
-      "version": "0.6.7",
-      "dependencies": [
-        "meta"
-      ]
+      "version": "0.7.2",
+      "dependencies": []
     },
     {
       "name": "io",
@@ -1241,7 +1265,7 @@
     },
     {
       "name": "sign_in_with_apple_web",
-      "version": "2.1.1",
+      "version": "3.0.0",
       "dependencies": [
         "flutter",
         "flutter_web_plugins",
@@ -1250,7 +1274,7 @@
     },
     {
       "name": "sign_in_with_apple_platform_interface",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": [
         "flutter",
         "meta",
@@ -1300,6 +1324,54 @@
         "collection",
         "flutter",
         "flutter_test",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "cloud_firestore_web",
+      "version": "4.4.11",
+      "dependencies": [
+        "_flutterfire_internals",
+        "cloud_firestore_platform_interface",
+        "collection",
+        "firebase_core",
+        "firebase_core_web",
+        "flutter",
+        "flutter_web_plugins"
+      ]
+    },
+    {
+      "name": "cloud_firestore_platform_interface",
+      "version": "6.6.11",
+      "dependencies": [
+        "_flutterfire_internals",
+        "collection",
+        "firebase_core",
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "firebase_analytics_web",
+      "version": "0.5.10+15",
+      "dependencies": [
+        "_flutterfire_internals",
+        "firebase_analytics_platform_interface",
+        "firebase_core",
+        "firebase_core_web",
+        "flutter",
+        "flutter_web_plugins"
+      ]
+    },
+    {
+      "name": "firebase_analytics_platform_interface",
+      "version": "4.4.2",
+      "dependencies": [
+        "_flutterfire_internals",
+        "firebase_core",
+        "flutter",
         "meta",
         "plugin_platform_interface"
       ]

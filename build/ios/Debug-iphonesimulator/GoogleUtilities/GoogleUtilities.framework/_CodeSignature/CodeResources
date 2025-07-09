@@ -72,6 +72,10 @@
 		<data>
 		zakav2dnnHEg+jKlDffWx35g+4E=
 		</data>
+		<key>Headers/GULOriginalIMPConvenienceMacros.h</key>
+		<data>
+		wp61DP+6n6xaIuN7Q+MUG//9NTA=
+		</data>
 		<key>Headers/GULReachabilityChecker.h</key>
 		<data>
 		ODTBIomyWPw7I8gcLxifM+3yRKk=
@@ -80,13 +84,17 @@
 		<data>
 		4X41UFqYbPvmhDB93lYXejW6oSw=
 		</data>
+		<key>Headers/GULSwizzler.h</key>
+		<data>
+		kqRN0S855mcEoeddcbC6llfp/j0=
+		</data>
 		<key>Headers/GULUserDefaults.h</key>
 		<data>
 		0Of0cBjQBb/OBqa93s7xZ8UpjTI=
 		</data>
 		<key>Headers/GoogleUtilities-umbrella.h</key>
 		<data>
-		+L4ZYE0BQFbCRZcUl8XWjSwt/3M=
+		5hKqPC+TN2bnPxqUZRuXCxhRa8U=
 		</data>
 		<key>Info.plist</key>
 		<data>
@@ -218,6 +226,13 @@
 			v1KWie2xQxLa73blnQdgSwWNYSFbijx3l7mixX1BAsw=
 			</data>
 		</dict>
+		<key>Headers/GULOriginalIMPConvenienceMacros.h</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			3RKVFe9VGiJiaLMdtbT57fm9sjp0vxBY2knbefyK3Fw=
+			</data>
+		</dict>
 		<key>Headers/GULReachabilityChecker.h</key>
 		<dict>
 			<key>hash2</key>
@@ -232,6 +247,13 @@
 			RXX77bV5gh6q/JqXdNYIGalkk5NAkTeEyA8ikWTsf5o=
 			</data>
 		</dict>
+		<key>Headers/GULSwizzler.h</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			nHEVLRZiAlaBzWwIgNfNZ9l61OpmGZSCbpSaKf3yIqs=
+			</data>
+		</dict>
 		<key>Headers/GULUserDefaults.h</key>
 		<dict>
 			<key>hash2</key>
@@ -243,7 +265,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pi0wJgnSszBn13elnmtgKBD9PaXhB6XOJX0H54zD4Xg=
+			VkCk9hfj4ACJaNYNoe9D2Z4Pdyfx5RyY3S5+devhw9A=
 			</data>
 		</dict>
 		<key>Modules/module.modulemap</key>

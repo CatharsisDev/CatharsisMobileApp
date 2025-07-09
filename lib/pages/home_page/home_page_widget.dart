@@ -1,21 +1,21 @@
+import 'dart:math';
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
+import '../../services/user_beahvior_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/gamecard_widget.dart';
-import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_swipeable_stack.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/flutter_flow_util.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/pop_up_provider.dart';
+import '../../provider/tutorial_state_provider.dart';
+import '/components/swipe_limit_popup.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
-import '/components/swipe_limit_popup.dart';
-import '../../provider/tutorial_state_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme_settings/theme_settings_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
@@ -39,15 +39,14 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     super.initState();
     _cardController = CardSwiperController();
 
-    // Initialize the hand swipe animation
     _handController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
-
+    
     _swipeAnimation = Tween<Offset>(
-      begin: Offset(-0.1, 0.0),
-      end: Offset(0.1, 0.0),
+      begin: const Offset(-0.1, 0.0),
+      end: const Offset(0.1, 0.0),
     ).animate(CurvedAnimation(
       parent: _handController,
       curve: Curves.easeInOut,
@@ -61,94 +60,81 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     super.dispose();
   }
 
-  void _handleCategorySelection(String category, CardStateNotifier notifier) {
-    notifier.updateCategory(
-        category == 'All Categories' ? 'all' : category.replaceAll('\n', ' '));
-    Navigator.pop(context); // Close the drawer after category selection
-  }
-
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return SwipeLimitPopup(
-          resetTime: resetTime,
-          onDismiss: () {
-            Navigator.of(context).pop();
-            ref.read(popUpProvider.notifier).hidePopUp();
-          },
-          onPurchase: () {
-            // Add purchase logic
-          },
-          onTimerEnd: () {
-            Navigator.of(context).pop();
-            ref.read(popUpProvider.notifier).hidePopUp();
-          },
-        );
-      },
+      builder: (_) => SwipeLimitPopup(
+        resetTime: resetTime,
+        onDismiss: () {
+          Navigator.of(context).pop();
+          ref.read(popUpProvider.notifier).hidePopUp();
+        },
+        onPurchase: () {
+          // Add purchase logic
+        },
+        onTimerEnd: () {
+          Navigator.of(context).pop();
+          ref.read(popUpProvider.notifier).hidePopUp();
+        },
+      ),
     );
   }
 
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
     final current = ref.read(cardStateProvider).selectedCategories;
+    
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        // Use the official category list instead of extracting from questions
+      builder: (_) {
         final categories = QuestionCategories.getAllCategories();
         final tempSelected = Set<String>.from(current);
 
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (_, setState) {
             return SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Filter Categories',
-                        style: GoogleFonts.raleway(
-                          fontSize: 24.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        )),
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Filter Categories',
+                      style: GoogleFonts.raleway(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  ...categories.map((cat) {
-                    return CheckboxListTile(
-                      title: Text(cat),
-                      value: tempSelected.contains(cat),
-                      onChanged: (v) {
-                        setState(() {
-                          if (v == true) {
-                            tempSelected.add(cat);
-                          } else {
-                            tempSelected.remove(cat);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                  ...categories.map((cat) => CheckboxListTile(
+                    title: Text(cat),
+                    value: tempSelected.contains(cat),
+                    onChanged: (v) {
+                      setState(() {
+                        if (v == true) {
+                          tempSelected.add(cat);
+                        } else {
+                          tempSelected.remove(cat);
+                        }
+                      });
+                    },
+                  )),
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         TextButton(
-                          onPressed: () {
-                            setState(() {
-                              tempSelected.clear();
-                            });
-                          },
-                          child: Text('Clear All'),
+                          onPressed: () => setState(() => tempSelected.clear()),
+                          child: const Text('Clear All'),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         TextButton(
                           onPressed: () {
                             notifier.updateSelectedCategories(tempSelected);
                             Navigator.pop(context);
                           },
-                          child: Text('Apply'),
+                          child: const Text('Apply'),
                         ),
                       ],
                     ),
@@ -176,7 +162,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             q.category == cardState.currentQuestion!.category);
 
     // Listen for popup trigger
-    ref.listen<bool>(popUpProvider, (previous, next) {
+    ref.listen<bool>(popUpProvider, (_, next) {
       if (next) {
         _showExtraPackagePopUp(context, cardState.swipeResetTime);
       }
@@ -191,34 +177,36 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             backgroundColor: ref.watch(themeProvider).themeName == 'dark'
                 ? Theme.of(context).scaffoldBackgroundColor
                 : ref.watch(themeProvider).themeName == 'light'
-                    ? Color.fromARGB(235, 201, 197, 197)
+                    ? const Color.fromARGB(235, 201, 197, 197)
                     : const Color.fromRGBO(208, 164, 180, 0.95),
             body: SafeArea(
-              top: true,
               child: Stack(
                 children: [
+                  // Background gradient
                   Container(
-                    width: MediaQuery.sizeOf(context).width * 1.0,
-                    height: MediaQuery.sizeOf(context).height * 1.029,
+                    width: MediaQuery.sizeOf(context).width,
+                    height: MediaQuery.sizeOf(context).height,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: ref.watch(themeProvider).themeName == 'dark'
-                            ? [Color(0xFF1E1E1E), Color(0xFF121212)]
+                            ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
                             : ref.watch(themeProvider).themeName == 'light'
                                 ? [
-                                    Color.fromARGB(235, 201, 197, 197),
-                                    Color.fromARGB(255, 255, 255, 255)
+                                    const Color.fromARGB(235, 201, 197, 197),
+                                    const Color.fromARGB(255, 255, 255, 255)
                                   ]
                                 : [
-                                    Color.fromARGB(235, 208, 164, 180),
-                                    Color.fromARGB(255, 140, 198, 255)
+                                    const Color.fromARGB(235, 208, 164, 180),
+                                    const Color.fromARGB(255, 140, 198, 255)
                                   ],
-                        stops: [0.0, 1.0],
-                        begin: AlignmentDirectional(0.6, -0.34),
-                        end: AlignmentDirectional(-1.0, 0.34),
+                        stops: const [0.0, 1.0],
+                        begin: const AlignmentDirectional(0.6, -0.34),
+                        end: const AlignmentDirectional(-1.0, 0.34),
                       ),
                     ),
                   ),
+                  
+                  // Card Stack
                   if (cardState.isLoading)
                     const Center(child: CircularProgressIndicator())
                   else
@@ -232,8 +220,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           children: [
                             FlutterFlowSwipeableStack(
                               controller: _cardController,
-                              itemCount: cardState.activeQuestions.isEmpty
-                                  ? 1
+                              itemCount: cardState.activeQuestions.isEmpty 
+                                  ? 1 
                                   : cardState.activeQuestions.length,
                               itemBuilder: (context, index) {
                                 final questions = cardState.activeQuestions;
@@ -248,21 +236,21 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                     ),
                                   );
                                 }
-                                final normalizedIndex =
-                                    index % questions.length;
+                                
+                                final normalizedIndex = index % questions.length;
                                 final question = questions[normalizedIndex];
+                                
                                 return Stack(
                                   children: [
                                     Align(
-                                      alignment: AlignmentDirectional(0.0, 0.0),
+                                      alignment: const AlignmentDirectional(0.0, 0.0),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.2),
+                                              color: Colors.black.withOpacity(0.2),
                                               blurRadius: 10,
-                                              offset: Offset(0, 5),
+                                              offset: const Offset(0, 5),
                                               spreadRadius: 1,
                                             ),
                                           ],
@@ -271,7 +259,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                       ),
                                     ),
                                     Align(
-                                      alignment: AlignmentDirectional(0.0, 0.0),
+                                      alignment: const AlignmentDirectional(0.0, 0.0),
                                       child: Container(
                                         width: 400.0,
                                         height: 400.0,
@@ -279,12 +267,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                           fit: StackFit.expand,
                                           children: [
                                             Align(
-                                              alignment: AlignmentDirectional(
-                                                  0.0, 0.0),
+                                              alignment: const AlignmentDirectional(0.0, 0.0),
                                               child: Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(
-                                                        20.0, 20.0, 20.0, 60.0),
+                                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                                    20.0, 20.0, 20.0, 60.0),
                                                 child: Text(
                                                   question.text,
                                                   textAlign: TextAlign.center,
@@ -294,12 +280,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                                     letterSpacing: 0.2,
                                                     shadows: [
                                                       Shadow(
-                                                        color:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .secondaryText,
-                                                        offset:
-                                                            Offset(2.0, 2.0),
+                                                        color: FlutterFlowTheme.of(context)
+                                                            .secondaryText,
+                                                        offset: const Offset(2.0, 2.0),
                                                         blurRadius: 2.0,
                                                       )
                                                     ],
@@ -321,11 +304,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                                   letterSpacing: 0.0,
                                                   shadows: [
                                                     Shadow(
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .secondaryText,
-                                                      offset: Offset(2.0, 2.0),
+                                                      color: FlutterFlowTheme.of(context)
+                                                          .secondaryText,
+                                                      offset: const Offset(2.0, 2.0),
                                                       blurRadius: 2.0,
                                                     )
                                                   ],
@@ -340,8 +321,12 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 );
                               },
                               onLeftSwipe: (index) {
-                                // Left swipe: skip without liking
-                                notifier.handleCardSwiped(index);
+                                // Pass direction and velocity to handleCardSwiped
+                                notifier.handleCardSwiped(
+                                  index, 
+                                  direction: 'left', 
+                                  velocity: 0.5
+                                );
                               },
                               onRightSwipe: (index) {
                                 // Right swipe: like then advance
@@ -350,7 +335,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                   final q = questions[index % questions.length];
                                   notifier.toggleLiked(q);
                                 }
-                                notifier.handleCardSwiped(index);
+                                notifier.handleCardSwiped(
+                                  index,
+                                  direction: 'right',
+                                  velocity: 0.5
+                                );
                               },
                               loop: true,
                               cardDisplayCount: 4,
@@ -361,11 +350,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         ),
                       ),
                     ),
-
-                  // Heart and Share Icons below card stack
+                  
                   // Heart and Share Icons below card stack
                   Positioned(
-                    bottom: 50, // Changed from 100 to 50 to avoid overlap
+                    bottom: 50,
                     left: 0,
                     right: 0,
                     child: Row(
@@ -375,37 +363,33 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         IconButton(
                           icon: FaIcon(
                             isCurrentQuestionLiked
-                                ? FontAwesomeIcons.solidHeart
-                                : FontAwesomeIcons.heart,
-                            color: isCurrentQuestionLiked
+                                ? FontAwesomeIcons.solidBookmark
+                                : FontAwesomeIcons.bookmark,
+                            color: isCurrentQuestionLiked 
                                 ? Colors.red
                                 : Colors.white,
                             size: 30.0,
                           ),
                           onPressed: () {
                             if (cardState.hasReachedSwipeLimit) {
-                              ref
-                                  .read(popUpProvider.notifier)
-                                  .showPopUp(cardState.swipeResetTime);
+                              ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
                             } else if (cardState.currentQuestion != null) {
                               notifier.toggleLiked(cardState.currentQuestion!);
                             }
                           },
                         ),
-                        SizedBox(width: 40),
+                        const SizedBox(width: 40),
                         // Share Icon
                         IconButton(
-                          icon: Icon(
-                            Icons
-                                .ios_share, // Changed from share_outlined to ios_share
+                          icon: const Icon(
+                            Icons.ios_share,
                             color: Colors.white,
                             size: 30.0,
                           ),
                           onPressed: () {
                             if (cardState.currentQuestion != null) {
-                              // TODO: Implement share functionality
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
+                                const SnackBar(
                                   content: Text('Share feature coming soon!'),
                                   duration: Duration(seconds: 2),
                                 ),
@@ -416,13 +400,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       ],
                     ),
                   ),
-
+                  
                   // Filter preferences icon
                   Positioned(
                     right: 10,
                     top: 10,
                     child: IconButton(
-                      icon: Icon(Icons.tune, color: Colors.white, size: 32),
+                      icon: const Icon(Icons.tune, color: Colors.white, size: 32),
                       onPressed: _openPreferences,
                     ),
                   ),

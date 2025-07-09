@@ -82,6 +82,14 @@ class QuestionCategories {
   static int getCategoryCount() {
     return getAllCategories().length;
   }
+
+  static String normalizeCategory(String category) {
+    return category
+        .replaceAll(RegExp(r'[^\x20-\x7E]'), '') // Remove non-ASCII
+        .replaceAll(RegExp(r'\s+'), ' ') // Replace multiple spaces with single space
+        .replaceAll('\n', ' ') // Replace newlines with space
+        .trim();
+  }
 }
 
 // Extension to add category-related functionality to String

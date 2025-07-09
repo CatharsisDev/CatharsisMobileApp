@@ -1,1 +1,0 @@
- /Users/william/Documents/Catharsis/CatharsisFlutterApp/CatharsisMobileApp/.dart_tool/flutter_build/1202adc19d7a8deec9cb0c4576fe38a3/native_assets.yaml: 

@@ -1,6 +1,4 @@
-import 'package:catharsis_cards/provider/app_state_provider.dart';
-import 'package:catharsis_cards/provider/auth_provider.dart';
-import 'package:catharsis_cards/provider/theme_provider.dart';
+import 'package:catharsis_cards/pages/main_settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,17 +16,14 @@ class ProfilePageWidget extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
-  Set<String> _selectedCategories = {};
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize with current selected categories from state
-    final cardState = ref.read(cardStateProvider);
-    _selectedCategories = Set.from(cardState.selectedCategories);
-  }
 
   void _showCategoryFilterDialog() {
+    final cardState = ref.read(cardStateProvider);
+    // Normalize the selected categories for comparison
+    Set<String> tempSelected = cardState.selectedCategories
+        .map((cat) => cat.replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toSet();
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -45,21 +40,23 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children:
-                      QuestionCategories.getAllCategories().map((category) {
+                  children: QuestionCategories.getAllCategories().map((category) {
+                    // Normalize the category for comparison
+                    final normalizedCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
+                    
                     return CheckboxListTile(
                       title: Text(
                         category,
                         style: GoogleFonts.raleway(fontSize: 16),
                       ),
-                      value: _selectedCategories.contains(category),
+                      value: tempSelected.contains(normalizedCategory),
                       activeColor: category.toCategoryColor(),
                       onChanged: (bool? value) {
                         setDialogState(() {
                           if (value ?? false) {
-                            _selectedCategories.add(category);
+                            tempSelected.add(normalizedCategory);
                           } else {
-                            _selectedCategories.remove(category);
+                            tempSelected.remove(normalizedCategory);
                           }
                         });
                       },
@@ -71,7 +68,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                 TextButton(
                   onPressed: () {
                     setDialogState(() {
-                      _selectedCategories.clear();
+                      tempSelected.clear();
                     });
                   },
                   child: Text(
@@ -88,16 +85,14 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                 ElevatedButton(
                   onPressed: () {
                     // Update the global state with selected categories
-                    ref
-                        .read(cardStateProvider.notifier)
-                        .updateSelectedCategories(_selectedCategories);
+                    ref.read(cardStateProvider.notifier).updateSelectedCategories(tempSelected);
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          _selectedCategories.isEmpty
-                              ? 'Showing all categories'
-                              : 'Filters applied: ${_selectedCategories.length} categories selected',
+                          tempSelected.isEmpty 
+                            ? 'Showing all categories' 
+                            : 'Filters applied: ${tempSelected.length} categories selected',
                         ),
                         duration: Duration(seconds: 2),
                       ),
@@ -121,7 +116,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final authState = ref.watch(authStateProvider);
     final authService = ref.read(authServiceProvider);
     final cardState = ref.watch(cardStateProvider);
-
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -129,14 +124,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
             colors: ref.watch(themeProvider).themeName == 'dark'
                 ? [Color(0xFF1E1E1E), Color(0xFF121212)]
                 : ref.watch(themeProvider).themeName == 'light'
-                    ? [
-                        Color.fromARGB(235, 201, 197, 197),
-                        Color.fromARGB(255, 255, 255, 255)
-                      ]
-                    : [
-                        Color.fromARGB(235, 208, 164, 180),
-                        Color.fromARGB(255, 140, 198, 255)
-                      ],
+                    ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
+                    : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
             stops: [0.0, 1.0],
             begin: AlignmentDirectional(0.6, -0.34),
             end: AlignmentDirectional(-1.0, 0.34),
@@ -164,10 +153,10 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                         Stack(
                           children: [
                             IconButton(
-                              icon: Icon(Icons.tune, color: Colors.white, size: 32,),
+                              icon: Icon(Icons.tune, color: Colors.white, size: 32),
                               onPressed: _showCategoryFilterDialog,
                             ),
-                            if (_selectedCategories.isNotEmpty)
+                            if (cardState.selectedCategories.isNotEmpty)
                               Positioned(
                                 right: 8,
                                 top: 8,
@@ -178,7 +167,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
-                                    '${_selectedCategories.length}',
+                                    '${cardState.selectedCategories.length}',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
@@ -190,23 +179,18 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           ],
                         ),
                         IconButton(
-                          icon: Icon(Icons.settings,
-                              color: Colors.white, size: 32),
+                          icon: Icon(Icons.settings, color: Colors.white, size: 32),
                           onPressed: () {
                             Navigator.push(
                               context,
                               PageRouteBuilder(
-                                pageBuilder:
-                                    (context, animation, secondaryAnimation) =>
-                                        SettingsMenuPage(),
-                                transitionsBuilder: (context, animation,
-                                    secondaryAnimation, child) {
+                                pageBuilder: (context, animation, secondaryAnimation) => SettingsMenuPage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
                                   const begin = Offset(1.0, 0.0);
                                   const end = Offset.zero;
                                   const curve = Curves.ease;
 
-                                  var tween = Tween(begin: begin, end: end)
-                                      .chain(CurveTween(curve: curve));
+                                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
 
                                   return SlideTransition(
                                     position: animation.drive(tween),
@@ -222,7 +206,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                   ],
                 ),
               ),
-
+              
               // Profile Content
               Expanded(
                 child: SingleChildScrollView(
@@ -246,9 +230,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                         loading: () => CircularProgressIndicator(),
                         error: (_, __) => Icon(Icons.error),
                       ),
-
+                      
                       SizedBox(height: 20),
-
+                      
                       // User Email
                       authState.when(
                         data: (user) => Text(
@@ -261,9 +245,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                         loading: () => Text('Loading...'),
                         error: (_, __) => Text('Error'),
                       ),
-
+                      
                       SizedBox(height: 40),
-
+                      
                       // Statistics Cards
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -282,11 +266,11 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           ),
                         ],
                       ),
-
+                      
                       SizedBox(height: 20),
-
+                      
                       // Active Filters Info
-                      if (_selectedCategories.isNotEmpty)
+                      if (cardState.selectedCategories.isNotEmpty)
                         Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(
@@ -308,30 +292,29 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
-                                  children: _selectedCategories.map((category) {
+                                  children: cardState.selectedCategories.map((category) {
+                                    // Display the normalized category name
+                                    final displayCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
+                                    
                                     return Chip(
                                       label: Text(
-                                        category,
+                                        displayCategory,
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
                                         ),
                                       ),
-                                      backgroundColor:
-                                          category.toCategoryColor(),
+                                      backgroundColor: displayCategory.toCategoryColor(),
                                       deleteIcon: Icon(
                                         Icons.close,
                                         size: 18,
                                         color: Colors.white,
                                       ),
                                       onDeleted: () {
-                                        setState(() {
-                                          _selectedCategories.remove(category);
-                                        });
-                                        ref
-                                            .read(cardStateProvider.notifier)
-                                            .updateSelectedCategories(
-                                                _selectedCategories);
+                                        final newSelected = Set<String>.from(cardState.selectedCategories);
+                                        newSelected.remove(category);
+                                        ref.read(cardStateProvider.notifier)
+                                            .updateSelectedCategories(newSelected);
                                       },
                                     );
                                   }).toList(),
@@ -351,8 +334,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
