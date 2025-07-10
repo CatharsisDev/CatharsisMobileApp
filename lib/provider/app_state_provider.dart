@@ -1,11 +1,10 @@
 import 'dart:math';
-import 'package:catharsis_cards/services/user_beahvior_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../questions_model.dart';
 import 'pop_up_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
-import '../services/user_beahvior_service.dart';
+import 'package:catharsis_cards/services/user_behavior_service.dart';
 
 const int SWIPE_LIMIT = 20;
 const Duration RESET_DURATION = Duration(minutes: 20);
@@ -74,9 +73,9 @@ class CardState {
       }).toList();
     }
 
-    filtered = filtered.where((q) => !likedQuestions.contains(q)).toList();
+    // Don't filter out liked questions - we want to show them with heart filled
     final unseen = filtered.where((q) => !seenQuestions.contains(q)).toList();
-    final seen   = filtered.where((q) =>  seenQuestions.contains(q)).toList();
+    final seen = filtered.where((q) => seenQuestions.contains(q)).toList();
     return [...unseen, ...seen];
   }
 
@@ -128,7 +127,27 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> _loadLiked() async {
-    state = state.copyWith(likedQuestions: likedBox.values.toList());
+    // First load from local Hive
+    final localLiked = likedBox.values.toList();
+    state = state.copyWith(likedQuestions: localLiked);
+    
+    // Then sync with Firestore
+    try {
+      final firestoreLiked = await UserBehaviorService.getLikedQuestions();
+      if (firestoreLiked.isNotEmpty) {
+        // Merge with local and update
+        final mergedSet = {...localLiked, ...firestoreLiked};
+        final mergedList = mergedSet.toList();
+        
+        // Update local storage
+        await likedBox.clear();
+        await likedBox.addAll(mergedList);
+        
+        state = state.copyWith(likedQuestions: mergedList);
+      }
+    } catch (e) {
+      print('Error syncing liked questions with Firestore: $e');
+    }
   }
 
   Future<void> _loadCache() async {
@@ -248,33 +267,52 @@ class CardStateNotifier extends StateNotifier<CardState> {
     _maybeGenerateMore();
   }
 
-  /// **Important**: Clone each `Question` so you're not re-using
-  /// a HiveObject bound to another box.
-  Future<void> toggleLiked(Question q) async {
-    final list = List<Question>.from(state.likedQuestions);
+  /// Toggle liked status without changing current card
+  void toggleLiked(Question q) async {
+    // Create normalized comparison for checking existence
     final normCat = _normalizeCategory(q.category);
-    final exists = list.any((x) =>
-        x.text == q.text && _normalizeCategory(x.category) == normCat);
-
-    bool isLiking = !exists;
-
-    if (exists) {
-      list.removeWhere((x) =>
-          x.text == q.text && _normalizeCategory(x.category) == normCat);
+    final currentLikes = state.likedQuestions;
+    
+    // Check if already liked
+    final existingIndex = currentLikes.indexWhere((liked) =>
+        liked.text == q.text && 
+        _normalizeCategory(liked.category) == normCat);
+    
+    final isCurrentlyLiked = existingIndex != -1;
+    
+    // Create new list of likes
+    List<Question> updatedLikes;
+    if (isCurrentlyLiked) {
+      // Remove from likes
+      updatedLikes = List<Question>.from(currentLikes)
+        ..removeAt(existingIndex);
     } else {
-      // create a brand‐new object for Hive
-      list.add(Question(text: q.text, category: q.category));
+      // Add to likes (create new instance to avoid Hive issues)
+      updatedLikes = [
+        ...currentLikes,
+        Question(text: q.text, category: q.category)
+      ];
     }
-
-    // Track the like/unlike action
-    await UserBehaviorService.trackQuestionLike(
-      question: q,
-      isLiked: isLiking,
-    );
-
-    await likedBox.clear();
-    await likedBox.addAll(list);
-    state = state.copyWith(likedQuestions: list);
+    
+    // Update state immediately for UI
+    state = state.copyWith(likedQuestions: updatedLikes);
+    
+    // Update storage and Firestore asynchronously
+    () async {
+      try {
+        // Update local Hive storage
+        await likedBox.clear();
+        await likedBox.addAll(updatedLikes);
+        
+        // Update Firestore
+        await UserBehaviorService.trackQuestionLike(
+          question: q,
+          isLiked: !isCurrentlyLiked,
+        );
+      } catch (e) {
+        print('Error updating likes: $e');
+      }
+    }();
   }
 }
 

@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
-import '../../services/user_beahvior_service.dart';
+import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/gamecard_widget.dart';
@@ -321,7 +321,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 );
                               },
                               onLeftSwipe: (index) {
-                                // Pass direction and velocity to handleCardSwiped
+                                // Just track swipe behavior, don't save
                                 notifier.handleCardSwiped(
                                   index, 
                                   direction: 'left', 
@@ -329,12 +329,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 );
                               },
                               onRightSwipe: (index) {
-                                // Right swipe: like then advance
-                                final questions = cardState.activeQuestions;
-                                if (questions.isNotEmpty) {
-                                  final q = questions[index % questions.length];
-                                  notifier.toggleLiked(q);
-                                }
+                                // Just track swipe behavior, don't save
                                 notifier.handleCardSwiped(
                                   index,
                                   direction: 'right',
@@ -363,8 +358,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         IconButton(
                           icon: FaIcon(
                             isCurrentQuestionLiked
-                                ? FontAwesomeIcons.solidBookmark
-                                : FontAwesomeIcons.bookmark,
+                                ? FontAwesomeIcons.solidHeart
+                                : FontAwesomeIcons.heart,
                             color: isCurrentQuestionLiked 
                                 ? Colors.red
                                 : Colors.white,
@@ -374,7 +369,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             if (cardState.hasReachedSwipeLimit) {
                               ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
                             } else if (cardState.currentQuestion != null) {
-                              notifier.toggleLiked(cardState.currentQuestion!);
+                              final question = cardState.currentQuestion!;
+                              // Just toggle the like, don't do anything else
+                              notifier.toggleLiked(question);
                             }
                           },
                         ),

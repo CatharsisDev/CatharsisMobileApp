@@ -79,7 +79,7 @@ class SettingsMenuPage extends ConsumerWidget {
                     
                     // Saved Cards
                     _buildSettingsItem(
-                      icon: FontAwesomeIcons.bookmark,
+                      icon: FontAwesomeIcons.heart,
                       title: 'Saved',
                       onTap: () {
                         Navigator.push(
