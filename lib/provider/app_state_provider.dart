@@ -36,6 +36,11 @@ class CardState {
     this.swipeResetTime,
   });
 
+  // Add the getter here, right after constructor
+  bool get hasReachedSwipeLimit {
+    return swipeResetTime != null && DateTime.now().isBefore(swipeResetTime!);
+  }
+
   CardState copyWith({
     List<Question>? allQuestions,
     List<Question>? likedQuestions,
@@ -73,19 +78,33 @@ class CardState {
       }).toList();
     }
 
-    // Don't filter out liked questions - we want to show them with heart filled
-    final unseen = filtered.where((q) => !seenQuestions.contains(q)).toList();
-    final seen = filtered.where((q) => seenQuestions.contains(q)).toList();
-    return [...unseen, ...seen];
+    // Remove already seen questions
+    return filtered.where((q) => !seenQuestions.contains(q)).toList();
   }
 
   Question? get currentQuestion {
+    // This will be set from the widget based on the swiper's current index
     final list = activeQuestions;
     if (list.isEmpty) return null;
-    return list[currentIndex.clamp(0, list.length - 1)];
+    // For now, return the first unseen question or the first question
+    final unseenIndex = list.indexWhere((q) => !seenQuestions.contains(q));
+    return list[unseenIndex >= 0 ? unseenIndex : 0];
   }
 
-  bool get hasReachedSwipeLimit => swipeResetTime != null && DateTime.now().isBefore(swipeResetTime!);
+  int get startingIndex {
+    final active = activeQuestions;
+    if (active.isEmpty) return 0;
+    
+    // Find the first unseen question
+    for (int i = 0; i < active.length; i++) {
+      if (!seenQuestions.contains(active[i])) {
+        return i;
+      }
+    }
+    
+    // If all are seen, start from the beginning
+    return 0;
+  }
 }
 
 class CardStateNotifier extends StateNotifier<CardState> {
@@ -107,6 +126,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box swipeBox;
   late Box<Question> cacheBox;
   DateTime? _currentQuestionStartTime;
+  List<Question>? _pendingSeenQuestions;
 
   Future<void> _initialize() async {
     state = state.copyWith(isLoading: true);
@@ -233,33 +253,36 @@ class CardStateNotifier extends StateNotifier<CardState> {
     );
   }
 
-  void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
+  void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
     final qs = state.activeQuestions;
     if (qs.isEmpty) return;
     
     final i = index % qs.length;
     final currentQuestion = qs[i];
     
-    // Track view duration if we have a start time
-    if (_currentQuestionStartTime != null) {
-      final duration = DateTime.now().difference(_currentQuestionStartTime!).inSeconds;
-      await UserBehaviorService.trackQuestionView(
-        question: currentQuestion,
-        viewDuration: duration,
-      );
-    }
+    // Track asynchronously without blocking
+    () async {
+      if (_currentQuestionStartTime != null) {
+        final duration = DateTime.now().difference(_currentQuestionStartTime!).inSeconds;
+        await UserBehaviorService.trackQuestionView(
+          question: currentQuestion,
+          viewDuration: duration,
+        );
+      }
 
-    // Track swipe behavior
-    await UserBehaviorService.trackSwipeBehavior(
-      question: currentQuestion,
-      direction: direction,
-      swipeVelocity: velocity,
-    );
+      await UserBehaviorService.trackSwipeBehavior(
+        question: currentQuestion,
+        direction: direction,
+        swipeVelocity: velocity,
+      );
+    }();
     
+    // Add to seen questions for persistence
     final seen = List<Question>.from(state.seenQuestions);
-    if (!seen.contains(currentQuestion)) seen.add(currentQuestion);
-    
-    state = state.copyWith(currentIndex: i, seenQuestions: seen);
+    if (!seen.contains(currentQuestion)) {
+      seen.add(currentQuestion);
+      state = state.copyWith(seenQuestions: seen);
+    }
     
     // Set start time for next question
     _currentQuestionStartTime = DateTime.now();
@@ -313,6 +336,14 @@ class CardStateNotifier extends StateNotifier<CardState> {
         print('Error updating likes: $e');
       }
     }();
+  }
+  
+  // Method to commit pending seen questions
+  void commitSeenQuestions() {
+    if (_pendingSeenQuestions != null) {
+      state = state.copyWith(seenQuestions: _pendingSeenQuestions);
+      _pendingSeenQuestions = null;
+    }
   }
 }
 

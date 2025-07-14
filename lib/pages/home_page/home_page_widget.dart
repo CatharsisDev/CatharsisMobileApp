@@ -33,6 +33,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   late CardSwiperController _cardController;
   late AnimationController _handController;
   late Animation<Offset> _swipeAnimation;
+  int _currentCardIndex = 0; // Track current card index locally
 
   @override
   void initState() {
@@ -81,59 +82,72 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 
+  /// UPDATED: normalize display → key mapping so the checkbox reflects
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
-    final current = ref.read(cardStateProvider).selectedCategories;
+    // these are your normalized keys already in state
+    final currentKeys = ref.read(cardStateProvider).selectedCategories;
     
     showModalBottomSheet(
       context: context,
       builder: (_) {
-        final categories = QuestionCategories.getAllCategories();
-        final tempSelected = Set<String>.from(current);
+        // display strings (may contain newlines)
+        final displayCats = QuestionCategories.getAllCategories();
+        // clone existing normalized keys
+        final tempSelectedKeys = Set<String>.from(currentKeys);
 
         return StatefulBuilder(
-          builder: (_, setState) {
+          builder: (context, setState) {
             return SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Filter Categories',
-                      style: GoogleFonts.raleway(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Filter Categories',
+                    style: GoogleFonts.raleway(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  ...categories.map((cat) => CheckboxListTile(
-                    title: Text(cat),
-                    value: tempSelected.contains(cat),
-                    onChanged: (v) {
-                      setState(() {
-                        if (v == true) {
-                          tempSelected.add(cat);
-                        } else {
-                          tempSelected.remove(cat);
-                        }
-                      });
-                    },
-                  )),
+                  const Divider(),
+                  // build a checkbox for each display string,
+                  // but test and mutate against its normalized key
+                  ...displayCats.map((display) {
+                    final key = QuestionCategories.normalizeCategory(display);
+                    return CheckboxListTile(
+                      title: Text(display),
+                      value: tempSelectedKeys.contains(key),
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true)
+                            tempSelectedKeys.add(key);
+                          else
+                            tempSelectedKeys.remove(key);
+                        });
+                      },
+                    );
+                  }).toList(),
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         TextButton(
-                          onPressed: () => setState(() => tempSelected.clear()),
+                          onPressed: () =>
+                              setState(() => tempSelectedKeys.clear()),
                           child: const Text('Clear All'),
                         ),
                         const Spacer(),
-                        TextButton(
+                        ElevatedButton(
                           onPressed: () {
-                            notifier.updateSelectedCategories(tempSelected);
+                            notifier.updateSelectedCategories(
+                                tempSelectedKeys);
                             Navigator.pop(context);
                           },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD0A4B4),
+                          ),
                           child: const Text('Apply'),
                         ),
                       ],
@@ -155,13 +169,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final showTutorial = ref.watch(tutorialProvider);
     final tutorialNotifier = ref.read(tutorialProvider.notifier);
 
-    // Check if current question is liked
-    final isCurrentQuestionLiked = cardState.currentQuestion != null &&
+    // locate the current question based on our local index
+    final questions = cardState.activeQuestions;
+    final currentQuestion = questions.isEmpty
+        ? null
+        : questions[_currentCardIndex % questions.length];
+    final isCurrentLiked = currentQuestion != null &&
         cardState.likedQuestions.any((q) =>
-            q.text == cardState.currentQuestion!.text &&
-            q.category == cardState.currentQuestion!.category);
+            q.text == currentQuestion.text &&
+            q.category == currentQuestion.category);
 
-    // Listen for popup trigger
+    // popup trigger
     ref.listen<bool>(popUpProvider, (_, next) {
       if (next) {
         _showExtraPackagePopUp(context, cardState.swipeResetTime);
@@ -182,7 +200,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             body: SafeArea(
               child: Stack(
                 children: [
-                  // Background gradient
+                  // BG gradient
                   Container(
                     width: MediaQuery.sizeOf(context).width,
                     height: MediaQuery.sizeOf(context).height,
@@ -193,7 +211,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             : ref.watch(themeProvider).themeName == 'light'
                                 ? [
                                     const Color.fromARGB(235, 201, 197, 197),
-                                    const Color.fromARGB(255, 255, 255, 255)
+                                    Colors.white
                                   ]
                                 : [
                                     const Color.fromARGB(235, 208, 164, 180),
@@ -205,148 +223,141 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       ),
                     ),
                   ),
-                  
-                  // Card Stack
+
+                  // card stack
                   if (cardState.isLoading)
                     const Center(child: CircularProgressIndicator())
                   else
                     Align(
                       alignment: const AlignmentDirectional(0.0, 0.0),
-                      child: Container(
+                      child: SizedBox(
                         width: MediaQuery.sizeOf(context).width * 4.0,
                         height: 485.0,
-                        child: Stack(
-                          alignment: const AlignmentDirectional(0.0, 0.0),
-                          children: [
-                            FlutterFlowSwipeableStack(
-                              controller: _cardController,
-                              itemCount: cardState.activeQuestions.isEmpty 
-                                  ? 1 
-                                  : cardState.activeQuestions.length,
-                              itemBuilder: (context, index) {
-                                final questions = cardState.activeQuestions;
-                                if (questions.isEmpty) {
-                                  return Center(
-                                    child: Text(
-                                      'No questions available',
-                                      style: GoogleFonts.raleway(
-                                        color: Colors.white,
-                                        fontSize: 20.0,
-                                      ),
-                                    ),
-                                  );
-                                }
-                                
-                                final normalizedIndex = index % questions.length;
-                                final question = questions[normalizedIndex];
-                                
-                                return Stack(
-                                  children: [
-                                    Align(
-                                      alignment: const AlignmentDirectional(0.0, 0.0),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.2),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 5),
-                                              spreadRadius: 1,
-                                            ),
-                                          ],
+                        child: FlutterFlowSwipeableStack(
+                          controller: _cardController,
+                          itemCount: questions.isEmpty ? 1 : questions.length,
+                          itemBuilder: (ctx, i) {
+                            if (questions.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'No questions available',
+                                  style: GoogleFonts.raleway(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              );
+                            }
+                            final idx = i % questions.length;
+                            final q = questions[idx];
+
+                            return Stack(
+                              children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 5),
+                                          spreadRadius: 1,
                                         ),
-                                        child: GamecardWidget(),
-                                      ),
+                                      ],
                                     ),
-                                    Align(
-                                      alignment: const AlignmentDirectional(0.0, 0.0),
-                                      child: Container(
-                                        width: 400.0,
-                                        height: 400.0,
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            Align(
-                                              alignment: const AlignmentDirectional(0.0, 0.0),
-                                              child: Padding(
-                                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                                    20.0, 20.0, 20.0, 60.0),
-                                                child: Text(
-                                                  question.text,
-                                                  textAlign: TextAlign.center,
-                                                  style: GoogleFonts.raleway(
-                                                    color: Colors.white,
-                                                    fontSize: 28.0,
-                                                    letterSpacing: 0.2,
-                                                    shadows: [
-                                                      Shadow(
-                                                        color: FlutterFlowTheme.of(context)
-                                                            .secondaryText,
-                                                        offset: const Offset(2.0, 2.0),
-                                                        blurRadius: 2.0,
-                                                      )
-                                                    ],
-                                                  ),
-                                                ),
+                                    child: GamecardWidget(),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: 400,
+                                    height: 400,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                20, 20, 20, 60),
+                                            child: Text(
+                                              q.text,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.raleway(
+                                                color: Colors.white,
+                                                fontSize: 28,
+                                                letterSpacing: 0.2,
+                                                shadows: [
+                                                  Shadow(
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .secondaryText,
+                                                    offset:
+                                                        const Offset(2, 2),
+                                                    blurRadius: 2,
+                                                  )
+                                                ],
                                               ),
                                             ),
-                                            Positioned(
-                                              left: 0,
-                                              right: 0,
-                                              bottom: 20,
-                                              child: Text(
-                                                question.category,
-                                                textAlign: TextAlign.center,
-                                                style: GoogleFonts.raleway(
-                                                  color: Colors.white,
-                                                  fontSize: 14.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.0,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: FlutterFlowTheme.of(context)
-                                                          .secondaryText,
-                                                      offset: const Offset(2.0, 2.0),
-                                                      blurRadius: 2.0,
-                                                    )
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
+                                        Positioned(
+                                          left: 0,
+                                          right: 0,
+                                          bottom: 20,
+                                          child: Text(
+                                            q.category,
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.raleway(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: [
+                                                Shadow(
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryText,
+                                                  offset:
+                                                      const Offset(2, 2),
+                                                  blurRadius: 2,
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                );
-                              },
-                              onLeftSwipe: (index) {
-                                // Just track swipe behavior, don't save
-                                notifier.handleCardSwiped(
-                                  index, 
-                                  direction: 'left', 
-                                  velocity: 0.5
-                                );
-                              },
-                              onRightSwipe: (index) {
-                                // Just track swipe behavior, don't save
-                                notifier.handleCardSwiped(
-                                  index,
-                                  direction: 'right',
-                                  velocity: 0.5
-                                );
-                              },
-                              loop: true,
-                              cardDisplayCount: 4,
-                              scale: 0.9,
-                              threshold: 0.7,
-                            ),
-                          ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                          onLeftSwipe: (i) {
+                            setState(() => _currentCardIndex = i + 1);
+                            notifier.handleCardSwiped(
+                              i,
+                              direction: 'left',
+                              velocity: 1.0,
+                            );
+                          },
+                          onRightSwipe: (i) {
+                            setState(() => _currentCardIndex = i + 1);
+                            notifier.handleCardSwiped(
+                              i,
+                              direction: 'right',
+                              velocity: 1.0,
+                            );
+                          },
+                          loop: true,
+                          cardDisplayCount: 4,
+                          scale: 0.9,
+                          threshold: 0.7,
                         ),
                       ),
                     ),
-                  
-                  // Heart and Share Icons below card stack
+
+                  // heart & share
                   Positioned(
                     bottom: 50,
                     left: 0,
@@ -354,56 +365,55 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Heart Icon
                         IconButton(
                           icon: FaIcon(
-                            isCurrentQuestionLiked
+                            isCurrentLiked
                                 ? FontAwesomeIcons.solidHeart
                                 : FontAwesomeIcons.heart,
-                            color: isCurrentQuestionLiked 
-                                ? Colors.red
-                                : Colors.white,
-                            size: 30.0,
+                            color:
+                                isCurrentLiked ? Colors.red : Colors.white,
+                            size: 30,
                           ),
                           onPressed: () {
                             if (cardState.hasReachedSwipeLimit) {
-                              ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
-                            } else if (cardState.currentQuestion != null) {
-                              final question = cardState.currentQuestion!;
-                              // Just toggle the like, don't do anything else
-                              notifier.toggleLiked(question);
+                              ref
+                                  .read(popUpProvider.notifier)
+                                  .showPopUp(cardState.swipeResetTime);
+                            } else if (currentQuestion != null) {
+                              notifier.toggleLiked(currentQuestion);
                             }
                           },
                         ),
                         const SizedBox(width: 40),
-                        // Share Icon
                         IconButton(
                           icon: const Icon(
                             Icons.ios_share,
                             color: Colors.white,
-                            size: 30.0,
+                            size: 30,
                           ),
                           onPressed: () {
-                            if (cardState.currentQuestion != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Share feature coming soon!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Share feature coming soon!'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
                           },
                         ),
                       ],
                     ),
                   ),
-                  
-                  // Filter preferences icon
+
+                  // prefs icon
                   Positioned(
                     right: 10,
                     top: 10,
                     child: IconButton(
-                      icon: const Icon(Icons.tune, color: Colors.white, size: 32),
+                      icon: const Icon(
+                        Icons.tune,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                       onPressed: _openPreferences,
                     ),
                   ),
@@ -413,7 +423,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           ),
         ),
 
-        // Tutorial Overlay
+        // tutorial overlay
         if (showTutorial)
           Positioned.fill(
             child: Container(
@@ -421,16 +431,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      "Swipe left and right on cards to navigate!",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.raleway(
-                        color: Colors.white,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    "Swipe left and right on cards to navigate!",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.raleway(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
                   ),
                   SlideTransition(
@@ -441,39 +448,33 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       color: Colors.white,
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      "Tap the heart icon to like a card and save it for later!",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.raleway(
-                        color: Colors.white,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Tap the heart icon to like a card and save it for later!",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.raleway(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
                   ),
-                  const SizedBox(height: 20.0),
+                  const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      tutorialNotifier.hideTutorial();
-                    },
+                    onPressed: () => tutorialNotifier.hideTutorial(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 30.0,
-                        vertical: 10.0,
+                          horizontal: 30, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
                     child: Text(
                       "Got it!",
                       style: GoogleFonts.raleway(
                         color: Colors.white,
-                        fontSize: 16.0,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
