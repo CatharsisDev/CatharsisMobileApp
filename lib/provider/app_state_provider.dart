@@ -126,7 +126,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box swipeBox;
   late Box<Question> cacheBox;
   DateTime? _currentQuestionStartTime;
-  List<Question>? _pendingSeenQuestions;
+  final List<Question> _internalSeenQuestions = []; // Track seen questions internally
 
   Future<void> _initialize() async {
     state = state.copyWith(isLoading: true);
@@ -212,7 +212,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   void _maybeGenerateMore() {
     if (state.allQuestions.isEmpty) return;
-    final pct = state.seenQuestions.length / state.allQuestions.length;
+    final pct = _internalSeenQuestions.length / state.allQuestions.length;
     if (pct > 0.8) {
       QuestionsService.loadQuestionsWithAI().then((newQs) {
         cacheBox.addAll(newQs);
@@ -242,6 +242,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       currentIndex: 0,
       seenQuestions: [],
     );
+    _internalSeenQuestions.clear();
   }
 
   void updateSelectedCategories(Set<String> cats) {
@@ -251,6 +252,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       currentIndex: 0,
       seenQuestions: [],
     );
+    _internalSeenQuestions.clear();
   }
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
@@ -277,11 +279,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
       );
     }();
     
-    // Add to seen questions for persistence
-    final seen = List<Question>.from(state.seenQuestions);
-    if (!seen.contains(currentQuestion)) {
-      seen.add(currentQuestion);
-      state = state.copyWith(seenQuestions: seen);
+    // Track seen questions internally without updating state
+    if (!_internalSeenQuestions.contains(currentQuestion)) {
+      _internalSeenQuestions.add(currentQuestion);
     }
     
     // Set start time for next question
@@ -337,13 +337,15 @@ class CardStateNotifier extends StateNotifier<CardState> {
       }
     }();
   }
-  
-  // Method to commit pending seen questions
-  void commitSeenQuestions() {
-    if (_pendingSeenQuestions != null) {
-      state = state.copyWith(seenQuestions: _pendingSeenQuestions);
-      _pendingSeenQuestions = null;
-    }
+
+  Future<void> loadMoreQuestions() async {
+    // Update state with internally tracked seen questions
+    state = state.copyWith(seenQuestions: List.from(_internalSeenQuestions));
+    
+    final newQs = await QuestionsService.loadQuestionsWithAI();
+    final updatedQuestions = [...state.allQuestions, ...newQs];
+    await cacheBox.addAll(newQs);
+    state = state.copyWith(allQuestions: updatedQuestions);
   }
 }
 

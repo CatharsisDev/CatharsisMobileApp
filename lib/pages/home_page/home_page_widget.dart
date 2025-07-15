@@ -33,7 +33,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   late CardSwiperController _cardController;
   late AnimationController _handController;
   late Animation<Offset> _swipeAnimation;
-  int _currentCardIndex = 0; // Track current card index locally
+  int _currentCardIndex = 0;
+  List<Question>? _cachedQuestions;
+  String? _cacheKey;
 
   @override
   void initState() {
@@ -82,18 +84,14 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 
-  /// UPDATED: normalize display → key mapping so the checkbox reflects
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
-    // these are your normalized keys already in state
     final currentKeys = ref.read(cardStateProvider).selectedCategories;
     
     showModalBottomSheet(
       context: context,
       builder: (_) {
-        // display strings (may contain newlines)
         final displayCats = QuestionCategories.getAllCategories();
-        // clone existing normalized keys
         final tempSelectedKeys = Set<String>.from(currentKeys);
 
         return StatefulBuilder(
@@ -111,8 +109,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     ),
                   ),
                   const Divider(),
-                  // build a checkbox for each display string,
-                  // but test and mutate against its normalized key
                   ...displayCats.map((display) {
                     final key = QuestionCategories.normalizeCategory(display);
                     return CheckboxListTile(
@@ -141,6 +137,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         const Spacer(),
                         ElevatedButton(
                           onPressed: () {
+                            setState(() {
+                              _cachedQuestions = null;
+                              _cacheKey = null;
+                              _currentCardIndex = 0;
+                            });
                             notifier.updateSelectedCategories(
                                 tempSelectedKeys);
                             Navigator.pop(context);
@@ -162,6 +163,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 
+  String _generateCacheKey(CardState state) {
+    return '${state.selectedCategories.join(',')}_${state.currentCategory}_${state.allQuestions.length}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cardState = ref.watch(cardStateProvider);
@@ -169,8 +174,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final showTutorial = ref.watch(tutorialProvider);
     final tutorialNotifier = ref.read(tutorialProvider.notifier);
 
-    // locate the current question based on our local index
-    final questions = cardState.activeQuestions;
+    // Generate cache key
+    final newCacheKey = _generateCacheKey(cardState);
+    
+    // Update cached questions only if necessary
+    if (_cachedQuestions == null || _cacheKey != newCacheKey) {
+      _cachedQuestions = List<Question>.from(cardState.activeQuestions);
+      _cacheKey = newCacheKey;
+      _currentCardIndex = 0;
+    }
+
+    final questions = _cachedQuestions!;
     final currentQuestion = questions.isEmpty
         ? null
         : questions[_currentCardIndex % questions.length];
@@ -179,7 +193,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             q.text == currentQuestion.text &&
             q.category == currentQuestion.category);
 
-    // popup trigger
     ref.listen<bool>(popUpProvider, (_, next) {
       if (next) {
         _showExtraPackagePopUp(context, cardState.swipeResetTime);
@@ -234,6 +247,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         width: MediaQuery.sizeOf(context).width * 4.0,
                         height: 485.0,
                         child: FlutterFlowSwipeableStack(
+                          key: ValueKey(_cacheKey),
                           controller: _cardController,
                           itemCount: questions.isEmpty ? 1 : questions.length,
                           itemBuilder: (ctx, i) {
@@ -335,21 +349,27 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           },
                           onLeftSwipe: (i) {
                             setState(() => _currentCardIndex = i + 1);
-                            notifier.handleCardSwiped(
-                              i,
-                              direction: 'left',
-                              velocity: 1.0,
-                            );
+                            // Delay the state update to avoid rebuilding during swipe
+                            Future.microtask(() {
+                              notifier.handleCardSwiped(
+                                i,
+                                direction: 'left',
+                                velocity: 1.0,
+                              );
+                            });
                           },
                           onRightSwipe: (i) {
                             setState(() => _currentCardIndex = i + 1);
-                            notifier.handleCardSwiped(
-                              i,
-                              direction: 'right',
-                              velocity: 1.0,
-                            );
+                            // Delay the state update to avoid rebuilding during swipe
+                            Future.microtask(() {
+                              notifier.handleCardSwiped(
+                                i,
+                                direction: 'right',
+                                velocity: 1.0,
+                              );
+                            });
                           },
-                          loop: true,
+                          loop: false,
                           cardDisplayCount: 4,
                           scale: 0.9,
                           threshold: 0.7,
