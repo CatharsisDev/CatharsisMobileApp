@@ -62,4 +62,15 @@ class QuestionsService {
     
     return allQuestions..shuffle();
   }
+
+  static Future<List<Question>> generateAdditionalQuestions({int countPerCategory = 25}) async {
+    List<Question> aiQuestions = [];
+    final categories = ['Love and Intimacy', 'Spirituality', 'Society', 'Interactions and Relationships', 'Personal Development'];
+    for (String category in categories) {
+      final normalizedCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final aiQuestionsBatch = await OpenAIService.generateQuestions(category: normalizedCategory, count: countPerCategory);
+      aiQuestions.addAll(aiQuestionsBatch);
+    }
+    return aiQuestions;
+  }
 }
