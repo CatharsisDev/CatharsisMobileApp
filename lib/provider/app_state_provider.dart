@@ -78,8 +78,9 @@ class CardState {
       }).toList();
     }
 
-    // Remove already seen questions
-    return filtered.where((q) => !seenQuestions.contains(q)).toList();
+    // Don't filter out seen questions - this was causing the card switching issue
+    // Instead, we'll handle seen questions differently
+    return filtered;
   }
 
   Question? get currentQuestion {
@@ -125,16 +126,18 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box<Question> likedBox;
   late Box swipeBox;
   late Box<Question> cacheBox;
+  late Box<Question> seenBox;
   DateTime? _currentQuestionStartTime;
-  final List<Question> _internalSeenQuestions = []; // Track seen questions internally
 
   Future<void> _initialize() async {
     state = state.copyWith(isLoading: true);
     likedBox = await Hive.openBox<Question>('likedQuestions');
     swipeBox = await Hive.openBox('swipeData');
     cacheBox = await Hive.openBox<Question>('cachedQuestions');
+    seenBox = await Hive.openBox<Question>('seenQuestions');
 
     await _loadLiked();
+    await _loadSeenQuestions();
     await _loadPersonalizedQuestions();
     await _checkReset();
     _maybeGenerateMore();
@@ -168,6 +171,11 @@ class CardStateNotifier extends StateNotifier<CardState> {
     } catch (e) {
       print('Error syncing liked questions with Firestore: $e');
     }
+  }
+
+  Future<void> _loadSeenQuestions() async {
+    final seenQuestions = seenBox.values.toList();
+    state = state.copyWith(seenQuestions: seenQuestions);
   }
 
   Future<void> _loadCache() async {
@@ -212,7 +220,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   void _maybeGenerateMore() {
     if (state.allQuestions.isEmpty) return;
-    final pct = _internalSeenQuestions.length / state.allQuestions.length;
+    final pct = state.seenQuestions.length / state.allQuestions.length;
     if (pct > 0.8) {
       QuestionsService.loadQuestionsWithAI().then((newQs) {
         cacheBox.addAll(newQs);
@@ -242,7 +250,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       currentIndex: 0,
       seenQuestions: [],
     );
-    _internalSeenQuestions.clear();
+    // Clear seen questions when category changes
+    seenBox.clear();
   }
 
   void updateSelectedCategories(Set<String> cats) {
@@ -252,7 +261,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       currentIndex: 0,
       seenQuestions: [],
     );
-    _internalSeenQuestions.clear();
+    // Clear seen questions when categories change
+    seenBox.clear();
   }
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
@@ -279,9 +289,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
       );
     }();
     
-    // Track seen questions internally without updating state
-    if (!_internalSeenQuestions.contains(currentQuestion)) {
-      _internalSeenQuestions.add(currentQuestion);
+    // Add to seen questions for persistence
+    final seen = List<Question>.from(state.seenQuestions);
+    if (!seen.any((q) => q.text == currentQuestion.text && q.category == currentQuestion.category)) {
+      // Create a new instance to avoid Hive conflict
+      final seenQuestion = Question(
+        text: currentQuestion.text,
+        category: currentQuestion.category,
+      );
+      seen.add(seenQuestion);
+      state = state.copyWith(seenQuestions: seen);
+      
+      // Persist to Hive
+      seenBox.add(seenQuestion);
     }
     
     // Set start time for next question
@@ -339,9 +359,6 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> loadMoreQuestions() async {
-    // Update state with internally tracked seen questions
-    state = state.copyWith(seenQuestions: List.from(_internalSeenQuestions));
-    
     final newQs = await QuestionsService.loadQuestionsWithAI();
     final updatedQuestions = [...state.allQuestions, ...newQs];
     await cacheBox.addAll(newQs);
