@@ -154,49 +154,6 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
             ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (i) {
-          setState(() {
-            _currentPage = null;
-            _currentPageName = tabs.keys.toList()[i];
-          });
-        },
-        backgroundColor: Color.fromRGBO(140, 198, 255, 0.7),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: FlutterFlowTheme.of(context).secondaryText,
-        showSelectedLabels: true,
-        showUnselectedLabels: false,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home_outlined,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              Icons.home,
-              size: 24.0,
-              color: Colors.white,
-            ),
-            label: 'Home',
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person_outline,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              Icons.person,
-              size: 24.0,
-              color: Colors.white,
-            ),
-            label: 'Profile',
-            tooltip: '',
-          ),
-        ],
-      ),
     );
   }
 }

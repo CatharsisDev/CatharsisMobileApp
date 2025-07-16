@@ -19,6 +19,8 @@ import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme_settings/theme_settings_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -61,6 +63,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     _cardController.dispose();
     _handController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: ref.watch(themeProvider).themeName == 'dark' ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: ref.watch(themeProvider).themeName == 'dark' ? Brightness.light : Brightness.dark,
+    ));
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
@@ -200,250 +213,175 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     });
 
     return Stack(
-      children: [
-        GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-            key: scaffoldKey,
-            backgroundColor: ref.watch(themeProvider).themeName == 'dark'
-                ? Theme.of(context).scaffoldBackgroundColor
-                : ref.watch(themeProvider).themeName == 'light'
-                    ? const Color.fromARGB(235, 201, 197, 197)
-                    : const Color.fromRGBO(208, 164, 180, 0.95),
-            body: SafeArea(
-              child: Stack(
-                children: [
-                  // BG gradient
-                  Container(
-                    width: MediaQuery.sizeOf(context).width,
-                    height: MediaQuery.sizeOf(context).height,
+      children: <Widget>[
+        cardState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Container(
+              width: MediaQuery.sizeOf(context).width,
+              height: MediaQuery.sizeOf(context).height,
+              child: FlutterFlowSwipeableStack(
+                controller: _cardController,
+                itemCount: questions.isEmpty ? 1 : questions.length,
+                itemBuilder: (ctx, i) {
+                  if (questions.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No questions available',
+                        style: GoogleFonts.raleway(
+                          color: Colors.white,
+                          fontSize: 20,
+                        ),
+                      ),
+                    );
+                  }
+                  final idx = i;
+                  final q = questions[idx];
+                  return Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: ref.watch(themeProvider).themeName == 'dark'
-                            ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
-                            : ref.watch(themeProvider).themeName == 'light'
-                                ? [
-                                    const Color.fromARGB(235, 201, 197, 197),
-                                    Colors.white
-                                  ]
-                                : [
-                                    const Color.fromARGB(235, 208, 164, 180),
-                                    const Color.fromARGB(255, 140, 198, 255)
-                                  ],
+                          ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                          : ref.watch(themeProvider).themeName == 'light'
+                            ? [const Color.fromARGB(235, 201, 197, 197), Colors.white]
+                            : [const Color.fromARGB(235, 208, 164, 180), const Color.fromARGB(255, 140, 198, 255)],
                         stops: const [0.0, 1.0],
                         begin: const AlignmentDirectional(0.6, -0.34),
                         end: const AlignmentDirectional(-1.0, 0.34),
                       ),
                     ),
-                  ),
-
-                  // card stack
-                  if (cardState.isLoading)
-                    const Center(child: CircularProgressIndicator())
-                  else
-                    Align(
-                      alignment: const AlignmentDirectional(0.0, 0.0),
-                      child: SizedBox(
-                        width: MediaQuery.sizeOf(context).width * 4.0,
-                        height: 485.0,
-                        child: FlutterFlowSwipeableStack(
-                          key: ValueKey(_cacheKey),
-                          controller: _cardController,
-                          itemCount: questions.isEmpty ? 1 : questions.length,
-                          itemBuilder: (ctx, i) {
-                            if (questions.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  'No questions available',
-                                  style: GoogleFonts.raleway(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                  ),
-                                ),
-                              );
-                            }
-                            final idx = i % questions.length;
-                            final q = questions[idx];
-
-                            return Stack(
-                              children: [
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 5),
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
-                                    child: GamecardWidget(),
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: SizedBox(
-                                    width: 400,
-                                    height: 400,
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                                20, 20, 20, 60),
-                                            child: Text(
-                                              q.text,
-                                              textAlign: TextAlign.center,
-                                              style: GoogleFonts.raleway(
-                                                color: Colors.white,
-                                                fontSize: 28,
-                                                letterSpacing: 0.2,
-                                                shadows: [
-                                                  Shadow(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .secondaryText,
-                                                    offset:
-                                                        const Offset(2, 2),
-                                                    blurRadius: 2,
-                                                  )
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: 0,
-                                          right: 0,
-                                          bottom: 20,
-                                          child: Text(
-                                            q.category,
-                                            textAlign: TextAlign.center,
-                                            style: GoogleFonts.raleway(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              shadows: [
-                                                Shadow(
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .secondaryText,
-                                                  offset:
-                                                      const Offset(2, 2),
-                                                  blurRadius: 2,
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                          onLeftSwipe: (i) {
-                            setState(() => _currentCardIndex = i + 1);
-                            // Delay the state update to avoid rebuilding during swipe
-                            Future.microtask(() {
-                              notifier.handleCardSwiped(
-                                i,
-                                direction: 'left',
-                                velocity: 1.0,
-                              );
-                            });
-                          },
-                          onRightSwipe: (i) {
-                            setState(() => _currentCardIndex = i + 1);
-                            // Delay the state update to avoid rebuilding during swipe
-                            Future.microtask(() {
-                              notifier.handleCardSwiped(
-                                i,
-                                direction: 'right',
-                                velocity: 1.0,
-                              );
-                            });
-                          },
-                          loop: false,
-                          cardDisplayCount: 4,
-                          scale: 0.9,
-                          threshold: 0.7,
-                        ),
-                      ),
-                    ),
-
-                  // heart & share
-                  Positioned(
-                    bottom: 50,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
                       children: [
-                        IconButton(
-                          icon: FaIcon(
-                            isCurrentLiked
-                                ? FontAwesomeIcons.solidHeart
-                                : FontAwesomeIcons.heart,
-                            color:
-                                isCurrentLiked ? Colors.red : Colors.white,
-                            size: 30,
-                          ),
-                          onPressed: () {
-                            if (cardState.hasReachedSwipeLimit) {
-                              ref
-                                  .read(popUpProvider.notifier)
-                                  .showPopUp(cardState.swipeResetTime);
-                            } else if (currentQuestion != null) {
-                              notifier.toggleLiked(currentQuestion);
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 40),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.ios_share,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Share feature coming soon!'),
-                                duration: Duration(seconds: 2),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                            child: Text(
+                              q.text,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.raleway(
+                                color: Colors.white,
+                                fontSize: 32,
+                                letterSpacing: 0.2,
+                                shadows: [
+                                  Shadow(
+                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                    offset: const Offset(2, 2),
+                                    blurRadius: 2,
+                                  )
+                                ],
                               ),
-                            );
-                          },
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 240,
+                          child: Text(
+                            q.category,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.raleway(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                  offset: const Offset(2, 2),
+                                  blurRadius: 2,
+                                )
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // prefs icon
-                  Positioned(
-                    right: 10,
-                    top: 10,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.tune,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      onPressed: _openPreferences,
-                    ),
-                  ),
-                ],
+                  );
+                },
+                onLeftSwipe: (i) {
+                  Future.delayed(Duration(milliseconds: 400), () {
+                    notifier.handleCardSwiped(i, direction: 'left', velocity: 1.0);
+                    setState(() => _currentCardIndex = i + 1);
+                  });
+                },
+                onRightSwipe: (i) {
+                  Future.delayed(Duration(milliseconds: 400), () {
+                    notifier.handleCardSwiped(i, direction: 'right', velocity: 1.0);
+                    setState(() => _currentCardIndex = i + 1);
+                  });
+                },
+                loop: false,
+                onEnd: () => notifier.loadMoreQuestions(),
+                cardDisplayCount: 2,
+                scale: 1.0,
+                threshold: 0.5,
+                maxAngle: 0,
+                cardPadding: EdgeInsets.zero,
+                backCardOffset: Offset(0, 0),
               ),
             ),
+        Positioned(
+          right: 10,
+          top: MediaQuery.of(context).padding.top + 10,
+          child: IconButton(
+            icon: const Icon(Icons.tune, color: Colors.white, size: 32),
+            onPressed: _openPreferences,
           ),
         ),
-
-        // tutorial overlay
+        Positioned(
+          // bottom navigation bar
+          bottom: 30,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: Icon(Icons.home, color: Colors.white, size: 24),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: Icon(Icons.person, color: Colors.white, size: 24),
+                onPressed: () => context.go('/profile'),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: FaIcon(
+                  isCurrentLiked ? FontAwesomeIcons.solidHeart : FontAwesomeIcons.heart,
+                  color: isCurrentLiked ? Colors.red : Colors.white,
+                  size: 30,
+                ),
+                onPressed: () {
+                  if (cardState.hasReachedSwipeLimit) {
+                    ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+                  } else if (currentQuestion != null) {
+                    notifier.toggleLiked(currentQuestion);
+                  }
+                },
+              ),
+              const SizedBox(width: 40),
+              IconButton(
+                icon: const Icon(Icons.ios_share, color: Colors.white, size: 30),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Share feature coming soon!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
         if (showTutorial)
           Positioned.fill(
             child: Container(
@@ -483,8 +421,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     onPressed: () => tutorialNotifier.hideTutorial(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),

@@ -7,6 +7,7 @@ import '../../provider/app_state_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -118,218 +119,240 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final cardState = ref.watch(cardStateProvider);
     
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: ref.watch(themeProvider).themeName == 'dark'
-                ? [Color(0xFF1E1E1E), Color(0xFF121212)]
-                : ref.watch(themeProvider).themeName == 'light'
-                    ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
-                    : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
-            stops: [0.0, 1.0],
-            begin: AlignmentDirectional(0.6, -0.34),
-            end: AlignmentDirectional(-1.0, 0.34),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Custom App Bar
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Profile',
-                      style: GoogleFonts.raleway(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: ref.watch(themeProvider).themeName == 'dark'
+                    ? [Color(0xFF1E1E1E), Color(0xFF121212)]
+                    : ref.watch(themeProvider).themeName == 'light'
+                        ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
+                        : [Color.fromARGB(235, 208, 164, 180), Color.fromARGB(255, 140, 198, 255)],
+                stops: [0.0, 1.0],
+                begin: AlignmentDirectional(0.6, -0.34),
+                end: AlignmentDirectional(-1.0, 0.34),
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Custom App Bar
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Stack(
+                        Text(
+                          'Profile',
+                          style: GoogleFonts.raleway(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
                           children: [
-                            IconButton(
-                              icon: Icon(Icons.tune, color: Colors.white, size: 32),
-                              onPressed: _showCategoryFilterDialog,
-                            ),
-                            if (cardState.selectedCategories.isNotEmpty)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  padding: EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '${cardState.selectedCategories.length}',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                            Stack(
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.tune, color: Colors.white, size: 32),
+                                  onPressed: _showCategoryFilterDialog,
+                                ),
+                                if (cardState.selectedCategories.isNotEmpty)
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      padding: EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        '${cardState.selectedCategories.length}',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.settings, color: Colors.white, size: 32),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  PageRouteBuilder(
+                                    pageBuilder: (context, animation, secondaryAnimation) => SettingsMenuPage(),
+                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                      const begin = Offset(1.0, 0.0);
+                                      const end = Offset.zero;
+                                      const curve = Curves.ease;
+
+                                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+                                      return SlideTransition(
+                                        position: animation.drive(tween),
+                                        child: child,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
                           ],
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.settings, color: Colors.white, size: 32),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) => SettingsMenuPage(),
-                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                  const begin = Offset(1.0, 0.0);
-                                  const end = Offset.zero;
-                                  const curve = Curves.ease;
-
-                                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-
-                                  return SlideTransition(
-                                    position: animation.drive(tween),
-                                    child: child,
-                                  );
-                                },
-                              ),
-                            );
-                          },
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              
-              // Profile Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // User Avatar
-                      authState.when(
-                        data: (user) => CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.white,
-                          child: Text(
-                            user?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFD0A4B4),
-                            ),
-                          ),
-                        ),
-                        loading: () => CircularProgressIndicator(),
-                        error: (_, __) => Icon(Icons.error),
-                      ),
-                      
-                      SizedBox(height: 20),
-                      
-                      // User Email
-                      authState.when(
-                        data: (user) => Text(
-                          user?.email ?? 'No email',
-                          style: GoogleFonts.raleway(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                        loading: () => Text('Loading...'),
-                        error: (_, __) => Text('Error'),
-                      ),
-                      
-                      SizedBox(height: 40),
-                      
-                      // Statistics Cards
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  ),
+                  
+                  // Profile Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
                         children: [
-                          _buildStatCard(
-                            'Liked Cards',
-                            '${cardState.likedQuestions.length}',
-                            Icons.favorite,
-                            Colors.red,
+                          // User Avatar
+                          authState.when(
+                            data: (user) => CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                                style: TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFD0A4B4),
+                                ),
+                              ),
+                            ),
+                            loading: () => CircularProgressIndicator(),
+                            error: (_, __) => Icon(Icons.error),
                           ),
-                          _buildStatCard(
-                            'Cards Seen',
-                            '${cardState.seenQuestions.length}',
-                            Icons.visibility,
-                            Colors.blue,
+                          
+                          SizedBox(height: 20),
+                          
+                          // User Email
+                          authState.when(
+                            data: (user) => Text(
+                              user?.email ?? 'No email',
+                              style: GoogleFonts.raleway(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            loading: () => Text('Loading...'),
+                            error: (_, __) => Text('Error'),
                           ),
+                          
+                          SizedBox(height: 40),
+                          
+                          // Statistics Cards
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildStatCard(
+                                'Liked Cards',
+                                '${cardState.likedQuestions.length}',
+                                Icons.favorite,
+                                Colors.red,
+                              ),
+                              _buildStatCard(
+                                'Cards Seen',
+                                '${cardState.seenQuestions.length}',
+                                Icons.visibility,
+                                Colors.blue,
+                              ),
+                            ],
+                          ),
+                          
+                          SizedBox(height: 20),
+                          
+                          // Active Filters Info
+                          if (cardState.selectedCategories.isNotEmpty)
+                            Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Active Filters',
+                                      style: GoogleFonts.raleway(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: cardState.selectedCategories.map((category) {
+                                        // Display the normalized category name
+                                        final displayCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
+                                        
+                                        return Chip(
+                                          label: Text(
+                                            displayCategory,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          backgroundColor: displayCategory.toCategoryColor(),
+                                          deleteIcon: Icon(
+                                            Icons.close,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                          onDeleted: () {
+                                            final newSelected = Set<String>.from(cardState.selectedCategories);
+                                            newSelected.remove(category);
+                                            ref.read(cardStateProvider.notifier)
+                                                .updateSelectedCategories(newSelected);
+                                          },
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                      
-                      SizedBox(height: 20),
-                      
-                      // Active Filters Info
-                      if (cardState.selectedCategories.isNotEmpty)
-                        Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Active Filters',
-                                  style: GoogleFonts.raleway(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: cardState.selectedCategories.map((category) {
-                                    // Display the normalized category name
-                                    final displayCategory = category.replaceAll(RegExp(r'\s+'), ' ').trim();
-                                    
-                                    return Chip(
-                                      label: Text(
-                                        displayCategory,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      backgroundColor: displayCategory.toCategoryColor(),
-                                      deleteIcon: Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
-                                      onDeleted: () {
-                                        final newSelected = Set<String>.from(cardState.selectedCategories);
-                                        newSelected.remove(category);
-                                        ref.read(cardStateProvider.notifier)
-                                            .updateSelectedCategories(newSelected);
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.home, color: Colors.white, size: 24),
+                  onPressed: () => context.go('/home'),
+                ),
+                IconButton(
+                  icon: Icon(Icons.person, color: Colors.white, size: 24),
+                  onPressed: () {}, // Already on profile
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
