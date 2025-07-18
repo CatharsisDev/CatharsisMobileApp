@@ -188,7 +188,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   Widget build(BuildContext context) {
     final cardState = ref.watch(cardStateProvider);
     final notifier = ref.read(cardStateProvider.notifier);
-    final showTutorial = ref.watch(tutorialProvider);
+    final showTutorial = ref.watch(tutorialProvider).showInAppTutorial;
     final tutorialNotifier = ref.read(tutorialProvider.notifier);
 
     // Generate cache key
@@ -479,7 +479,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => tutorialNotifier.hideTutorial(),
+                    onPressed: () => ref.read(tutorialProvider.notifier).hideInAppTutorial(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(

@@ -1,6 +1,5 @@
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'questions_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -15,12 +14,27 @@ import 'index.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'provider/app_state_provider.dart';
 import 'provider/pop_up_provider.dart';
+import 'provider/tutorial_state_provider.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:go_router/go_router.dart';
 import '/pages/profile/profile_page.dart';
+import '/pages/home_page/home_page_widget.dart';
+import 'app_router.dart' as app_router;
+
+class AppStateNotifier extends ChangeNotifier {
+  static final AppStateNotifier _instance = AppStateNotifier._internal();
+  factory AppStateNotifier() => _instance;
+  static AppStateNotifier get instance => _instance;
+  
+  AppStateNotifier._internal() {
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      notifyListeners();
+    });
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +68,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
     _appStateNotifier = AppStateNotifier.instance;
-    _router = createRouter(_appStateNotifier, ref);
+    _router = app_router.createRouter(_appStateNotifier, ref);
   }
 
   void setThemeMode(ThemeMode mode) => safeSetState(() {
@@ -67,21 +81,47 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Listen to auth state changes
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
-        data: (user) {
+        data: (user) async {
           final currentLocation =
               _router.routerDelegate.currentConfiguration.fullPath;
-          if (user != null && currentLocation == '/login') {
-            _router.go('/home');
-          } else if (user == null &&
-              currentLocation != '/login' &&
-              currentLocation != '/') {
-            _router.go('/login');
+          
+          if (user != null) {
+            // User is logged in
+            if (currentLocation == '/login' || currentLocation == '/') {
+              // Check if user has seen welcome screen
+              final tutorialState = ref.read(tutorialProvider);
+              if (!tutorialState.hasSeenWelcome) {
+                _router.go('/welcome');
+              } else {
+                _router.go('/home');
+              }
+            }
+          } else {
+            // User is not logged in
+            if (currentLocation != '/login' && currentLocation != '/') {
+              _router.go('/login');
+            }
           }
         },
         loading: () {},
         error: (_, __) => _router.go('/login'),
       );
     });
+
+    // Also listen to tutorial state changes
+    ref.listen<TutorialState>(tutorialProvider, (previous, next) {
+      final user = FirebaseAuth.instance.currentUser;
+      final currentLocation =
+          _router.routerDelegate.currentConfiguration.fullPath;
+      
+      // If user just completed tutorial and is still on welcome screen
+      if (user != null && 
+          next.hasSeenWelcome && 
+          currentLocation == '/welcome') {
+        _router.go('/home');
+      }
+    });
+
     return MaterialApp.router(
       title: 'CatharsisCards',
       localizationsDelegates: [
