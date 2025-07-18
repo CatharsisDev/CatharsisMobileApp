@@ -48,7 +48,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _swipeAnimation = Tween<Offset>(
       begin: const Offset(-0.1, 0.0),
       end: const Offset(0.1, 0.0),
@@ -70,9 +70,14 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     super.didChangeDependencies();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: ref.watch(themeProvider).themeName == 'dark' ? Brightness.light : Brightness.dark,
+      statusBarIconBrightness: ref.watch(themeProvider).themeName == 'dark'
+          ? Brightness.light
+          : Brightness.dark,
       systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: ref.watch(themeProvider).themeName == 'dark' ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness:
+          ref.watch(themeProvider).themeName == 'dark'
+              ? Brightness.light
+              : Brightness.dark,
     ));
   }
 
@@ -100,7 +105,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
     final currentKeys = ref.read(cardStateProvider).selectedCategories;
-    
+
     showModalBottomSheet(
       context: context,
       builder: (_) {
@@ -138,8 +143,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     );
                   }).toList(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         TextButton(
@@ -155,8 +160,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               _cacheKey = null;
                               _currentCardIndex = 0;
                             });
-                            notifier.updateSelectedCategories(
-                                tempSelectedKeys);
+                            notifier.updateSelectedCategories(tempSelectedKeys);
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
@@ -189,7 +193,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
     // Generate cache key
     final newCacheKey = _generateCacheKey(cardState);
-    
+
     // Update cached questions only if necessary
     if (_cachedQuestions == null || _cacheKey != newCacheKey) {
       _cachedQuestions = List<Question>.from(cardState.activeQuestions);
@@ -215,110 +219,162 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     return Stack(
       children: <Widget>[
         cardState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Container(
-              width: MediaQuery.sizeOf(context).width,
-              height: MediaQuery.sizeOf(context).height,
-              child: FlutterFlowSwipeableStack(
-                controller: _cardController,
-                itemCount: questions.isEmpty ? 1 : questions.length,
-                itemBuilder: (ctx, i) {
-                  if (questions.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No questions available',
-                        style: GoogleFonts.raleway(
-                          color: Colors.white,
-                          fontSize: 20,
+            ? const Center(child: CircularProgressIndicator())
+            : Container(
+                width: MediaQuery.sizeOf(context).width,
+                height: MediaQuery.sizeOf(context).height,
+                child: FlutterFlowSwipeableStack(
+                  controller: _cardController,
+                  itemCount: questions.isEmpty ? 1 : questions.length,
+                  itemBuilder: (ctx, i) {
+                    if (questions.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No questions available',
+                          style: GoogleFonts.raleway(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                      );
+                    }
+                    final idx = i;
+                    final question = questions[idx];
+                    // Map normalized category names to icon assets
+                    final Map<String, String> _iconMap = {
+                      'Love and Intimacy':
+                          'assets/images/love_intimacy_icon.png',
+                      'Spirituality': 'assets/images/spirituality_icon.png',
+                      'Society': 'assets/images/society_icon.png',
+                      'Interactions and Relationships':
+                          'assets/images/interactions_relationships_icon.png',
+                      'Personal Development':
+                          'assets/images/personal_development_icon.png',
+                    };
+                    // Normalize and lookup icon path
+                    final normalizedCat =
+                        question.category.replaceAll('\n', ' ').trim();
+                    final iconPath = _iconMap[normalizedCat] ?? '';
+                    final q = question;
+                    return GestureDetector(
+                      onDoubleTap: () {
+                        // actually toggle the like in your state
+                        ref.read(cardStateProvider.notifier).toggleLiked(q);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: ref.watch(themeProvider).themeName == 'dark'
+                                ? [
+                                    const Color(0xFF1E1E1E),
+                                    const Color(0xFF121212)
+                                  ]
+                                : ref.watch(themeProvider).themeName == 'light'
+                                    ? [
+                                        const Color.fromARGB(235, 201, 197, 197),
+                                        Colors.white
+                                      ]
+                                    : [
+                                        const Color.fromARGB(235, 208, 164, 180),
+                                        const Color.fromARGB(255, 140, 198, 255)
+                                      ],
+                            stops: const [0.0, 1.0],
+                            begin: const AlignmentDirectional(0.6, -0.34),
+                            end: const AlignmentDirectional(-1.0, 0.34),
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            if (iconPath.isNotEmpty)
+                              Positioned(
+                                top:
+                                    140, // adjust as needed for spacing above question text
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: Image.asset(
+                                    iconPath,
+                                    width: 100,
+                                    height: 100,
+                                  ),
+                                ),
+                              ),
+                            Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                                child: Text(
+                                  q.text,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.raleway(
+                                    color: Colors.white,
+                                    //Size of Questions
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.2,
+                                    shadows: [
+                                      Shadow(
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        offset: const Offset(2, 2),
+                                        blurRadius: 2,
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 240,
+                              child: Text(
+                                q.category,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.raleway(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryText,
+                                      offset: const Offset(2, 2),
+                                      blurRadius: 2,
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
-                  }
-                  final idx = i;
-                  final q = questions[idx];
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: ref.watch(themeProvider).themeName == 'dark'
-                          ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
-                          : ref.watch(themeProvider).themeName == 'light'
-                            ? [const Color.fromARGB(235, 201, 197, 197), Colors.white]
-                            : [const Color.fromARGB(235, 208, 164, 180), const Color.fromARGB(255, 140, 198, 255)],
-                        stops: const [0.0, 1.0],
-                        begin: const AlignmentDirectional(0.6, -0.34),
-                        end: const AlignmentDirectional(-1.0, 0.34),
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                            child: Text(
-                              q.text,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.raleway(
-                                color: Colors.white,
-                                fontSize: 32,
-                                letterSpacing: 0.2,
-                                shadows: [
-                                  Shadow(
-                                    color: FlutterFlowTheme.of(context).secondaryText,
-                                    offset: const Offset(2, 2),
-                                    blurRadius: 2,
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 240,
-                          child: Text(
-                            q.category,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.raleway(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  color: FlutterFlowTheme.of(context).secondaryText,
-                                  offset: const Offset(2, 2),
-                                  blurRadius: 2,
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                onLeftSwipe: (i) {
-                  Future.delayed(Duration(milliseconds: 400), () {
-                    notifier.handleCardSwiped(i, direction: 'left', velocity: 1.0);
-                    setState(() => _currentCardIndex = i + 1);
-                  });
-                },
-                onRightSwipe: (i) {
-                  Future.delayed(Duration(milliseconds: 400), () {
-                    notifier.handleCardSwiped(i, direction: 'right', velocity: 1.0);
-                    setState(() => _currentCardIndex = i + 1);
-                  });
-                },
-                loop: false,
-                onEnd: () => notifier.loadMoreQuestions(),
-                cardDisplayCount: 2,
-                scale: 1.0,
-                threshold: 0.5,
-                maxAngle: 0,
-                cardPadding: EdgeInsets.zero,
-                backCardOffset: Offset(0, 0),
+                  },
+                  onLeftSwipe: (i) {
+                    Future.delayed(Duration(milliseconds: 400), () {
+                      notifier.handleCardSwiped(i,
+                          direction: 'left', velocity: 1.0);
+                      setState(() => _currentCardIndex = i + 1);
+                    });
+                  },
+                  onRightSwipe: (i) {
+                    Future.delayed(Duration(milliseconds: 400), () {
+                      notifier.handleCardSwiped(i,
+                          direction: 'right', velocity: 1.0);
+                      setState(() => _currentCardIndex = i + 1);
+                    });
+                  },
+                  loop: false,
+                  onEnd: () => notifier.loadMoreQuestions(),
+                  cardDisplayCount: 2,
+                  scale: 1.0,
+                  threshold: 0.5,
+                  maxAngle: 0,
+                  cardPadding: EdgeInsets.zero,
+                  backCardOffset: Offset(0, 0),
+                ),
               ),
-            ),
         Positioned(
           right: 10,
           top: MediaQuery.of(context).padding.top + 10,
@@ -355,13 +411,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             children: [
               IconButton(
                 icon: FaIcon(
-                  isCurrentLiked ? FontAwesomeIcons.solidHeart : FontAwesomeIcons.heart,
+                  isCurrentLiked
+                      ? FontAwesomeIcons.solidHeart
+                      : FontAwesomeIcons.heart,
                   color: isCurrentLiked ? Colors.red : Colors.white,
                   size: 30,
                 ),
                 onPressed: () {
                   if (cardState.hasReachedSwipeLimit) {
-                    ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+                    ref
+                        .read(popUpProvider.notifier)
+                        .showPopUp(cardState.swipeResetTime);
                   } else if (currentQuestion != null) {
                     notifier.toggleLiked(currentQuestion);
                   }
@@ -369,7 +429,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
               const SizedBox(width: 40),
               IconButton(
-                icon: const Icon(Icons.ios_share, color: Colors.white, size: 30),
+                icon:
+                    const Icon(Icons.ios_share, color: Colors.white, size: 30),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -421,7 +482,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     onPressed: () => tutorialNotifier.hideTutorial(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),

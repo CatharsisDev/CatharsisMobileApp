@@ -78,8 +78,9 @@ class CardState {
       }).toList();
     }
 
-    // Remove already seen questions
-    return filtered.where((q) => !seenQuestions.contains(q)).toList();
+    // Don't filter out seen questions - this was causing the card switching issue
+    // Instead, we'll handle seen questions differently
+    return filtered;
   }
 
   Question? get currentQuestion {
@@ -146,9 +147,6 @@ class CardStateNotifier extends StateNotifier<CardState> {
     _currentQuestionStartTime = DateTime.now();
 
     state = state.copyWith(isLoading: false);
-    if (state.activeQuestions.isEmpty) {
-      await loadMoreQuestions();
-    }
   }
 
   Future<void> _loadLiked() async {
@@ -361,10 +359,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> loadMoreQuestions() async {
-    final newQs = await QuestionsService.generateAdditionalQuestions();
-    final uniqueNew = newQs.where((q) => !state.allQuestions.contains(q)).toList();
-    final updatedQuestions = [...state.allQuestions, ...uniqueNew];
-    await cacheBox.addAll(uniqueNew);
+    final newQs = await QuestionsService.loadQuestionsWithAI();
+    final updatedQuestions = [...state.allQuestions, ...newQs];
+    await cacheBox.addAll(newQs);
     state = state.copyWith(allQuestions: updatedQuestions);
   }
 }
