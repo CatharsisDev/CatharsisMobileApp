@@ -181,106 +181,106 @@ class ThemeTypography extends Typography {
 
   final FlutterFlowTheme theme;
 
-  String get displayLargeFamily => 'Raleway';
-  TextStyle get displayLarge => GoogleFonts.getFont(
-        'Raleway',
+  String get displayLargeFamily => 'Runtime';
+  TextStyle get displayLarge => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 56.0,
       );
-  String get displayMediumFamily => 'Raleway';
-  TextStyle get displayMedium => GoogleFonts.getFont(
-        'Raleway',
+  String get displayMediumFamily => 'Runtime';
+  TextStyle get displayMedium => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 44.0,
       );
-  String get displaySmallFamily => 'Raleway';
-  TextStyle get displaySmall => GoogleFonts.getFont(
-        'Raleway',
+  String get displaySmallFamily => 'Runtime';
+  TextStyle get displaySmall => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.w500,
         fontSize: 36.0,
       );
-  String get headlineLargeFamily => 'Raleway';
-  TextStyle get headlineLarge => GoogleFonts.getFont(
-        'Raleway',
+  String get headlineLargeFamily => 'Runtime';
+  TextStyle get headlineLarge => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.w600,
         fontSize: 32.0,
       );
-  String get headlineMediumFamily => 'Raleway';
-  TextStyle get headlineMedium => GoogleFonts.getFont(
-        'Raleway',
+  String get headlineMediumFamily => 'Runtime';
+  TextStyle get headlineMedium => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 32.0,
       );
-  String get headlineSmallFamily => 'Raleway';
-  TextStyle get headlineSmall => GoogleFonts.getFont(
-        'Raleway',
+  String get headlineSmallFamily => 'Runtime';
+  TextStyle get headlineSmall => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.w500,
         fontSize: 24.0,
       );
-  String get titleLargeFamily => 'Raleway';
-  TextStyle get titleLarge => GoogleFonts.getFont(
-        'Raleway',
+  String get titleLargeFamily => 'Runtime';
+  TextStyle get titleLarge => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.w500,
         fontSize: 22.0,
       );
-  String get titleMediumFamily => 'Raleway';  // Changed from Inter
-  TextStyle get titleMedium => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get titleMediumFamily => 'Runtime';
+  TextStyle get titleMedium => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.info,
         fontWeight: FontWeight.w600,
         fontSize: 18.0,
       );
-  String get titleSmallFamily => 'Raleway';  // Changed from Inter
-  TextStyle get titleSmall => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get titleSmallFamily => 'Runtime';
+  TextStyle get titleSmall => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.info,
         fontWeight: FontWeight.w500,
         fontSize: 16.0,
       );
-  String get labelLargeFamily => 'Raleway';  // Changed from Inter
-  TextStyle get labelLarge => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get labelLargeFamily => 'Runtime';
+  TextStyle get labelLarge => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.secondaryText,
         fontWeight: FontWeight.w500,
         fontSize: 16.0,
       );
-  String get labelMediumFamily => 'Raleway';  // Changed from Inter
-  TextStyle get labelMedium => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get labelMediumFamily => 'Runtime';
+  TextStyle get labelMedium => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.secondaryText,
         fontWeight: FontWeight.w500,
         fontSize: 14.0,
       );
-  String get labelSmallFamily => 'Raleway';  // Changed from Inter
-  TextStyle get labelSmall => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get labelSmallFamily => 'Runtime';
+  TextStyle get labelSmall => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.secondaryText,
         fontWeight: FontWeight.w500,
         fontSize: 12.0,
       );
-  String get bodyLargeFamily => 'Raleway';  // Changed from Inter
-  TextStyle get bodyLarge => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get bodyLargeFamily => 'Runtime';
+  TextStyle get bodyLarge => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontSize: 16.0,
       );
-  String get bodyMediumFamily => 'Raleway';  // Changed from Inter
-  TextStyle get bodyMedium => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get bodyMediumFamily => 'Runtime';
+  TextStyle get bodyMedium => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 14.0,
       );
-  String get bodySmallFamily => 'Raleway';  // Changed from Inter
-  TextStyle get bodySmall => GoogleFonts.getFont(
-        'Raleway',  // Changed from Inter
+  String get bodySmallFamily => 'Runtime';
+  TextStyle get bodySmall => TextStyle(
+        fontFamily: 'Runtime',
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 12.0,

@@ -6,11 +6,13 @@ class AppThemes {
     primaryColor: const Color(0xFFE35F42),
     scaffoldBackgroundColor: const Color.fromARGB(235, 208, 164, 180),
     textTheme: TextTheme(
-      bodyMedium: GoogleFonts.raleway(
+      bodyMedium: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.white,
       ),
-      titleLarge: GoogleFonts.raleway(
+      titleLarge: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 22,
         fontWeight: FontWeight.bold,
         color: Colors.white,
@@ -33,11 +35,13 @@ class AppThemes {
     primaryColor: Colors.blue,
     scaffoldBackgroundColor: Colors.white,
     textTheme: TextTheme(
-      bodyMedium: GoogleFonts.raleway(
+      bodyMedium: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.black,
       ),
-      titleLarge: GoogleFonts.raleway(
+      titleLarge: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 22,
         fontWeight: FontWeight.bold,
         color: Colors.black,
@@ -60,11 +64,13 @@ class AppThemes {
     primaryColor: Colors.deepPurple,
     scaffoldBackgroundColor: const Color.fromRGBO(255, 0, 0, 1),
     textTheme: TextTheme(
-      bodyMedium: GoogleFonts.raleway(
+      bodyMedium: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.white,
       ),
-      titleLarge: GoogleFonts.raleway(
+      titleLarge: TextStyle(
+        fontFamily: 'Runtime',
         fontSize: 22,
         fontWeight: FontWeight.bold,
         color: Colors.white,

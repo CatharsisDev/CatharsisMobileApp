@@ -39,7 +39,7 @@ class AppThemes {
     scaffoldBackgroundColor: const Color.fromARGB(235, 208, 164, 180),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
-        fontFamily: 'Raleway',
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.white,
       ),
@@ -58,7 +58,7 @@ class AppThemes {
     scaffoldBackgroundColor: Colors.white,
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
-        fontFamily: 'Raleway',
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.black,
       ),
@@ -77,7 +77,7 @@ class AppThemes {
     scaffoldBackgroundColor: Colors.black,
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
-        fontFamily: 'Raleway',
+        fontFamily: 'Runtime',
         fontSize: 16,
         color: Colors.white,
       ),

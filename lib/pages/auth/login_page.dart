@@ -191,7 +191,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              style: TextStyle(
+                              style: GoogleFonts.raleway(
                                   color: Colors.black), // input text color
                               validator: (value) {
                                 if (value == null || value.isEmpty) {

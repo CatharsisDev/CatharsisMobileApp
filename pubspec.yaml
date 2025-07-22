@@ -102,6 +102,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
+  fonts:
+    - family: Runtime
+      fonts:
+        - asset: assets/fonts/Runtime.otf
+  
   assets:
     - assets/
     - assets/images/
