@@ -16,7 +16,7 @@ class OpenAIService {
     }
 
     final prompt = '''Generate $count thought-provoking conversation questions for "$category".
-Make them open-ended, deep, and under 20 words each.
+Make them open-ended, deep, and under 14 words each.
 Return only the questions, one per line.''';
     
     try {

@@ -10,6 +10,7 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
     state = state.copyWith(
       hasSeenWelcome: hasSeenTutorial,
       showInAppTutorial: false,
+      isInitialized: true,
     );
   }
 
@@ -37,19 +38,23 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
 class TutorialState {
   final bool hasSeenWelcome;
   final bool showInAppTutorial;
+  final bool isInitialized;
 
   TutorialState({
     this.hasSeenWelcome = false,
     this.showInAppTutorial = false,
+    this.isInitialized = false,
   });
 
   TutorialState copyWith({
     bool? hasSeenWelcome,
     bool? showInAppTutorial,
+    bool? isInitialized,
   }) {
     return TutorialState(
       hasSeenWelcome: hasSeenWelcome ?? this.hasSeenWelcome,
       showInAppTutorial: showInAppTutorial ?? this.showInAppTutorial,
+      isInitialized: isInitialized ?? this.isInitialized,
     );
   }
 }

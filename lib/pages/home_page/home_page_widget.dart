@@ -30,7 +30,7 @@ class HomePageWidget extends ConsumerStatefulWidget {
 }
 
 class _HomePageWidgetState extends ConsumerState<HomePageWidget>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late CardSwiperController _cardController;
   late AnimationController _handController;
@@ -38,8 +38,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   int _currentCardIndex = 0;
   List<Question>? _cachedQuestions;
   String? _cacheKey;
+  final Set<String> _displayedQuestionIds = {};
 
-  // Category colors mapping
+  @override
+  bool get wantKeepAlive => true;
+
   final Map<String, Color> _categoryColors = {
     'Love and Intimacy': const Color(0xFF8B4F4F),
     'Spirituality': const Color(0xFF6B5B95),
@@ -48,7 +51,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     'Personal Development': const Color(0xFF6B8E6B),
   };
 
-  // Category icons mapping
   final Map<String, String> _categoryIcons = {
     'Love and Intimacy': '❤️',
     'Spirituality': '✨',
@@ -78,7 +80,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
   @override
   void dispose() {
-    // don't use ref here—only dispose controllers
     _cardController.dispose();
     _handController.dispose();
     super.dispose();
@@ -116,7 +117,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 
-void _openPreferences() {
+  void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
     final currentKeys = ref.read(cardStateProvider).selectedCategories;
 
@@ -185,7 +186,6 @@ void _openPreferences() {
                         children: displayCats.map((display) {
                           final key = QuestionCategories.normalizeCategory(display);
                           final isSelected = tempSelectedKeys.contains(key);
-                          final categoryColor = _categoryColors[display] ?? const Color(0xFF5C4033);
                           
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6),
@@ -209,32 +209,27 @@ void _openPreferences() {
                                     vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? const Color.fromRGBO(152, 117, 84, 0.1) : const Color.fromRGBO(255, 253, 240, 1), 
+                                    color: isSelected 
+                                        ? const Color.fromRGBO(152, 117, 84, 0.1) 
+                                        : const Color.fromRGBO(255, 253, 240, 1), 
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(color: const Color(0xFF8B4F4F), width: 1),
                                   ),
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      return Row(
-                                        children: [
-                                          // Removed emoji and spacing
-                                          Expanded(
-                                            child: Text(
-                                              display,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.raleway(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-
-                                                color: 
-                                                     Colors.black87,
-                                            ),
-                                            ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          display,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.raleway(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
                                           ),
-                                        ],
-                                      );
-                                    },
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -288,9 +283,8 @@ void _openPreferences() {
     );
   }
 
-
   String _generateCacheKey(CardState state) {
-    return '${state.selectedCategories.join(',')}_${state.currentCategory}_${state.allQuestions.length}';
+    return '${state.selectedCategories.join(',')}_${state.currentCategory}_${state.allQuestions.length}_${state.seenQuestions.length}';
   }
 
   Widget _buildCategoryChip(String category) {
@@ -316,7 +310,7 @@ void _openPreferences() {
             style: TextStyle(
               fontFamily: 'Runtime',
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -327,16 +321,35 @@ void _openPreferences() {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Add this for AutomaticKeepAliveClientMixin
     final cardState = ref.watch(cardStateProvider);
     final notifier = ref.read(cardStateProvider.notifier);
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
 
     final newCacheKey = _generateCacheKey(cardState);
-    if (_cachedQuestions == null || _cacheKey != newCacheKey) {
-      _cachedQuestions = List<Question>.from(cardState.activeQuestions);
+    final didActiveQuestionsChange = _cacheKey != newCacheKey;
+    if (_cachedQuestions == null || didActiveQuestionsChange) {
+      final allActive = cardState.activeQuestions;
+      final unseenQuestions = allActive.where((q) {
+        final questionId = '${q.text}_${q.category}';
+        return !cardState.seenQuestions.any((seen) =>
+            seen.text == q.text && seen.category == q.category) &&
+            !_displayedQuestionIds.contains(questionId);
+      }).toList();
+
+      _cachedQuestions = unseenQuestions.isEmpty ? allActive : unseenQuestions;
       _cacheKey = newCacheKey;
-      _currentCardIndex = 0;
+
+      if (_currentCardIndex >= _cachedQuestions!.length) {
+        _currentCardIndex = 0;
+      }
+    }
+
+    // Track displayed questions
+    if (_cachedQuestions!.isNotEmpty && _currentCardIndex < _cachedQuestions!.length) {
+      final currentQ = _cachedQuestions![_currentCardIndex];
+      _displayedQuestionIds.add('${currentQ.text}_${currentQ.category}');
     }
 
     final questions = _cachedQuestions!;
@@ -356,7 +369,6 @@ void _openPreferences() {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Background
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -380,8 +392,6 @@ void _openPreferences() {
               ),
             ),
           ),
-
-          // Card stack
           Positioned.fill(
             child: cardState.isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -444,7 +454,7 @@ void _openPreferences() {
                                   Column(
                                     children: [
                                       _buildCategoryChip(q.category),
-                                      const SizedBox(height: 280),
+                                      const SizedBox(height: 230),
                                     ],
                                   ),
                                 ],
@@ -455,14 +465,32 @@ void _openPreferences() {
                       ),
                     );
                   },
-                  onLeftSwipe: (i) => Future.delayed(const Duration(milliseconds: 100), () {
-                    notifier.handleCardSwiped(i, direction: 'left', velocity: 1.0);
-                    setState(() => _currentCardIndex = i + 1);
-                  }),
-                  onRightSwipe: (i) => Future.delayed(const Duration(milliseconds: 100), () {
-                    notifier.handleCardSwiped(i, direction: 'right', velocity: 1.0);
-                    setState(() => _currentCardIndex = i + 1);
-                  }),
+                  onLeftSwipe: (i) {
+                    if (questions.isNotEmpty && i < questions.length) {
+                      final question = questions[i];
+                      final activeQuestions = cardState.activeQuestions;
+                      final actualIndex = activeQuestions.indexWhere((q) =>
+                          q.text == question.text && q.category == question.category);
+
+                      if (actualIndex != -1) {
+                        notifier.handleCardSwiped(actualIndex, direction: 'left', velocity: 1.0);
+                      }
+                      Future.microtask(() => setState(() => _currentCardIndex += 1));
+                    }
+                  },
+                  onRightSwipe: (i) {
+                    if (questions.isNotEmpty && i < questions.length) {
+                      final question = questions[i];
+                      final activeQuestions = cardState.activeQuestions;
+                      final actualIndex = activeQuestions.indexWhere((q) =>
+                          q.text == question.text && q.category == question.category);
+
+                      if (actualIndex != -1) {
+                        notifier.handleCardSwiped(actualIndex, direction: 'right', velocity: 1.0);
+                      }
+                      setState(() => _currentCardIndex += 1);
+                    }
+                  },
                   loop: false,
                   onEnd: () => notifier.loadMoreQuestions(),
                   cardDisplayCount: 3,
@@ -473,16 +501,13 @@ void _openPreferences() {
                   backCardOffset: Offset.zero,
                 ),
           ),
-
-          // Top actions
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: InkWell(
@@ -512,10 +537,8 @@ void _openPreferences() {
               ),
             ),
           ),
-
-          // Bottom controls
           Positioned(
-            bottom: 160,
+            bottom: 130,
             left: 0,
             right: 0,
             child: Column(
@@ -526,7 +549,6 @@ void _openPreferences() {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Share
                       InkWell(
                         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -556,13 +578,10 @@ void _openPreferences() {
                         ),
                       ),
                       const SizedBox(width: 60),
-                      // Like
                       InkWell(
                         onTap: () {
                           if (cardState.hasReachedSwipeLimit) {
-                            ref
-                                .read(popUpProvider.notifier)
-                                .showPopUp(cardState.swipeResetTime);
+                            ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
                           } else if (currentQuestion != null) {
                             notifier.toggleLiked(currentQuestion);
                           }
@@ -594,8 +613,6 @@ void _openPreferences() {
               ],
             ),
           ),
-
-          // Navigation bar just below the action buttons
           Positioned(
             bottom: 50,
             left: 0,
@@ -656,8 +673,6 @@ void _openPreferences() {
               ),
             ),
           ),
-
-          // Tutorial overlay
           if (showTutorial)
             Positioned.fill(
               child: Container(
@@ -696,12 +711,10 @@ void _openPreferences() {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () =>
-                          ref.read(tutorialProvider.notifier).hideInAppTutorial(),
+                      onPressed: () => ref.read(tutorialProvider.notifier).hideInAppTutorial(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5C4033),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
