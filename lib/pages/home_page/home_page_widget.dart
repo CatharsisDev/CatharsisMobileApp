@@ -383,7 +383,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
             ),
             child: Opacity(
-              opacity: 0.3,
+              opacity: 0.4,
               child: Container(
                 decoration: const BoxDecoration(
                   image: DecorationImage(
