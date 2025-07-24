@@ -44,11 +44,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   bool get wantKeepAlive => true;
 
   final Map<String, Color> _categoryColors = {
-    'Love and Intimacy': const Color(0xFF8B4F4F),
-    'Spirituality': const Color(0xFF6B5B95),
-    'Society': const Color(0xFF5C4033),
-    'Interactions and Relationships': const Color(0xFF4F7CAC),
-    'Personal Development': const Color(0xFF6B8E6B),
+    'Love and Intimacy': const Color.fromRGBO(42, 63, 44, 1),
+    'Spirituality': const Color.fromRGBO(42, 63, 44, 1),
+    'Society': const Color.fromRGBO(42, 63, 44, 1),
+    'Interactions and Relationships': const Color.fromRGBO(42, 63, 44, 1),
+    'Personal Development': const Color.fromRGBO(42, 63, 44, 1),
   };
 
   final Map<String, String> _categoryIcons = {
@@ -123,6 +123,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         final displayCats = QuestionCategories.getAllCategories();
@@ -131,6 +132,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         return StatefulBuilder(
           builder: (context, setState) {
             return Container(
+              height: MediaQuery.of(context).size.height * 0.6,
               decoration: BoxDecoration(
                 color: const Color.fromRGBO(255, 253, 240, 0.9),
                 borderRadius: const BorderRadius.only(
@@ -517,14 +519,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFF987554).withOpacity(0.1),
+                                    ),
                       child: Image.asset(
                         'assets/images/preferences_icon.png',
                         width: 24,
@@ -560,15 +557,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         child: Container(
                           width: 56,
                           height: 56,
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
                           child: Image.asset(
                             'assets/images/share_icon.png',
                             width: 24,
@@ -590,15 +578,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         child: Container(
                           width: 56,
                           height: 56,
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
                           child: Image.asset(
                             'assets/images/heart_icon.png',
                             width: 28,
