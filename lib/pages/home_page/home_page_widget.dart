@@ -22,6 +22,8 @@ import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+// Rest of your HomePageWidget code remains the same...
+
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
 
@@ -652,6 +654,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
             ),
           ),
+          /*
           if (showTutorial)
             Positioned.fill(
               child: Container(
@@ -690,7 +693,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () => ref.read(tutorialProvider.notifier).hideInAppTutorial(),
+                      onPressed: () {
+                        ref.read(tutorialProvider.notifier).hideInAppTutorial();
+                        ref.read(tutorialProvider.notifier).setTutorialSeen();
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5C4033),
                         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
@@ -712,6 +718,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                 ),
               ),
             ),
+            */
         ],
       ),
     );

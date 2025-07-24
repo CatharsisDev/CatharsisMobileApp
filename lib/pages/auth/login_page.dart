@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../provider/auth_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../provider/tutorial_state_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   @override
@@ -48,6 +49,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _emailController.text.trim(),
           _passwordController.text,
         );
+        // Don't do any navigation here - let the router handle it
+        print('New user registered - router should redirect to welcome');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -84,208 +87,245 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authService = ref.read(authServiceProvider);
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFD0A4B4), Color(0xFF8CC6FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/catharsis_word_only.png',
-                    height: MediaQuery.of(context).size.height *
-                        0.27, // 8% of screen height
-                    fit: BoxFit.contain,
-                  ),
-                  SizedBox(height: 30),
-                  Text(
-                    _isLogin ? 'Welcome Back' : 'Create Account',
-                    style: GoogleFonts.raleway(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 30),
-
-                  // Email/Password Form
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                labelStyle: TextStyle(color: Colors.grey),
-                                prefixIcon:
-                                    Icon(Icons.email, color: Colors.grey),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: Color.fromARGB(255, 255, 102, 0)), // your custom color
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusColor: Color.fromARGB(255, 255, 102, 0),
-                              ),
-                              style: GoogleFonts.raleway(
-                                  color: Colors.black), // input text color
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                labelStyle: TextStyle(color: Colors.grey),
-                                prefixIcon:
-                                    Icon(Icons.lock, color: Colors.grey),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide:
-                                      BorderSide(color: Color.fromARGB(255, 255, 102, 0)),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              style: GoogleFonts.raleway(
-                                  color: Colors.black), // input text color
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
-                                }
-                                if (!_isLogin && value.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
-                            ),
-                            if (_errorMessage != null) ...[
-                              SizedBox(height: 16),
-                              Text(
-                                _errorMessage!,
-                                style: GoogleFonts.raleway(
-                                  color: Colors.red,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                            SizedBox(height: 20),
-                            _isLoading
-                                ? CircularProgressIndicator()
-                                : ElevatedButton(
-                                    onPressed: _submitForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xFFD0A4B4),
-                                      minimumSize: Size(double.infinity, 50),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _isLogin ? 'Sign In' : 'Register',
-                                      style: GoogleFonts.raleway(fontSize: 16),
-                                    ),
-                                  ),
-                            SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLogin = !_isLogin;
-                                  _errorMessage = null;
-                                });
-                              },
-                              child: Text(
-                                _isLogin
-                                    ? "Don't have an account? Register"
-                                    : "Already have an account? Sign In",
-                                style: GoogleFonts.raleway(
-                                    color: Color.fromARGB(255, 255, 102, 0)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 20),
-                  Text(
-                    'Or continue with',
-                    style: GoogleFonts.raleway(color: Colors.white70),
-                  ),
-                  SizedBox(height: 20),
-
-                  // Social Sign In Buttons
-                  _SignInButton(
-                    onPressed: () async {
-                      await authService.signInWithGoogle();
-                    },
-                    icon: FontAwesomeIcons.google,
-                    text: 'Sign in with Google',
-                    backgroundColor: Colors.white,
-                    textColor: Colors.black87,
-                  ),
-                  SizedBox(height: 16),
-                  _SignInButton(
-                    onPressed: () async {
-                      await authService.signInWithApple();
-                    },
-                    icon: FontAwesomeIcons.apple,
-                    text: 'Sign in with Apple',
-                    backgroundColor: Colors.black,
-                    textColor: Colors.white,
-                  ),
+      body: Stack(
+        children: [
+          // Cream gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFFFAF1E1),
+                  const Color(0xFFFAF1E1).withOpacity(0.95),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
+          // Texture overlay at 40% opacity
+          Opacity(
+            opacity: 0.4,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/background_texture.png"),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          // Existing SafeArea + ListView
+          SafeArea(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                MediaQuery.of(context).padding.bottom + 20,
+              ),
+              children: [
+                Image.asset(
+                  'assets/images/catharsis_word_only.png',
+                  height: MediaQuery.of(context).size.height * 0.20,
+                  fit: BoxFit.contain,
+                ),
+                SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    _isLogin ? 'Welcome Back' : 'Create Account',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromRGBO(32, 28, 17, 1),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              prefixIcon: Icon(Icons.email, color: Colors.grey),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Color.fromRGBO(42, 63, 44, 1)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: Colors.black,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              prefixIcon: Icon(Icons.lock, color: Colors.grey),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Color.fromRGBO(42, 63, 44, 1)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: Colors.black,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (!_isLogin && value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          if (_errorMessage != null) ...[
+                            SizedBox(height: 16),
+                            Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: 20),
+                          _isLoading
+                              ? CircularProgressIndicator()
+                              : ElevatedButton(
+                                  onPressed: _submitForm,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color.fromRGBO(42, 63, 44, 1),
+                                    minimumSize: Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _isLogin ? 'Sign In' : 'Register',
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                          SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isLogin = !_isLogin;
+                                _errorMessage = null;
+                              });
+                            },
+                            child: Text(
+                              _isLogin
+                                  ? "Don't have an account? Register"
+                                  : "Already have an account? Sign In",
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromRGBO(42, 63, 44, 1),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Center(
+                  child: Text(
+                    'Or continue with',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromRGBO(32, 28, 17, 1),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                _SignInButton(
+                  onPressed: () async {
+                    await authService.signInWithGoogle();
+                    // Router will handle redirecting new users to welcome screen
+                  },
+                  icon: FontAwesomeIcons.google,
+                  text: 'Sign in with Google',
+                  backgroundColor: Colors.white,
+                  textColor: Colors.black87,
+                ),
+                SizedBox(height: 16),
+                _SignInButton(
+                  onPressed: () async {
+                    await authService.signInWithApple();
+                    // Router will handle redirecting new users to welcome screen
+                  },
+                  icon: FontAwesomeIcons.apple,
+                  text: 'Sign in with Apple',
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                ),
+              ],
+            ),
+          ),  // end SafeArea
+        ],    // end Stack children
+      ),      // end Stack
+    );        // end Scaffold
   }
 }
 
@@ -307,7 +347,7 @@ class _SignInButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -324,7 +364,11 @@ class _SignInButton extends StatelessWidget {
             SizedBox(width: 12),
             Text(
               text,
-              style: GoogleFonts.raleway(color: textColor, fontSize: 16),
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                color: textColor,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
