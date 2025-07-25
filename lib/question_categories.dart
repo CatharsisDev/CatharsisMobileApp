@@ -23,7 +23,7 @@ class QuestionCategories {
   static const String spirituality = 'Spirituality';
   static const String society = 'Society';
   static const String interactionsAndRelationships = 'Interactions and Relationships';
-  static const String personalDevelopment = 'Personal \nDevelopment';
+  static const String personalDevelopment = 'Personal Development';
 
   // Map using exact CSV names
   static const Map<String, String> categoryDisplayNames = {

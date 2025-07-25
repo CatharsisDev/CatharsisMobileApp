@@ -4,6 +4,7 @@ import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/gamecard_widget.dart';
 import '/flutter_flow/flutter_flow_swipeable_stack.dart';
@@ -238,15 +239,18 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          display,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontFamily: 'Runtime',
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            display,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontFamily: 'Runtime',
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
                                           ),
                                         ),
                                       ),
