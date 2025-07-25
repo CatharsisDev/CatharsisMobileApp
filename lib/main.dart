@@ -78,48 +78,22 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to auth state changes
+    // Simplified auth state listener - just refresh router
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
-        data: (user) async {
-          final currentLocation =
-              _router.routerDelegate.currentConfiguration.fullPath;
-          
-          if (user != null) {
-            // User is logged in
-            if (currentLocation == '/login' || currentLocation == '/') {
-              // Check if user has seen welcome screen
-              final tutorialState = ref.read(tutorialProvider);
-              if (!tutorialState.hasSeenWelcome) {
-                _router.go('/welcome');
-              } else {
-                _router.go('/home');
-              }
-            }
-          } else {
-            // User is not logged in
-            if (currentLocation != '/login' && currentLocation != '/') {
-              _router.go('/login');
-            }
-          }
+        data: (user) {
+          // Just refresh the router - let the redirect logic handle navigation
+          _router.refresh();
         },
         loading: () {},
-        error: (_, __) => _router.go('/login'),
+        error: (_, __) => _router.refresh(),
       );
     });
 
     // Also listen to tutorial state changes
     ref.listen<TutorialState>(tutorialProvider, (previous, next) {
-      final user = FirebaseAuth.instance.currentUser;
-      final currentLocation =
-          _router.routerDelegate.currentConfiguration.fullPath;
-      
-      // If user just completed tutorial and is still on welcome screen
-      if (user != null && 
-          next.hasSeenWelcome && 
-          currentLocation == '/welcome') {
-        _router.go('/home');
-      }
+      // Just refresh the router when tutorial state changes
+      _router.refresh();
     });
 
     return MaterialApp.router(

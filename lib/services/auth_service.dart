@@ -82,13 +82,15 @@ class AuthService {
 
   Future<User?> registerWithEmail(String email, String password) async {
     try {
-      // Clear ALL Hive data before creating new user
-      print('Clearing all Hive data before registration');
+      // Clear SharedPreferences BEFORE registration
+      print('Clearing all preferences before registration');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
       
-      // List of all possible box names (including user-specific ones)
+      // Clear Hive data
+      print('Clearing all Hive data before registration');
       final boxPrefixes = ['likedQuestions', 'swipeData', 'cachedQuestions', 'seenQuestions'];
       
-      // Clear default boxes
       for (final prefix in boxPrefixes) {
         try {
           if (Hive.isBoxOpen(prefix)) {
@@ -101,9 +103,7 @@ class AuthService {
           print('Error clearing box $prefix: $e');
         }
         
-        // Also try to clear any user-specific boxes
         try {
-          // Check for boxes with common user ID patterns
           final defaultBox = '${prefix}_default';
           if (Hive.isBoxOpen(defaultBox)) {
             final box = Hive.box(defaultBox);
@@ -116,17 +116,17 @@ class AuthService {
         }
       }
       
-      // Clear SharedPreferences too
-      print('Registering new user - clearing welcome state');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clear all preferences
-      
+      // Now register the user
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       
       print('New user registered successfully: ${result.user?.email}');
+      
+      // Force a small delay to ensure preferences are cleared
+      await Future.delayed(Duration(milliseconds: 100));
+      
       return result.user;
     } on FirebaseAuthException catch (e) {
       print('Email Registration Error: ${e.code} - ${e.message}');

@@ -45,11 +45,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordController.text,
         );
       } else {
+        // Reset tutorial state BEFORE registering
+        print('Resetting tutorial state before registration');
+        await ref.read(tutorialProvider.notifier).resetTutorial();
+        
+        // Force the tutorial provider to reinitialize immediately
+        ref.invalidate(tutorialProvider);
+        
+        // Small delay to ensure state is updated
+        await Future.delayed(Duration(milliseconds: 100));
+        
+        // Now register the user
         await authService.registerWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        // Don't do any navigation here - let the router handle it
+        
         print('New user registered - router should redirect to welcome');
       }
     } on FirebaseAuthException catch (e) {

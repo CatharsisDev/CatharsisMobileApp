@@ -16,7 +16,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme_settings/theme_settings_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/services.dart';
@@ -163,17 +162,20 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         children: [
                           Text(
                             'Filter Categories',
-                            style: GoogleFonts.raleway(
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
+                              letterSpacing: 1.2,
                             ),
                           ),
                           TextButton(
                             onPressed: () => setState(() => tempSelectedKeys.clear()),
                             child: Text(
                               'Clear All',
-                              style: GoogleFonts.raleway(
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
                                 color: Colors.grey[600],
                                 fontSize: 14,
                               ),
@@ -226,7 +228,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                           display,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.raleway(
+                                          style: TextStyle(
+                                            fontFamily: 'Runtime',
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.black87,
@@ -267,7 +270,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             ),
                             child: Text(
                               'Apply',
-                              style: GoogleFonts.raleway(
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
