@@ -1,8 +1,10 @@
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../questions_model.dart';
 import 'pop_up_provider.dart';
+import 'auth_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 
@@ -131,10 +133,65 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   Future<void> _initialize() async {
     state = state.copyWith(isLoading: true);
-    likedBox = await Hive.openBox<Question>('likedQuestions');
-    swipeBox = await Hive.openBox('swipeData');
-    cacheBox = await Hive.openBox<Question>('cachedQuestions');
-    seenBox = await Hive.openBox<Question>('seenQuestions');
+    
+    // Define all box prefixes
+    final boxPrefixes = ['likedQuestions', 'swipeData', 'cachedQuestions', 'seenQuestions'];
+    
+    // Close all existing boxes
+    for (final prefix in boxPrefixes) {
+      // Try to close default boxes
+      try {
+        if (Hive.isBoxOpen(prefix)) {
+          await Hive.box(prefix).close();
+        }
+      } catch (e) {
+        print('Error closing box $prefix: $e');
+      }
+      
+      // Try to close user-specific boxes (with common patterns)
+      for (final suffix in ['_default', '_temp']) {
+        final boxName = '$prefix$suffix';
+        try {
+          if (Hive.isBoxOpen(boxName)) {
+            await Hive.box(boxName).close();
+          }
+        } catch (e) {
+          // Ignore errors for non-existent boxes
+        }
+      }
+    }
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userId = user.uid;
+      print('Initializing boxes for user: $userId');
+      
+      // Close any existing user-specific boxes first
+      for (final prefix in boxPrefixes) {
+        final userBoxName = '${prefix}_$userId';
+        try {
+          if (Hive.isBoxOpen(userBoxName)) {
+            await Hive.box(userBoxName).close();
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+      
+      // Open user-specific boxes
+      likedBox = await Hive.openBox<Question>('likedQuestions_$userId');
+      swipeBox = await Hive.openBox('swipeData_$userId');
+      cacheBox = await Hive.openBox<Question>('cachedQuestions_$userId');
+      seenBox = await Hive.openBox<Question>('seenQuestions_$userId');
+      
+      print('Boxes opened - Liked: ${likedBox.length}, Seen: ${seenBox.length}');
+    } else {
+      print('No user found, using default boxes');
+      likedBox = await Hive.openBox<Question>('likedQuestions_default');
+      swipeBox = await Hive.openBox('swipeData_default');
+      cacheBox = await Hive.openBox<Question>('cachedQuestions_default');
+      seenBox = await Hive.openBox<Question>('seenQuestions_default');
+    }
 
     await _loadLiked();
     await _loadSeenQuestions();
@@ -266,11 +323,17 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
-    final qs = state.activeQuestions;
-    if (qs.isEmpty) return;
+    // Get the cached unseen questions from the widget
+    final allActive = state.activeQuestions;
+    final unseenQuestions = allActive.where((q) => 
+      !state.seenQuestions.any((seen) => 
+        seen.text == q.text && seen.category == q.category)
+    ).toList();
     
-    final i = index % qs.length;
-    final currentQuestion = qs[i];
+    final qs = unseenQuestions.isEmpty ? allActive : unseenQuestions;
+    if (qs.isEmpty || index >= qs.length) return;
+    
+    final currentQuestion = qs[index];
     
     // Track asynchronously without blocking
     () async {
@@ -296,6 +359,58 @@ class CardStateNotifier extends StateNotifier<CardState> {
       final seenQuestion = Question(
         text: currentQuestion.text,
         category: currentQuestion.category,
+      );
+      seen.add(seenQuestion);
+      state = state.copyWith(seenQuestions: seen);
+      
+      // Persist to Hive
+      seenBox.add(seenQuestion);
+    }
+    
+    // Set start time for next question
+    _currentQuestionStartTime = DateTime.now();
+    
+    _maybeGenerateMore();
+  }
+
+  void markQuestionAsSeen(Question question) {
+    final seen = List<Question>.from(state.seenQuestions);
+    if (!seen.any((q) => q.text == question.text && q.category == question.category)) {
+      final seenQuestion = Question(
+        text: question.text,
+        category: question.category,
+      );
+      seen.add(seenQuestion);
+      state = state.copyWith(seenQuestions: seen);
+      seenBox.add(seenQuestion);
+    }
+  }
+
+  void handleCardSwipedWithQuestion(Question question, {String direction = 'unknown', double velocity = 0.0}) {
+    // Track asynchronously without blocking
+    () async {
+      if (_currentQuestionStartTime != null) {
+        final duration = DateTime.now().difference(_currentQuestionStartTime!).inSeconds;
+        await UserBehaviorService.trackQuestionView(
+          question: question,
+          viewDuration: duration,
+        );
+      }
+
+      await UserBehaviorService.trackSwipeBehavior(
+        question: question,
+        direction: direction,
+        swipeVelocity: velocity,
+      );
+    }();
+    
+    // Add to seen questions for persistence
+    final seen = List<Question>.from(state.seenQuestions);
+    if (!seen.any((q) => q.text == question.text && q.category == question.category)) {
+      // Create a new instance to avoid Hive conflict
+      final seenQuestion = Question(
+        text: question.text,
+        category: question.category,
       );
       seen.add(seenQuestion);
       state = state.copyWith(seenQuestions: seen);
@@ -364,9 +479,44 @@ class CardStateNotifier extends StateNotifier<CardState> {
     await cacheBox.addAll(newQs);
     state = state.copyWith(allQuestions: updatedQuestions);
   }
+
+  // Add cleanup method for sign out
+  Future<void> clearUserData() async {
+    try {
+      await likedBox.clear();
+      await swipeBox.clear();
+      await cacheBox.clear();
+      await seenBox.clear();
+      
+      // Reset state
+      state = CardState(
+        allQuestions: [],
+        likedQuestions: [],
+        seenQuestions: [],
+        currentCategory: 'all',
+        isLoading: false,
+        currentIndex: 0,
+        selectedCategories: {},
+      );
+    } catch (e) {
+      print('Error clearing user data: $e');
+    }
+  }
 }
 
-final cardStateProvider =
-    StateNotifierProvider<CardStateNotifier, CardState>((ref) {
+final cardStateProvider = StateNotifierProvider<CardStateNotifier, CardState>((ref) {
+  // Listen to auth state changes
+  ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+    final previousUser = previous?.whenOrNull(data: (user) => user);
+    final currentUser = next.whenOrNull(data: (user) => user);
+    
+    // If user changed (including null -> user or user -> null)
+    if (previousUser?.uid != currentUser?.uid) {
+      print('Auth state changed - User changed from ${previousUser?.uid} to ${currentUser?.uid}');
+      // Force provider to rebuild
+      ref.invalidateSelf();
+    }
+  });
+  
   return CardStateNotifier(ref);
 });
