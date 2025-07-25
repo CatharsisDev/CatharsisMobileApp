@@ -316,10 +316,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
     state = state.copyWith(
       selectedCategories: normSet,
       currentIndex: 0,
-      seenQuestions: [],
+      // Don't reset seen questions when changing categories
     );
-    // Clear seen questions when categories change
-    seenBox.clear();
+    // Don't clear seen questions box
   }
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
