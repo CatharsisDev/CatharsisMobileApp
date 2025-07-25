@@ -157,11 +157,20 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     const SizedBox(height: 20),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
+                          // Back button
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              icon: Icon( Icons.arrow_back_ios, color: Colors.black87, size: 24),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          // Title
                           Text(
-                            'Filter Categories',
+                            'Categories',
                             style: TextStyle(
                               fontFamily: 'Runtime',
                               fontSize: 24,
@@ -170,14 +179,19 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               letterSpacing: 1.2,
                             ),
                           ),
-                          TextButton(
-                            onPressed: () => setState(() => tempSelectedKeys.clear()),
-                            child: Text(
-                              'Clear All',
-                              style: TextStyle(
-                                fontFamily: 'Runtime',
-                                color: Colors.grey[600],
-                                fontSize: 14,
+                          // Clear All button
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => setState(() => tempSelectedKeys.clear()),
+                              child: Text(
+                                'Clear All',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold
+                                ),
                               ),
                             ),
                           ),
