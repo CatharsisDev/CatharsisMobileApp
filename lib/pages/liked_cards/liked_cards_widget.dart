@@ -81,6 +81,7 @@ class LikedCardsWidget extends ConsumerWidget {
                         return Card(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
+                          color: const Color.fromARGB(255, 253, 250, 240),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           elevation: 4,

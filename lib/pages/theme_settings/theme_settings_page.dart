@@ -8,34 +8,39 @@ class ThemeSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themeProvider);
     final themeNotifier = ref.read(themeProvider.notifier);
+    final isDark = themeState.themeName == 'dark';
 
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFFFAF1E1),
-                  const Color(0xFFFAF1E1).withOpacity(0.95),
-                ],
-              ),
-            ),
-          ),
-          // Texture overlay at 40% opacity
-          Opacity(
-            opacity: 0.4,
-            child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/images/background_texture.png"),
-                  fit: BoxFit.cover,
+          // Solid dark background when in dark theme, otherwise cream gradient + texture
+          if (isDark) 
+            Container(color: const Color(0xFF100E42))
+          else ...[
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFFAF1E1),
+                    const Color(0xFFFAF1E1).withOpacity(0.95),
+                  ],
                 ),
               ),
             ),
-          ),
+            Opacity(
+              opacity: 0.4,
+              child: Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/images/background_texture.png"),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ],
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

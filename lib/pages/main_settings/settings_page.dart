@@ -198,7 +198,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                             style: GoogleFonts.raleway(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: Colors.white,
+                                              color: const Color.fromARGB(255, 253, 250, 240),
                                             ),
                                           ),
                                         ),
@@ -241,7 +241,7 @@ class SettingsMenuPage extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color.fromARGB(240, 255, 253, 250),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(

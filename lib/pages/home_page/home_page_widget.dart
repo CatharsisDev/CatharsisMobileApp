@@ -232,7 +232,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                   decoration: BoxDecoration(
                                     color: isSelected 
                                         ? const Color.fromRGBO(152, 117, 84, 0.1) 
-                                        : const Color.fromRGBO(255, 253, 240, 1), 
+                                        : const Color.fromARGB(255, 251, 248, 231), 
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(color: const Color(0xFF8B4F4F), width: 1),
                                   ),
@@ -353,6 +353,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
 
+    // Get theme data
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+
     final newCacheKey = _generateCacheKey(cardState);
     final didActiveQuestionsChange = _cacheKey != newCacheKey;
     if (_cachedQuestions == null || didActiveQuestionsChange) {
@@ -395,18 +399,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
+          // Theme-aware background
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFFFAF1E1),
-                  const Color(0xFFFAF1E1).withOpacity(0.95),
-                ],
-              ),
+              color: theme.scaffoldBackgroundColor,
             ),
-            child: Opacity(
+          ),
+          // Conditionally show texture based on custom theme setting
+          if (customTheme?.showBackgroundTexture ?? false)
+            Opacity(
               opacity: 0.4,
               child: Container(
                 decoration: const BoxDecoration(
@@ -417,7 +418,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                 ),
               ),
             ),
-          ),
           Positioned.fill(
             child: cardState.isLoading
               ? const Center(child: CircularProgressIndicator())
