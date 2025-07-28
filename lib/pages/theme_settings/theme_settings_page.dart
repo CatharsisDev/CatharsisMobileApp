@@ -15,13 +15,24 @@ class ThemeSettingsPage extends ConsumerWidget {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: ref.watch(themeProvider).themeName == 'dark' 
-    ? [Theme.of(context).appBarTheme.backgroundColor!, Theme.of(context).scaffoldBackgroundColor]
-    : ref.watch(themeProvider).themeName == 'light'
-    ? [Color.fromARGB(235, 201, 197, 197), Color.fromARGB(255, 255, 255, 255)]
-    : [Color.fromARGB(235, 208, 164, 180), Color.fromRGBO(140, 198, 255, 1)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFFFAF1E1),
+                  const Color(0xFFFAF1E1).withOpacity(0.95),
+                ],
+              ),
+            ),
+          ),
+          // Texture overlay at 40% opacity
+          Opacity(
+            opacity: 0.4,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/background_texture.png"),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -35,24 +46,18 @@ class ThemeSettingsPage extends ConsumerWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
                         iconSize: 30.0,
                         onPressed: () => Navigator.pop(context), // Navigate back
                       ),
                       const SizedBox(width: 8.0),
                       Text(
                         'Theme Settings',
-                        style: GoogleFonts.raleway(
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
                           fontSize: 22.0,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(2.0, 2.0),
-                              blurRadius: 2.0,
-                              color: Colors.black.withOpacity(0.5),
-                            ),
-                          ],
+                          color: const Color.fromRGBO(32, 28, 17, 1),
                         ),
                       ),
                     ],
@@ -67,34 +72,22 @@ class ThemeSettingsPage extends ConsumerWidget {
                       children: [
                         Text(
                           'Select Theme',
-                          style: GoogleFonts.raleway(
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
                             fontSize: 20.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(2.0, 2.0),
-                                blurRadius: 2.0,
-                                color: Colors.black.withOpacity(0.5),
-                              ),
-                            ],
+                            color: const Color.fromRGBO(32, 28, 17, 1),
                           ),
                         ),
                         const SizedBox(height: 20),
                         ListTile(
                           title: Text(
-                            'Catharsis Signature Theme',
-                            style: GoogleFonts.raleway(
-                              color: Colors.white,
+                            'Default Theme',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: const Color.fromRGBO(32, 28, 17, 1),
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(2.0, 2.0),
-                                  blurRadius: 2.0,
-                                  color: Colors.black.withOpacity(0.5),
-                                ),
-                              ],
                             ),
                           ),
                           trailing: Radio<String>(
@@ -107,17 +100,11 @@ class ThemeSettingsPage extends ConsumerWidget {
                         ListTile(
                           title: Text(
                             'Light Theme',
-                            style: GoogleFonts.raleway(
-                              color: Colors.white,
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: const Color.fromRGBO(32, 28, 17, 1),
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(2.0, 2.0),
-                                  blurRadius: 2.0,
-                                  color: Colors.black.withOpacity(0.5),
-                                ),
-                              ],
                             ),
                           ),
                           trailing: Radio<String>(
@@ -130,17 +117,11 @@ class ThemeSettingsPage extends ConsumerWidget {
                         ListTile(
                           title: Text(
                             'Dark Theme',
-                            style: GoogleFonts.raleway(
-                              color: Colors.white,
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: const Color.fromRGBO(32, 28, 17, 1),
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(2.0, 2.0),
-                                  blurRadius: 2.0,
-                                  color: Colors.black.withOpacity(0.5),
-                                ),
-                              ],
                             ),
                           ),
                           trailing: Radio<String>(

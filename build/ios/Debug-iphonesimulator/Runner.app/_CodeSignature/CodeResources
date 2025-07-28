@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		l2fYyy/xyfHNu5ZqjR8r5y/g0vo=
+		HYHvDV52qAs5OmwbOFRJRHM5vOg=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,7 +54,7 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		EHBnvH6wsVhWAYNNub6c7EAsOGE=
+		cDWjQrbmKPaKiqwrX8mBrGw453c=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<data>
@@ -62,11 +62,11 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
-		pzqxc5Ul1xQi3ARdGaSGbzESuPU=
+		EFI3V2x8ejvQpfE3TinMh4x8oz4=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<data>
-		zlTaP4Cx4QaJrsuiBZk5Qx7ZBvE=
+		WFkdezIafjqGlpE3E3Yg0E+qxiY=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
 		<data>
@@ -91,6 +91,10 @@
 		<key>Frameworks/App.framework/flutter_assets/assets/images/background_texture.png</key>
 		<data>
 		/Zv/bABqtkruJjjuKDsVnEvF+IY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/boat_illustration.png</key>
+		<data>
+		Y6TMazNq5kNpQBEz+HbtgPgg+zc=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/catharsis_signature_theme_card_background.png</key>
 		<data>
@@ -178,7 +182,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		fxAJdv/LvInPB2iZu4y1Olz5j7M=
+		fqyPaUhx55jIV6Uk1lTasGs8dB4=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -1307,7 +1311,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Ff6EzJWZ333Y49KVj9QE6XQMqmXfLQc3vt58PBDTrek=
+			XwPocx3Nxx7D+yJbWfrrrvO9HMXnthR2N0RKQDvXIHY=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -1321,7 +1325,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			xngtietPyjzuKb4k3thcdqb1c+wdVALGuPKJdfJ4Luw=
+			swByFKRduA4Cj+Kqt9u3genbJ6GXXDn4hCDbI4csjCE=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
@@ -1335,14 +1339,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			UGDTK5ck0jKC2VMEcJEBZukzBXT8DUIxfVuD2s+CMgk=
+			KiusUehZfoLjvprldfIBVkJEj43rijh5cskNNgvrtzY=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			TGZk+CjRqqy8YaXwWMY/kYk3k7Js913eeZnx7nxjfHs=
+			aTeKyIqixmqJeUcqakSM8enw7C+biNgLamqRt+YfoZ4=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
@@ -1385,6 +1389,13 @@
 			<key>hash2</key>
 			<data>
 			sYXbwiIt2cd5nzGLkvgQnau/l0+7ofuYMy0pfpIgGr0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/boat_illustration.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			dQiR5JKY2doUURQNw3CZNHTGrpakRlpVhkaWrRw8uyE=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/catharsis_signature_theme_card_background.png</key>
@@ -1538,7 +1549,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ZDA4tk8p9ibc6Gpqe/pif6UM9zHuc+x8uzIgSqGw/K8=
+			/A035z62e0stX8jfPcv9mfTEfb78LKQ0VvGtZtyCAh4=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>

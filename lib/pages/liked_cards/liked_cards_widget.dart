@@ -20,7 +20,8 @@ class LikedCardsWidget extends ConsumerWidget {
         elevation: 0,
         title: Text(
           'Liked Cards',
-          style: GoogleFonts.raleway(
+          style: TextStyle(
+            fontFamily: 'Runtime',
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
