@@ -22,8 +22,6 @@ import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-// Rest of your HomePageWidget code remains the same...
-
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
 
@@ -44,14 +42,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
   @override
   bool get wantKeepAlive => true;
-
-  final Map<String, Color> _categoryColors = {
-    'Love and Intimacy': const Color.fromRGBO(42, 63, 44, 1),
-    'Spirituality': const Color.fromRGBO(42, 63, 44, 1),
-    'Society': const Color.fromRGBO(42, 63, 44, 1),
-    'Interactions and Relationships': const Color.fromRGBO(42, 63, 44, 1),
-    'Personal Development': const Color.fromRGBO(42, 63, 44, 1),
-  };
 
   final Map<String, String> _categoryIcons = {
     'Love and Intimacy': '❤️',
@@ -90,11 +80,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Make status bar theme-aware
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
     ));
   }
 
@@ -122,6 +114,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
     final currentKeys = ref.read(cardStateProvider).selectedCategories;
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
 
     showModalBottomSheet(
       context: context,
@@ -136,7 +130,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             return Container(
               height: MediaQuery.of(context).size.height * 0.6,
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 253, 240, 0.9),
+                color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -151,7 +145,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[400],
+                        color: theme.brightness == Brightness.dark 
+                            ? Colors.grey[600] 
+                            : Colors.grey[400],
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -165,7 +161,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           Align(
                             alignment: Alignment.centerLeft,
                             child: IconButton(
-                              icon: Icon( Icons.arrow_back_ios, color: Colors.black87, size: 24),
+                              icon: Icon(
+                                Icons.arrow_back_ios, 
+                                color: theme.iconTheme.color, 
+                                size: 24
+                              ),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
                           ),
@@ -176,7 +176,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               fontFamily: 'Runtime',
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: theme.textTheme.titleLarge?.color,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -189,7 +189,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 'Clear All',
                                 style: TextStyle(
                                   fontFamily: 'Runtime',
-                                  color: Colors.grey[600],
+                                  color: theme.brightness == Brightness.dark 
+                                      ? Colors.grey[400] 
+                                      : Colors.grey[600],
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold
                                 ),
@@ -231,10 +233,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                   ),
                                   decoration: BoxDecoration(
                                     color: isSelected 
-                                        ? const Color.fromRGBO(152, 117, 84, 0.1) 
-                                        : const Color.fromARGB(255, 251, 248, 231), 
+                                        ? (customTheme?.preferenceItemSelectedColor?.withOpacity(0.8) ?? Colors.grey[700])
+                                        : (customTheme?.preferenceItemUnselectedColor ?? Colors.grey[800]), 
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFF8B4F4F), width: 1),
+                                    border: Border.all(
+                                      color: customTheme?.preferenceBorderColor ?? Colors.grey[600]!, 
+                                      width: 1
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
@@ -249,7 +254,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                               fontFamily: 'Runtime',
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
+                                              color: theme.textTheme.bodyMedium?.color,
                                             ),
                                           ),
                                         ),
@@ -279,7 +284,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromRGBO(42, 63, 44, 1),
+                              backgroundColor: theme.extension<CustomThemeExtension>()?.preferenceButtonColor ?? theme.primaryColor,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
@@ -314,7 +319,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   Widget _buildCategoryChip(String category) {
-    final categoryColor = _categoryColors[category] ?? const Color(0xFF5C4033);
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+    final categoryColor = customTheme?.categoryChipColor ?? theme.primaryColor;
     final categoryIcon = _categoryIcons[category] ?? '📌';
 
     return Container(
@@ -403,35 +410,34 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           Container(
             decoration: BoxDecoration(
               color: theme.scaffoldBackgroundColor,
+              image: (customTheme?.showBackgroundTexture ?? false) && 
+                     (customTheme?.backgroundImagePath != null)
+                  ? DecorationImage(
+                      image: AssetImage(customTheme!.backgroundImagePath!),
+                      fit: BoxFit.cover,
+                      opacity: 0.4,
+                    )
+                  : null,
             ),
           ),
-          // Conditionally show texture based on custom theme setting
-          if (customTheme?.showBackgroundTexture ?? false)
-            Opacity(
-              opacity: 0.4,
-              child: Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage("assets/images/background_texture.png"),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
           Positioned.fill(
             child: cardState.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: theme.primaryColor,
+                  )
+                )
               : FlutterFlowSwipeableStack(
                   controller: _cardController,
                   itemCount: questions.isEmpty ? 1 : questions.length,
                   itemBuilder: (ctx, i) {
                     if (questions.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           'No questions available',
                           style: TextStyle(
                             fontFamily: 'Runtime',
-                            color: Colors.black87,
+                            color: theme.textTheme.bodyMedium?.color,
                             fontSize: 24,
                             fontWeight: FontWeight.w500,
                           ),
@@ -445,13 +451,16 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       child: Container(
                         width: double.infinity,
                         height: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFAF1E1),
-                          image: DecorationImage(
-                            image: AssetImage("assets/images/background_texture.png"),
-                            fit: BoxFit.cover,
-                            opacity: 0.4,
-                          ),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          image: (customTheme?.showBackgroundTexture ?? false) && 
+                                 (customTheme?.backgroundImagePath != null)
+                              ? DecorationImage(
+                                  image: AssetImage(customTheme!.backgroundImagePath!),
+                                  fit: BoxFit.cover,
+                                  opacity: 0.4,
+                                )
+                              : null,
                         ),
                         child: Stack(
                           children: [
@@ -465,9 +474,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                     child: Center(
                                       child: Text(
                                         q.text,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'Runtime',
-                                          color: Colors.black87,
+                                          color: theme.textTheme.bodyMedium?.color,
                                           fontSize: 36,
                                           fontWeight: FontWeight.bold,
                                           height: 1.3,
@@ -527,6 +536,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                   backCardOffset: Offset.zero,
                 ),
           ),
+          // Top preferences button
           Positioned(
             top: 0,
             left: 0,
@@ -534,30 +544,65 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: InkWell(
-                    onTap: _openPreferences,
-                    customBorder: const CircleBorder(),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: const Color(0xFF987554).withOpacity(0.1),
-                                    ),
-                      child: Image.asset(
-                        'assets/images/preferences_icon.png',
-                        width: 24,
-                        height: 24,
-                        color: const Color.fromRGBO(145, 121, 102, 0.867),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Theme settings button
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ThemeSettingsPage()),
+                        );
+                      },
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.white.withOpacity(0.1)
+                              : const Color(0xFF987554).withOpacity(0.1),
+                        ),
+                        child: Icon(
+                          Icons.palette,
+                          size: 24,
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.white70
+                              : const Color.fromRGBO(145, 121, 102, 0.867),
+                        ),
                       ),
                     ),
-                  ),
+                    // Preferences button
+                    InkWell(
+                      onTap: _openPreferences,
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.white.withOpacity(0.1)
+                              : const Color(0xFF987554).withOpacity(0.1),
+                        ),
+                        child: Image.asset(
+                          'assets/images/preferences_icon.png',
+                          width: 24,
+                          height: 24,
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.white70
+                              : const Color.fromRGBO(145, 121, 102, 0.867),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+          // Bottom action buttons
           Positioned(
             bottom: 130,
             left: 0,
@@ -572,8 +617,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     children: [
                       InkWell(
                         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Share feature coming soon!'),
+                          SnackBar(
+                            content: Text(
+                              'Share feature coming soon!',
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: theme.primaryColor,
                             duration: Duration(seconds: 2),
                           ),
                         ),
@@ -585,7 +637,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             'assets/images/share_icon.png',
                             width: 24,
                             height: 24,
-                            color: const Color.fromRGBO(145, 121, 102, 0.867),
+                            color: theme.brightness == Brightness.dark 
+                                ? Colors.white70
+                                : const Color.fromRGBO(145, 121, 102, 0.867),
                           ),
                         ),
                       ),
@@ -606,7 +660,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             'assets/images/heart_icon.png',
                             width: 28,
                             height: 28,
-                            color: isCurrentLiked ? Colors.red : const Color.fromRGBO(145, 121, 102, 0.867),
+                            color: isCurrentLiked ? Colors.red : (theme.brightness == Brightness.dark 
+                                ? Colors.white70
+                                : const Color.fromRGBO(145, 121, 102, 0.867)),
                           ),
                         ),
                       ),
@@ -616,6 +672,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ],
             ),
           ),
+          // Bottom navigation
           Positioned(
             bottom: 50,
             left: 0,
@@ -633,14 +690,14 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           'assets/images/home_icon.png',
                           width: 24,
                           height: 24,
-                          color: Colors.black87,
+                          color: theme.textTheme.bodyMedium?.color,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           "Home",
                           style: TextStyle(
                             fontFamily: 'Runtime',
-                            color: Colors.black87,
+                            color: theme.textTheme.bodyMedium?.color,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -657,14 +714,18 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           'assets/images/profile_icon.png',
                           width: 24,
                           height: 24,
-                          color: Colors.grey[600],
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                         const SizedBox(width: 8),
                         Text(
                           "Profile",
                           style: TextStyle(
                             fontFamily: 'Runtime',
-                            color: Colors.grey[600],
+                            color: theme.brightness == Brightness.dark 
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
                           ),
@@ -676,6 +737,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
             ),
           ),
+          // Tutorial overlay (commented out but keeping for reference)
           /*
           if (showTutorial)
             Positioned.fill(
@@ -720,7 +782,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         ref.read(tutorialProvider.notifier).setTutorialSeen();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5C4033),
+                        backgroundColor: theme.primaryColor,
                         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),

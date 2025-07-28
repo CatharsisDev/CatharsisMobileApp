@@ -12,6 +12,8 @@ class LikedCardsWidget extends ConsumerWidget {
     final cardState = ref.watch(cardStateProvider);
     final likedQuestions = cardState.likedQuestions;
     final notifier = ref.read(cardStateProvider.notifier);
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -24,41 +26,30 @@ class LikedCardsWidget extends ConsumerWidget {
             fontFamily: 'Runtime',
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: theme.textTheme.titleLarge?.color,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: IconThemeData(color: theme.iconTheme.color),
       ),
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Cream gradient background covers entire screen
+          // Theme-aware background
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFFFAF1E1),
-                  const Color(0xFFFAF1E1).withOpacity(0.95),
-                ],
-              ),
+              color: theme.scaffoldBackgroundColor,
+              image: (customTheme?.showBackgroundTexture ?? false) && 
+                     (customTheme?.backgroundImagePath != null)
+                  ? DecorationImage(
+                      image: AssetImage(customTheme!.backgroundImagePath!),
+                      fit: BoxFit.cover,
+                      opacity: 0.4,
+                    )
+                  : null,
             ),
           ),
-          // Texture overlay at 40% opacity
-          Opacity(
-            opacity: 0.4,
-            child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/images/background_texture.png"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-          // Main content shifted below AppBar
+          // Main content
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -69,7 +60,9 @@ class LikedCardsWidget extends ConsumerWidget {
                         style: TextStyle(
                           fontFamily: 'Runtime',
                           fontSize: 20,
-                          color: Colors.grey,
+                          color: theme.brightness == Brightness.dark 
+                              ? Colors.grey[400] 
+                              : Colors.grey,
                         ),
                       ),
                     )
@@ -81,7 +74,7 @@ class LikedCardsWidget extends ConsumerWidget {
                         return Card(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          color: const Color.fromARGB(255, 253, 250, 240),
+                          color: theme.cardColor,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           elevation: 4,
@@ -94,6 +87,7 @@ class LikedCardsWidget extends ConsumerWidget {
                                 fontFamily: 'Runtime',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
+                                color: theme.textTheme.bodyMedium?.color,
                               ),
                             ),
                             subtitle: Text(
@@ -101,7 +95,9 @@ class LikedCardsWidget extends ConsumerWidget {
                               style: TextStyle(
                                 fontFamily: 'Runtime',
                                 fontSize: 14,
-                                color: Colors.grey,
+                                color: theme.brightness == Brightness.dark 
+                                    ? Colors.grey[400] 
+                                    : Colors.grey,
                               ),
                             ),
                             trailing: IconButton(

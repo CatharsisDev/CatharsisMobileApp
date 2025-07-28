@@ -9,38 +9,31 @@ class ThemeSettingsPage extends ConsumerWidget {
     final themeState = ref.watch(themeProvider);
     final themeNotifier = ref.read(themeProvider.notifier);
     final isDark = themeState.themeName == 'dark';
+    
+    // Get theme-aware colors
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
+    final customTheme = Theme.of(context).extension<CustomThemeExtension>();
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          // Solid dark background when in dark theme, otherwise cream gradient + texture
-          if (isDark) 
-            Container(color: const Color(0xFF100E42))
-          else ...[
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFFFAF1E1),
-                    const Color(0xFFFAF1E1).withOpacity(0.95),
-                  ],
-                ),
-              ),
+          // Use theme-aware background
+          Container(
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              image: (customTheme?.showBackgroundTexture ?? false) && 
+                     (customTheme?.backgroundImagePath != null)
+                  ? DecorationImage(
+                      image: AssetImage(customTheme!.backgroundImagePath!),
+                      fit: BoxFit.cover,
+                      opacity: 0.4,
+                    )
+                  : null,
             ),
-            Opacity(
-              opacity: 0.4,
-              child: Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage("assets/images/background_texture.png"),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
+          
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,9 +44,9 @@ class ThemeSettingsPage extends ConsumerWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+                        icon: Icon(Icons.arrow_back_ios, color: textColor),
                         iconSize: 30.0,
-                        onPressed: () => Navigator.pop(context), // Navigate back
+                        onPressed: () => Navigator.pop(context),
                       ),
                       const SizedBox(width: 8.0),
                       Text(
@@ -62,7 +55,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                           fontFamily: 'Runtime',
                           fontSize: 22.0,
                           fontWeight: FontWeight.bold,
-                          color: const Color.fromRGBO(32, 28, 17, 1),
+                          color: textColor,
                         ),
                       ),
                     ],
@@ -81,7 +74,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                             fontFamily: 'Runtime',
                             fontSize: 20.0,
                             fontWeight: FontWeight.bold,
-                            color: const Color.fromRGBO(32, 28, 17, 1),
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -90,7 +83,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                             'Default Theme',
                             style: TextStyle(
                               fontFamily: 'Runtime',
-                              color: const Color.fromRGBO(32, 28, 17, 1),
+                              color: textColor,
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
                             ),
@@ -98,7 +91,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                           trailing: Radio<String>(
                             value: 'catharsis_signature',
                             groupValue: themeState.themeName,
-                            activeColor: const Color.fromARGB(255, 227, 95, 66), // Tick color
+                            activeColor: const Color.fromARGB(255, 227, 95, 66),
                             onChanged: (value) => themeNotifier.setTheme('catharsis_signature'),
                           ),
                         ),
@@ -107,7 +100,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                             'Light Theme',
                             style: TextStyle(
                               fontFamily: 'Runtime',
-                              color: const Color.fromRGBO(32, 28, 17, 1),
+                              color: textColor,
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
                             ),
@@ -124,7 +117,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                             'Dark Theme',
                             style: TextStyle(
                               fontFamily: 'Runtime',
-                              color: const Color.fromRGBO(32, 28, 17, 1),
+                              color: textColor,
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
                             ),

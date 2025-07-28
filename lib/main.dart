@@ -1,4 +1,5 @@
 import 'package:catharsis_cards/provider/auth_provider.dart';
+import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
 import 'package:firebase_auth/firebase_auth.dart';
 import 'questions_model.dart';
 import 'package:flutter/gestures.dart';
@@ -60,7 +61,6 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
-  ThemeMode _themeMode = FlutterFlowTheme.themeMode;
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
 
@@ -71,18 +71,15 @@ class _MyAppState extends ConsumerState<MyApp> {
     _router = app_router.createRouter(_appStateNotifier, ref);
   }
 
-  void setThemeMode(ThemeMode mode) => safeSetState(() {
-        _themeMode = mode;
-        FlutterFlowTheme.saveThemeMode(mode);
-      });
-
   @override
   Widget build(BuildContext context) {
-    // Simplified auth state listener - just refresh router
+    // Watch the theme provider instead of using the old theme mode
+    final themeState = ref.watch(themeProvider);
+
+    // Auth state listener
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
         data: (user) {
-          // Just refresh the router - let the redirect logic handle navigation
           _router.refresh();
         },
         loading: () {},
@@ -90,9 +87,8 @@ class _MyAppState extends ConsumerState<MyApp> {
       );
     });
 
-    // Also listen to tutorial state changes
+    // Tutorial state listener
     ref.listen<TutorialState>(tutorialProvider, (previous, next) {
-      // Just refresh the router when tutorial state changes
       _router.refresh();
     });
 
@@ -104,15 +100,10 @@ class _MyAppState extends ConsumerState<MyApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en', '')],
-      theme: ThemeData(
-        brightness: Brightness.light,
-        useMaterial3: false,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: false,
-      ),
-      themeMode: _themeMode,
+      // Use the theme from your custom theme provider
+      theme: themeState.themeData,
+      darkTheme: themeState.themeData, // You can also set a specific dark theme here if needed
+      themeMode: ThemeMode.light, // Let your custom provider handle the theme switching
       routerConfig: _router,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../provider/auth_provider.dart';
+import '../../provider/theme_provider.dart';
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
 
@@ -12,36 +13,26 @@ class SettingsMenuPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.read(authServiceProvider);
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
     
     return Scaffold(
       body: Stack(
         children: [
-          // Cream gradient background
+          // Theme-aware background
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFAF1E1),
-                  Color(0xFFFAF1E1).withOpacity(0.95),
-                ],
-              ),
+              color: theme.scaffoldBackgroundColor,
+              image: (customTheme?.showBackgroundTexture ?? false) && 
+                     (customTheme?.backgroundImagePath != null)
+                  ? DecorationImage(
+                      image: AssetImage(customTheme!.backgroundImagePath!),
+                      fit: BoxFit.cover,
+                      opacity: 0.3,
+                    )
+                  : null,
             ),
           ),
-          // Texture overlay
-          Opacity(
-            opacity: 0.3,
-            child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/images/background_texture.png"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-          // Original SafeArea content
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +43,7 @@ class SettingsMenuPage extends ConsumerWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.arrow_back_ios, color: const Color.fromARGB(255, 0, 0, 0), size: 22),
+                        icon: Icon(Icons.arrow_back_ios, color: theme.iconTheme.color, size: 22),
                         onPressed: () => Navigator.pop(context),
                       ),
                       SizedBox(width: 16),
@@ -62,7 +53,7 @@ class SettingsMenuPage extends ConsumerWidget {
                           fontFamily: 'Runtime',
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: theme.textTheme.titleLarge?.color,
                         ),
                       ),
                     ],
@@ -78,6 +69,8 @@ class SettingsMenuPage extends ConsumerWidget {
                       
                       // Customize Theme
                       _buildSettingsItem(
+                        context: context,
+                        theme: theme,
                         icon: Icons.palette_outlined,
                         title: 'Customize theme',
                         assetIcon: 'assets/images/changetheme_icon.png',
@@ -95,6 +88,8 @@ class SettingsMenuPage extends ConsumerWidget {
                       
                       // Saved Cards
                       _buildSettingsItem(
+                        context: context,
+                        theme: theme,
                         icon: FontAwesomeIcons.heart,
                         title: 'Saved',
                         assetIcon: 'assets/images/saved_icon.png',
@@ -109,11 +104,13 @@ class SettingsMenuPage extends ConsumerWidget {
                       ),
                       
                       SizedBox(height: 40),
-                      Divider(color: Colors.white24),
+                      Divider(color: theme.brightness == Brightness.dark ? Colors.white24 : Colors.grey[300]),
                       SizedBox(height: 20),
                       
                       // Log Out
                       _buildSettingsItem(
+                        context: context,
+                        theme: theme,
                         icon: Icons.logout,
                         title: 'Log out',
                         assetIcon: 'assets/images/logout_icon.png',
@@ -125,7 +122,7 @@ class SettingsMenuPage extends ConsumerWidget {
                             backgroundColor: Colors.transparent,
                             builder: (context) => Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).scaffoldBackgroundColor,
+                                color: theme.cardColor,
                                 borderRadius: BorderRadius.only(
                                   topLeft: Radius.circular(20),
                                   topRight: Radius.circular(20),
@@ -140,23 +137,30 @@ class SettingsMenuPage extends ConsumerWidget {
                                     height: 4,
                                     margin: EdgeInsets.only(bottom: 20),
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[300],
+                                      color: theme.brightness == Brightness.dark 
+                                          ? Colors.grey[600] 
+                                          : Colors.grey[300],
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
                                   Text(
                                     'Log out',
-                                    style: GoogleFonts.raleway(
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
+                                      color: theme.textTheme.titleLarge?.color,
                                     ),
                                   ),
                                   SizedBox(height: 16),
                                   Text(
                                     'Are you sure you want to log out?',
-                                    style: GoogleFonts.raleway(
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
                                       fontSize: 16,
-                                      color: Colors.grey[600],
+                                      color: theme.brightness == Brightness.dark 
+                                          ? Colors.grey[400] 
+                                          : Colors.grey[600],
                                     ),
                                   ),
                                   SizedBox(height: 24),
@@ -169,15 +173,22 @@ class SettingsMenuPage extends ConsumerWidget {
                                             padding: EdgeInsets.symmetric(vertical: 16),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(12),
-                                              side: BorderSide(color: Colors.grey[300]!),
+                                              side: BorderSide(
+                                                color: theme.brightness == Brightness.dark 
+                                                    ? Colors.grey[600]! 
+                                                    : Colors.grey[300]!
+                                              ),
                                             ),
                                           ),
                                           child: Text(
                                             'Cancel',
-                                            style: GoogleFonts.raleway(
+                                            style: TextStyle(
+                                              fontFamily: 'Runtime',
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: Colors.grey[700],
+                                              color: theme.brightness == Brightness.dark 
+                                                  ? Colors.grey[300] 
+                                                  : Colors.grey[700],
                                             ),
                                           ),
                                         ),
@@ -195,10 +206,11 @@ class SettingsMenuPage extends ConsumerWidget {
                                           ),
                                           child: Text(
                                             'Log out',
-                                            style: GoogleFonts.raleway(
+                                            style: TextStyle(
+                                              fontFamily: 'Runtime',
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: const Color.fromARGB(255, 253, 250, 240),
+                                              color: Colors.white,
                                             ),
                                           ),
                                         ),
@@ -213,7 +225,6 @@ class SettingsMenuPage extends ConsumerWidget {
                           
                           if (shouldLogout == true) {
                             await authService.signOut();
-                            // Navigation will happen automatically via auth state
                           }
                         },
                       ),
@@ -229,11 +240,13 @@ class SettingsMenuPage extends ConsumerWidget {
   }
 
   Widget _buildSettingsItem({
+    required BuildContext context,
+    required ThemeData theme,
     required IconData icon,
     required String title,
     required VoidCallback onTap,
     bool isRed = false,
-    String? assetIcon,  // new optional asset path
+    String? assetIcon,
   }) {
     return InkWell(
       onTap: onTap,
@@ -241,7 +254,7 @@ class SettingsMenuPage extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(240, 255, 253, 250),
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -254,11 +267,16 @@ class SettingsMenuPage extends ConsumerWidget {
         child: Row(
           children: [
             if (assetIcon != null) 
-              Image.asset(assetIcon, width: 24, height: 24)
+              Image.asset(
+                assetIcon, 
+                width: 24, 
+                height: 24,
+                color: isRed ? Colors.red : theme.iconTheme.color,
+              )
             else if (icon == FontAwesomeIcons.bookmark)
-              FaIcon(icon, color: isRed ? Colors.red : Colors.black87, size: 20)
+              FaIcon(icon, color: isRed ? Colors.red : theme.iconTheme.color, size: 20)
             else
-              Icon(icon, color: isRed ? Colors.red : Colors.black87, size: 20),
+              Icon(icon, color: isRed ? Colors.red : theme.iconTheme.color, size: 20),
             SizedBox(width: 16),
             Text(
               title,
@@ -266,13 +284,13 @@ class SettingsMenuPage extends ConsumerWidget {
                 fontFamily: 'Runtime',
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: isRed ? Colors.red : Colors.black87,
+                color: isRed ? Colors.red : theme.textTheme.bodyMedium?.color,
               ),
             ),
             Spacer(),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey,
+              color: theme.brightness == Brightness.dark ? Colors.grey[400] : Colors.grey,
               size: 18,
             ),
           ],
