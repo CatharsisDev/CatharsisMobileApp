@@ -32,7 +32,7 @@ class LikedCardsWidget extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Cream gradient background
+          // Cream gradient background covers entire screen
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -57,58 +57,63 @@ class LikedCardsWidget extends ConsumerWidget {
               ),
             ),
           ),
-          // Main content
-          likedQuestions.isEmpty
-              ? Center(
-                  child: Text(
-                    'No liked cards yet',
-                    style: TextStyle(
-                      fontFamily: 'Runtime',
-                      fontSize: 20,
-                      color: Colors.grey,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: likedQuestions.length,
-                  itemBuilder: (context, index) {
-                    final question = likedQuestions[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 4,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        title: Text(
-                          question.text,
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        subtitle: Text(
-                          question.category,
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.favorite, color: Colors.red),
-                          onPressed: () {
-                            notifier.toggleLiked(question);
-                          },
+          // Main content shifted below AppBar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: likedQuestions.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No liked cards yet',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 20,
+                          color: Colors.grey,
                         ),
                       ),
-                    );
-                  },
-                ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: likedQuestions.length,
+                      itemBuilder: (context, index) {
+                        final question = likedQuestions[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 4,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            title: Text(
+                              question.text,
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              question.category,
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.favorite, color: Colors.red),
+                              onPressed: () {
+                                notifier.toggleLiked(question);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
         ],
       ),
     );
