@@ -145,9 +145,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: theme.brightness == Brightness.dark 
-                            ? Colors.grey[600] 
-                            : Colors.grey[400],
+                        color: customTheme?.iconColor ?? theme.iconTheme.color,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -407,19 +405,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       body: Stack(
         children: [
           // Theme-aware background
-          Container(
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              image: (customTheme?.showBackgroundTexture ?? false) && 
-                     (customTheme?.backgroundImagePath != null)
-                  ? DecorationImage(
-                      image: AssetImage(customTheme!.backgroundImagePath!),
-                      fit: BoxFit.cover,
-                      opacity: 0.4,
-                    )
-                  : null,
-            ),
-          ),
           Positioned.fill(
             child: cardState.isLoading
               ? Center(
@@ -448,54 +433,58 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     final q = questions[idx];
                     return GestureDetector(
                       onDoubleTap: () => notifier.toggleLiked(q),
-                      child: Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          image: (customTheme?.showBackgroundTexture ?? false) && 
-                                 (customTheme?.backgroundImagePath != null)
-                              ? DecorationImage(
-                                  image: AssetImage(customTheme!.backgroundImagePath!),
-                                  fit: BoxFit.cover,
-                                  opacity: 0.4,
-                                )
-                              : null,
-                        ),
-                        child: Stack(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(40),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const SizedBox(height: 100),
-                                  Flexible(
-                                    child: Center(
-                                      child: Text(
-                                        q.text,
-                                        style: TextStyle(
-                                          fontFamily: 'Runtime',
-                                          color: theme.textTheme.bodyMedium?.color,
-                                          fontSize: 36,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.3,
-                                          letterSpacing: 2,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            image: (customTheme?.showBackgroundTexture ?? false) &&
+                                   (customTheme?.backgroundImagePath != null)
+                                ? DecorationImage(
+                                    image: AssetImage(customTheme!.backgroundImagePath!),
+                                    fit: BoxFit.cover,
+                                    opacity: 0.4,
+                                  )
+                                : null,
+                          ),
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(40),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const SizedBox(height: 100),
+                                    Flexible(
+                                      child: Center(
+                                        child: Text(
+                                          q.text,
+                                          style: TextStyle(
+                                            fontFamily: 'Runtime',
+                                            color: theme.textTheme.bodyMedium?.color,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.3,
+                                            letterSpacing: 2,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                        textAlign: TextAlign.center,
                                       ),
                                     ),
-                                  ),
-                                  Column(
-                                    children: [
-                                      _buildCategoryChip(q.category),
-                                      const SizedBox(height: 230),
-                                    ],
-                                  ),
-                                ],
+                                    Column(
+                                      children: [
+                                        _buildCategoryChip(q.category),
+                                        const SizedBox(height: 230),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -545,35 +534,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // Theme settings button
-                    InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ThemeSettingsPage()),
-                        );
-                      },
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: theme.brightness == Brightness.dark 
-                              ? Colors.white.withOpacity(0.1)
-                              : const Color(0xFF987554).withOpacity(0.1),
-                        ),
-                        child: Icon(
-                          Icons.palette,
-                          size: 24,
-                          color: theme.brightness == Brightness.dark 
-                              ? Colors.white70
-                              : const Color.fromRGBO(145, 121, 102, 0.867),
-                        ),
-                      ),
-                    ),
                     // Preferences button
                     InkWell(
                       onTap: _openPreferences,
@@ -583,17 +545,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.brightness == Brightness.dark 
-                              ? Colors.white.withOpacity(0.1)
-                              : const Color(0xFF987554).withOpacity(0.1),
+                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
                         ),
                         child: Image.asset(
                           'assets/images/preferences_icon.png',
                           width: 24,
                           height: 24,
-                          color: theme.brightness == Brightness.dark 
-                              ? Colors.white70
-                              : const Color.fromRGBO(145, 121, 102, 0.867),
+                          color: customTheme?.iconColor ?? theme.iconTheme.color,
                         ),
                       ),
                     ),
@@ -637,9 +595,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             'assets/images/share_icon.png',
                             width: 24,
                             height: 24,
-                            color: theme.brightness == Brightness.dark 
-                                ? Colors.white70
-                                : const Color.fromRGBO(145, 121, 102, 0.867),
+                            color: customTheme?.likeAndShareIconColor ?? Colors.white.withOpacity(0.1),
                           ),
                         ),
                       ),
@@ -660,9 +616,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             'assets/images/heart_icon.png',
                             width: 28,
                             height: 28,
-                            color: isCurrentLiked ? Colors.red : (theme.brightness == Brightness.dark 
-                                ? Colors.white70
-                                : const Color.fromRGBO(145, 121, 102, 0.867)),
+                            color: isCurrentLiked
+                                ? Colors.red
+                                : (customTheme?.likeAndShareIconColor ??
+                                    const Color.fromARGB(221, 255, 255, 255)),
                           ),
                         ),
                       ),

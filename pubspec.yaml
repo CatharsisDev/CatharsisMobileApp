@@ -109,7 +109,6 @@ flutter:
   
   assets:
     - assets/
-    - assets/images/
     - assets/images/background_texture.png
     - assets/Card_Statements_Questions.csv
     - .env

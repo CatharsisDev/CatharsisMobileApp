@@ -72,7 +72,7 @@ class SettingsMenuPage extends ConsumerWidget {
                         context: context,
                         theme: theme,
                         icon: Icons.palette_outlined,
-                        title: 'Customize theme',
+                        title: 'App appearance',
                         assetIcon: 'assets/images/changetheme_icon.png',
                         onTap: () {
                           Navigator.push(
@@ -158,6 +158,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                     style: TextStyle(
                                       fontFamily: 'Runtime',
                                       fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                       color: theme.brightness == Brightness.dark 
                                           ? Colors.grey[400] 
                                           : Colors.grey[600],
@@ -185,7 +186,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                             style: TextStyle(
                                               fontFamily: 'Runtime',
                                               fontSize: 16,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.bold,
                                               color: theme.brightness == Brightness.dark 
                                                   ? Colors.grey[300] 
                                                   : Colors.grey[700],
@@ -209,7 +210,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                             style: TextStyle(
                                               fontFamily: 'Runtime',
                                               fontSize: 16,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.bold,
                                               color: Colors.white,
                                             ),
                                           ),
@@ -283,7 +284,7 @@ class SettingsMenuPage extends ConsumerWidget {
               style: TextStyle(
                 fontFamily: 'Runtime',
                 fontSize: 16,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.bold,
                 color: isRed ? Colors.red : theme.textTheme.bodyMedium?.color,
               ),
             ),

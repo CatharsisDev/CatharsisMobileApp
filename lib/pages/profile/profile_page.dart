@@ -255,18 +255,14 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: theme.brightness == Brightness.dark 
-                                ? Colors.white.withOpacity(0.1)
-                                : const Color(0xFF987554).withOpacity(0.1),
+                            color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
                           ),
                           child: Center(
                             child: Image.asset(
                               'assets/images/preferences_icon.png',
                               width: 24,
                               height: 24,
-                              color: theme.brightness == Brightness.dark 
-                                  ? Colors.white70
-                                  : const Color(0xFF987554),
+                              color: customTheme?.iconColor ?? theme.iconTheme.color,
                             ),
                           ),
                         ),
@@ -296,18 +292,14 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: theme.brightness == Brightness.dark 
-                                ? Colors.white.withOpacity(0.1)
-                                : const Color(0xFF987554).withOpacity(0.1),
+                            color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
                           ),
                           child: Center(
                             child: Image.asset(
                               'assets/images/settings_icon.png',
                               width: 24,
                               height: 24,
-                              color: theme.brightness == Brightness.dark 
-                                  ? Colors.white70
-                                  : const Color(0xFF987554),
+                              color: customTheme?.iconColor ?? theme.iconTheme.color,
                             ),
                           ),
                         ),
@@ -351,10 +343,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                 shape: BoxShape.circle,
                                 color: theme.cardColor,
                                 border: Border.all(
-                                  color: customTheme?.profileAvatarColor ?? 
-                                         (theme.brightness == Brightness.dark 
-                                             ? const Color(0xFF2A2870) 
-                                             : Colors.white), 
+                                  color: theme.brightness == Brightness.dark 
+                                      ? (customTheme?.profileAvatarColor ?? const Color(0xFF2A2870))
+                                      : Colors.white, 
                                   width: 8
                                 ),
                               ),
@@ -545,19 +536,19 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
       decoration: BoxDecoration(
         color: customTheme?.profileStatCardColor ?? Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-       image: (customTheme?.profileStatCardImagePath != null)
-    ? DecorationImage(
-        image: AssetImage(customTheme!.profileStatCardImagePath!),
-        fit: BoxFit.cover,
-        opacity: 0.6,
-      )
-    : (customTheme?.backgroundImagePath != null && theme.brightness != Brightness.dark)
-        ? DecorationImage(
-            image: AssetImage(customTheme!.backgroundImagePath!),
-            fit: BoxFit.cover,
-            opacity: 0.4,
-          )
-        : null,
+        image: (customTheme?.profileStatCardImagePath != null)
+            ? DecorationImage(
+                image: AssetImage(customTheme!.profileStatCardImagePath!),
+                fit: BoxFit.cover,
+                opacity: 0.6,
+              )
+            : (customTheme?.backgroundImagePath != null && theme.brightness != Brightness.dark)
+                ? DecorationImage(
+                    image: AssetImage(customTheme!.backgroundImagePath!),
+                    fit: BoxFit.cover,
+                    opacity: 0.4,
+                  )
+                : null,
       ),
       child: Column(
         children: [

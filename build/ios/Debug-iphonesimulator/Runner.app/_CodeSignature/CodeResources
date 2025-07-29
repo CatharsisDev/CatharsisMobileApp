@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		KhrREX1hHTMlQ0T1fLQEOee2u1o=
+		lOOBftgPKSHV43/fdgCBdpP1YKM=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,7 +54,7 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		465glQLAHGmCZG7gGVf/R/UhmRA=
+		cy5Ex1yiOKp+lOSliX+dHX2iOr8=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<data>
@@ -62,11 +62,11 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
-		EFI3V2x8ejvQpfE3TinMh4x8oz4=
+		5OSvXLPzRDmUuZL11XMwz/7glWk=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<data>
-		WFkdezIafjqGlpE3E3Yg0E+qxiY=
+		tJ/zqCI6zcVf5fRiIMByYwj+XgY=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
 		<data>
@@ -108,9 +108,21 @@
 		<data>
 		cuXUVO0lyysY9kTmJWOsQmQ4HNk=
 		</data>
-		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_card_background.png</key>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_background.png</key>
 		<data>
-		Y616kuQDjXibhL4h9XAcOLAZjN8=
+		QVf1b5/sY7YAn7yOxae4rmaoUL0=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_stat_card.png</key>
+		<data>
+		nnbc/9zul6qlcGDayFDj3sEKmV8=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_theme_image.png</key>
+		<data>
+		WF6h7kmPiMmO6Ydnyo6X9j9Mv3w=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/default_theme_image.png</key>
+		<data>
+		UxpHnmWQdqyWSGGdLAxTXbw2GL0=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/favicon.png</key>
 		<data>
@@ -128,9 +140,17 @@
 		<data>
 		TKqtVcQ9h41jTTaep7QY6RqX5kw=
 		</data>
-		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_card_background.png</key>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_background.png</key>
 		<data>
-		LLqD6m6+nteYXFdXLZxsiR3wwpU=
+		zY7wejVyi+1mIG8FbBpodYjq1Bw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_stat_card.png</key>
+		<data>
+		8i5uIf41HcrHPi+vs8oMdvsyQfc=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_theme_image.png</key>
+		<data>
+		MoPE6niuw76HZQdjvlSvRRQ+pvY=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/logout_icon.png</key>
 		<data>
@@ -182,7 +202,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		iFJGWSkoHUPPNYW7wOCMG2Denko=
+		o5SturCETKtGVifrPrusO3wRpvs=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -438,7 +458,7 @@
 		</data>
 		<key>Frameworks/Flutter.framework/Flutter</key>
 		<data>
-		3Id+IsvnV6S1A4Wb5/JdWefz1RY=
+		tdD6s+P0Sj9fTBzLoXjydC+IcMs=
 		</data>
 		<key>Frameworks/Flutter.framework/Headers/Flutter.h</key>
 		<data>
@@ -510,7 +530,7 @@
 		</data>
 		<key>Frameworks/Flutter.framework/Info.plist</key>
 		<data>
-		rk7xP4egdwAMf9k+nUasiT3P4FU=
+		76iDFTrqMb9ZkyISriH514A2cU4=
 		</data>
 		<key>Frameworks/Flutter.framework/Modules/module.modulemap</key>
 		<data>
@@ -522,7 +542,7 @@
 		</data>
 		<key>Frameworks/Flutter.framework/_CodeSignature/CodeResources</key>
 		<data>
-		5LUa+zpzEZMxr1NIVImBVc9YSRA=
+		1SeT/qlsPhqPCzhoWKySvlMA2c8=
 		</data>
 		<key>Frameworks/Flutter.framework/icudtl.dat</key>
 		<data>
@@ -1311,7 +1331,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			S9ZmjjqBgxhHUXWMcSYeu9pMOrSECDzTgSfTGBrbOLU=
+			6IjkSzhnWsV7zwru0hYTQ5Jei3ZYaBtI1fIPNsLZqyA=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -1325,7 +1345,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			LQcYCpOx1HYTw45wt1YXeHnN+neDn2nGmi+kItyTVks=
+			dB7q1iYAXX1jyOZ8Iu7fafjQOdtDLGXed7ScQ+Eg4xo=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
@@ -1339,14 +1359,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			KiusUehZfoLjvprldfIBVkJEj43rijh5cskNNgvrtzY=
+			xSl+EqQj2vLytA9YSAq7smHxJMCAd9UFyRslLZ4xLMI=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			aTeKyIqixmqJeUcqakSM8enw7C+biNgLamqRt+YfoZ4=
+			Og4kFSRXyCpxjwCAvcAPQMKVUDWcPGTh7wcO2JwGt7s=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
@@ -1419,11 +1439,32 @@
 			SNQJA0PmuTaBtdMhh6eB1mCddQyRBIwmru+PxfyRtjc=
 			</data>
 		</dict>
-		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_card_background.png</key>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_background.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			vCI2mkT9qG8I7Zu6OxCzcjR1oRVqkYAAJAgbeFApKxs=
+			+bTyjMe8wRz6EYmVFTglwmzpFPfxxvoIXL1XkJInav0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_stat_card.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			QpsNBg1AU7whBD059MDwBKxnGU9aQNCgCN/kVwa9EK4=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			QNwQCN7oUgCMhzd8HFZr/dATqkumE2oA/GIMAMH4xng=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/default_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			l/QzjJdeg7aPjmf0oY3SjtgRUaqeVK7wMuXkdMguQis=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/favicon.png</key>
@@ -1454,11 +1495,25 @@
 			K2zMD7vQbPaY47//s7YV4+tHR/L8RWmFFjHgjzntsG8=
 			</data>
 		</dict>
-		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_card_background.png</key>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_background.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			1dEUHE1Mj7TrxYyW+X2BGBGpT6fZt9U34cNw8iRejCE=
+			pBPNQXY2WPtcerigWFpsVLWzxMHD1laVNZ97aAbbvf4=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_stat_card.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			6CacfXyV5p7eeBWzAQLGDzrDOh15CgDX3dqEuB6CIks=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			vbxTjbqrLYaapbHRFypj+qHoSXhKI6D3gxHMVQTMrqI=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/logout_icon.png</key>
@@ -1549,7 +1604,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			OVokQVzj6KnEOzsvdN7cLGfkrfG9AZd0wnhytQy7LrM=
+			h48EBR67lLTAEWhGF0m1nkYgT5XjJaSLjL5IjQVHmro=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
@@ -1997,7 +2052,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			x0VbSgx5xj5Vlrt4FSiyM6f+jqdBVBiUA/Orad3ZR6k=
+			qs5dt7a1lwMdvP7gIZ+9Dz4z1SlsHdoNKWUZwMm2ybc=
 			</data>
 		</dict>
 		<key>Frameworks/Flutter.framework/Headers/Flutter.h</key>
@@ -2123,7 +2178,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			XIMcB3COMPQrQYOgBVTGkjoQMmX4L6lpmNC2W/WBTDs=
+			33QenaRXiMxDiT3mFuKUmhdbAqn3oTP5nW+nau6zLm0=
 			</data>
 		</dict>
 		<key>Frameworks/Flutter.framework/Modules/module.modulemap</key>
@@ -2144,7 +2199,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			40u4RFBMgi3o6oo1eo2vUeemQko0q95tMAIFnLoePj4=
+			UDp/mDmM6JjNWnn3CEFcUUS1OVuawmtENECFGnWaehk=
 			</data>
 		</dict>
 		<key>Frameworks/Flutter.framework/icudtl.dat</key>
