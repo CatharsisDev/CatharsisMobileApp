@@ -2,30 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeNotifier() : super(ThemeState(
     themeData: AppThemes.catharsisSignature,
     themeName: 'catharsis_signature',
   )) {
-    _loadTheme(); // Load saved theme on startup
+    _init(); // Use separate init method
+  }
+
+  // Initialize theme loading
+  void _init() async {
+    if (mounted) { // Check if still mounted
+      await _loadTheme();
+    }
   }
 
   // Load theme from storage
-  void _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedTheme = prefs.getString('selected_theme') ?? 'catharsis_signature';
-    setTheme(savedTheme);
+  Future<void> _loadTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedTheme = prefs.getString('selected_theme') ?? 'catharsis_signature';
+      
+      if (mounted) { // Check before setting state
+        setTheme(savedTheme, saveToStorage: false); // Don't save again
+      }
+    } catch (e) {
+      // Handle error silently or log
+    }
   }
 
   // Save theme to storage
-  void _saveTheme(String themeName) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selected_theme', themeName);
+  Future<void> _saveTheme(String themeName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('selected_theme', themeName);
+    } catch (e) {
+      // Handle error silently
+    }
   }
 
-  void setTheme(String themeName) {
-    _saveTheme(themeName); // Save to storage
+  void setTheme(String themeName, {bool saveToStorage = true}) {
+    if (!mounted) return; // Exit if disposed
+    
+    if (saveToStorage) {
+      _saveTheme(themeName);
+    }
     
     switch (themeName) {
       case 'light':
@@ -94,8 +115,7 @@ class AppThemes {
         profileContentBackgroundColor: Color.fromRGBO(255, 253, 240, 1),
         iconColor: Color.fromRGBO(152, 117, 84, 1),
         iconCircleColor: Color.fromRGBO(152, 117, 84, 0.1),
-        likeAndShareIconColor: Color.fromRGBO(152, 117, 84, 1)
-
+        likeAndShareIconColor: Color.fromRGBO(152, 117, 84, 1),
       ),
     ],
   );
@@ -126,25 +146,25 @@ class AppThemes {
       fillColor: MaterialStateProperty.all(Colors.blue),
     ),
     extensions: const [
-  CustomThemeExtension(
-    showBackgroundTexture: true,
-    backgroundImagePath: "assets/images/light_mode_background.png",
-    categoryChipColor: Color.fromRGBO(212, 221, 255, 1),
-    preferenceButtonColor: Color.fromRGBO(242, 209, 209, 1),
-    preferenceModalBackgroundColor: Colors.white,
-    preferenceItemSelectedColor: Color.fromRGBO(227, 227, 227, 1),
-    preferenceItemUnselectedColor: Color.fromRGBO(255, 255, 255, 1),
-    preferenceBorderColor: Color.fromARGB(255, 214, 214, 214),
-    profileAvatarColor: Color.fromRGBO(242, 209, 209, 1),
-    profileStatCardColor: Colors.transparent,
-    profileStatIconBackgroundColor: Colors.white,
-    profileContentBackgroundColor: Colors.white,
-    profileStatCardImagePath: "assets/images/light_mode_stat_card.png",
-    iconColor: Color.fromRGBO(133, 161, 173, 1), // Add this
-    iconCircleColor: Color.fromRGBO(133, 161, 173, 0.1),
-    likeAndShareIconColor: Color.fromRGBO(98, 98, 113, 1) // Add this
-  ),
-],
+      CustomThemeExtension(
+        showBackgroundTexture: true,
+        backgroundImagePath: "assets/images/light_mode_background.png",
+        categoryChipColor: Color.fromRGBO(212, 221, 255, 1),
+        preferenceButtonColor: Color.fromRGBO(242, 209, 209, 1),
+        preferenceModalBackgroundColor: Colors.white,
+        preferenceItemSelectedColor: Color.fromRGBO(227, 227, 227, 1),
+        preferenceItemUnselectedColor: Color.fromRGBO(255, 255, 255, 1),
+        preferenceBorderColor: Color.fromARGB(255, 214, 214, 214),
+        profileAvatarColor: Color.fromRGBO(242, 209, 209, 1),
+        profileStatCardColor: Colors.transparent,
+        profileStatIconBackgroundColor: Colors.white,
+        profileContentBackgroundColor: Colors.white,
+        profileStatCardImagePath: "assets/images/light_mode_stat_card.png",
+        iconColor: Color.fromRGBO(133, 161, 173, 1),
+        iconCircleColor: Color.fromRGBO(133, 161, 173, 0.1),
+        likeAndShareIconColor: Color.fromRGBO(98, 98, 113, 1),
+      ),
+    ],
   );
 
   static final ThemeData darkTheme = ThemeData(
@@ -189,7 +209,7 @@ class AppThemes {
         profileStatCardImagePath: "assets/images/dark_mode_stat_card.png",
         iconColor: Color.fromRGBO(237, 239, 220, 1),
         iconCircleColor: Color.fromRGBO(255, 255, 255, 0.1),
-        likeAndShareIconColor: Color.fromRGBO(237, 239, 220, 1)
+        likeAndShareIconColor: Color.fromRGBO(237, 239, 220, 1),
       ),
     ],
   );
@@ -230,7 +250,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     required this.profileStatCardImagePath,
     required this.iconColor,
     required this.iconCircleColor,
-    required this.likeAndShareIconColor
+    required this.likeAndShareIconColor,
   });
 
   @override
@@ -246,6 +266,11 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     Color? profileAvatarColor,
     Color? profileStatCardColor,
     Color? profileStatIconBackgroundColor,
+    Color? profileContentBackgroundColor,
+    String? profileStatCardImagePath,
+    Color? iconColor,
+    Color? iconCircleColor,
+    Color? likeAndShareIconColor,
   }) {
     return CustomThemeExtension(
       showBackgroundTexture: showBackgroundTexture ?? this.showBackgroundTexture,
@@ -287,8 +312,8 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       profileContentBackgroundColor: Color.lerp(profileContentBackgroundColor, other.profileContentBackgroundColor, t)!,
       profileStatCardImagePath: t < 0.5 ? profileStatCardImagePath : other.profileStatCardImagePath,
       iconColor: Color.lerp(iconColor, other.iconColor, t)!,
-      iconCircleColor: t < 0.5 ? iconCircleColor : other.iconCircleColor,
-      likeAndShareIconColor: t < 0.5 ? likeAndShareIconColor : other.likeAndShareIconColor,
+      iconCircleColor: Color.lerp(iconCircleColor, other.iconCircleColor, t),
+      likeAndShareIconColor: Color.lerp(likeAndShareIconColor, other.likeAndShareIconColor, t),
     );
   }
 }

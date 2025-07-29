@@ -106,19 +106,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           });
         },
         children: [
-          // Page 1: Animated Catharsis
-          // _buildAnimatedCatharsisPage(), // Remove this line
-          
-          // Page 2: Welcome Message
+          // Page 1: Welcome Message
           _buildWelcomePage(),
           
-          // Page 3: How it Works
+          // Page 2: How it Works
           _buildHowItWorksPage(),
           
-          // Page 4: Categories Introduction
+          // Page 3: Categories Introduction
           _buildCategoriesPage(),
           
-          // Page 5: Get Started
+          // Page 4: Get Started
           _buildGetStartedPage(),
         ],
       ),
@@ -235,12 +232,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Original content
-        Container(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            children: [
-              Expanded(
+        // Content with consistent navigation positioning
+        Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -277,9 +274,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   ],
                 ),
               ),
-              _buildNavigationButtons(),
-            ],
-          ),
+            ),
+            // Fixed position navigation
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: _buildNavigationButtons(),
+            ),
+          ],
         ),
       ],
     );
@@ -313,52 +314,55 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Page content without its own background
-        Padding(
-          padding: const EdgeInsets.all(40),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'How It Works',
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromRGBO(32, 28, 17, 1),
-                  ),
+        // Content with consistent navigation positioning
+        Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'How It Works',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromRGBO(32, 28, 17, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 60),
+                    _buildFeatureItem(
+                      icon: Icons.swipe,
+                      title: 'Swipe Through Cards',
+                      description: 'Swipe left or right to explore thought-provoking questions',
+                      delay: 200,
+                    ),
+                    const SizedBox(height: 40),
+                    _buildFeatureItem(
+                      icon: Icons.favorite,
+                      title: 'Double Tap to Like',
+                      description: 'Save your favorite questions for later reflection',
+                      delay: 400,
+                    ),
+                    const SizedBox(height: 40),
+                    _buildFeatureItem(
+                      icon: Icons.category,
+                      title: 'Choose Categories',
+                      description: 'Filter questions by topics that resonate with you',
+                      delay: 600,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 60),
-                _buildFeatureItem(
-                  icon: Icons.swipe,
-                  title: 'Swipe Through Cards',
-                  description: 'Swipe left or right to explore thought-provoking questions',
-                  delay: 200,
-                ),
-                const SizedBox(height: 40),
-                _buildFeatureItem(
-                  icon: Icons.favorite,
-                  title: 'Double Tap to Like',
-                  description: 'Save your favorite questions for later reflection',
-                  delay: 400,
-                ),
-                const SizedBox(height: 40),
-                _buildFeatureItem(
-                  icon: Icons.category,
-                  title: 'Choose Categories',
-                  description: 'Filter questions by topics that resonate with you',
-                  delay: 600,
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 32,
-          child: _buildNavigationButtons(),
+            // Fixed position navigation
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: _buildNavigationButtons(),
+            ),
+          ],
         ),
       ],
     );
@@ -373,6 +377,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       {'name': 'Relationships', 'icon': 'assets/images/interactions_relationships_icon.png'},
       {'name': 'Personal Development', 'icon': 'assets/images/personal_development_icon.png'},
     ];
+    
     return Stack(
       children: [
         Container(
@@ -398,11 +403,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            children: [
-              Expanded(
+        // Content with consistent navigation positioning
+        Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -429,9 +435,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   ],
                 ),
               ),
-              _buildNavigationButtons(),
-            ],
-          ),
+            ),
+            // Fixed position navigation
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: _buildNavigationButtons(),
+            ),
+          ],
         ),
       ],
     );
@@ -463,6 +473,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
+        // Content centered properly
         Center(
           child: Padding(
             padding: const EdgeInsets.all(40),
@@ -553,7 +564,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
           child: Icon(
             icon,
-            color: Colors.white,
+            color: const Color.fromRGBO(32, 28, 17, 1),
             size: 30,
           ),
         ),
@@ -591,25 +602,27 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (_currentPage > 0)
-          TextButton(
-            onPressed: () {
-              _pageController.previousPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-            child: Text(
-              'Back',
-              style: TextStyle(
-                fontFamily: 'Runtime',
-                color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
-                fontSize: 16,
+        // Left side - Back button or spacer
+        _currentPage > 0
+          ? TextButton(
+              onPressed: () {
+                _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              child: Text(
+                'Back',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
+                  fontSize: 16,
+                ),
               ),
-            ),
-          )
-        else
-          const SizedBox(width: 60),
+            )
+          : const SizedBox(width: 60),
+        
+        // Center - Dots indicator
         Row(
           children: List.generate(
             4,
@@ -620,31 +633,32 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _currentPage == index
-                    ? Colors.white
-                    : Colors.white.withOpacity(0.3),
+                    ? const Color.fromRGBO(32, 28, 17, 1)
+                    : const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.3),
               ),
             ),
           ),
         ),
-        if (_currentPage < 3)
-          TextButton(
-            onPressed: _nextPage,
-            child: Text(
-              'Next',
-              style: TextStyle(
-                fontFamily: 'Runtime',
-                color: const Color.fromRGBO(32, 28, 17, 1),
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+        
+        // Right side - Next button or spacer
+        _currentPage < 3
+          ? TextButton(
+              onPressed: _nextPage,
+              child: Text(
+                'Next',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: const Color.fromRGBO(32, 28, 17, 1),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          )
-        else
-          const SizedBox(width: 60),
+            )
+          : const SizedBox(width: 60),
       ],
     );
   }
-}
+
   /// Builds a single category introduction item for the tutorial.
   Widget _buildCategoryItem(Map<String, String> entry) {
     return Padding(
@@ -661,7 +675,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               entry['icon']!,
               width: 48,
               height: 48,
-              color: Colors.white,
+              color: const Color.fromRGBO(32, 28, 17, 1),
             ),
             const SizedBox(width: 16),
             Flexible( 
@@ -683,3 +697,4 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       ),
     );
   }
+}

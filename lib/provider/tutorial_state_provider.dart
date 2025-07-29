@@ -3,17 +3,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class TutorialStateNotifier extends StateNotifier<TutorialState> {
   TutorialStateNotifier() : super(TutorialState()) {
-    // Initialize immediately when created
     _init();
   }
 
-  Future<void> _init() async {
-    // Set a temporary initialized state while checking
-    state = state.copyWith(isInitialized: false);
-    await checkIfTutorialSeen();
+  void _init() async {
+    if (mounted) {
+      await checkIfTutorialSeen();
+    }
   }
 
   Future<void> checkIfTutorialSeen() async {
+    if (!mounted) return; // Exit if disposed
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       
@@ -24,49 +25,73 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
       
       print('Checking tutorial state: hasSeenWelcome = $hasSeenTutorial');
       
-      // Update state
-      state = state.copyWith(
-        hasSeenWelcome: hasSeenTutorial,
-        showInAppTutorial: false,
-        isInitialized: true,
-      );
-      
-      print('Tutorial state updated: ${state.hasSeenWelcome}, initialized: ${state.isInitialized}');
+      // Update state only if still mounted
+      if (mounted) {
+        state = state.copyWith(
+          hasSeenWelcome: hasSeenTutorial,
+          showInAppTutorial: false,
+          isInitialized: true,
+        );
+        
+        print('Tutorial state updated: ${state.hasSeenWelcome}, initialized: ${state.isInitialized}');
+      }
     } catch (e) {
       print('Error checking tutorial state: $e');
       // On error, assume they haven't seen it
-      state = state.copyWith(
-        hasSeenWelcome: false,
-        showInAppTutorial: false,
-        isInitialized: true,
-      );
+      if (mounted) {
+        state = state.copyWith(
+          hasSeenWelcome: false,
+          showInAppTutorial: false,
+          isInitialized: true,
+        );
+      }
     }
   }
 
   Future<void> setTutorialSeen() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_welcome', true);
-    state = state.copyWith(
-      hasSeenWelcome: true,
-      showInAppTutorial: false, // Also hide in-app tutorial when marking as seen
-    );
+    if (!mounted) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_welcome', true);
+      
+      if (mounted) {
+        state = state.copyWith(
+          hasSeenWelcome: true,
+          showInAppTutorial: false, // Also hide in-app tutorial when marking as seen
+        );
+      }
+    } catch (e) {
+      print('Error setting tutorial seen: $e');
+    }
   }
 
   void showInAppTutorial() {
+    if (!mounted) return;
     state = state.copyWith(showInAppTutorial: true);
   }
 
   void hideInAppTutorial() {
+    if (!mounted) return;
     state = state.copyWith(showInAppTutorial: false);
   }
 
   Future<void> resetTutorial() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_welcome', false);
-    state = state.copyWith(
-      hasSeenWelcome: false,
-      showInAppTutorial: false,
-    );
+    if (!mounted) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_welcome', false);
+      
+      if (mounted) {
+        state = state.copyWith(
+          hasSeenWelcome: false,
+          showInAppTutorial: false,
+        );
+      }
+    } catch (e) {
+      print('Error resetting tutorial: $e');
+    }
   }
 }
 
@@ -95,7 +120,7 @@ class TutorialState {
 }
 
 final tutorialProvider = StateNotifierProvider<TutorialStateNotifier, TutorialState>(
-  (ref) => TutorialStateNotifier(), // Removed ..checkIfTutorialSeen() since it's now in constructor
+  (ref) => TutorialStateNotifier(),
 );
 
 // For backward compatibility with existing code
