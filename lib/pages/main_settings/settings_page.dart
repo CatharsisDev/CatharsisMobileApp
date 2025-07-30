@@ -4,6 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/theme_provider.dart';
+import '../../provider/user_profile_provider.dart';
+import '../../provider/app_state_provider.dart';
+import '../../provider/tutorial_state_provider.dart';
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
 
@@ -225,7 +228,45 @@ class SettingsMenuPage extends ConsumerWidget {
                           );
                           
                           if (shouldLogout == true) {
-                            await authService.signOut();
+                            try {
+                              // Show loading indicator
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => Center(
+                                  child: CircularProgressIndicator(
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              );
+
+                              // Clear all user-specific providers
+                              ref.invalidate(userProfileProvider);
+                              ref.invalidate(cardStateProvider);
+                              ref.invalidate(tutorialProvider);
+                              
+                              // Sign out (this will trigger theme reset via auth state listener)
+                              await authService.signOut();
+                              
+                              // Pop loading indicator and settings page
+                              if (context.mounted) {
+                                Navigator.of(context).pop(); // Pop loading
+                                Navigator.of(context).pop(); // Pop settings page
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.of(context).pop(); // Pop loading
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error signing out: ${e.toString()}',
+                                      style: TextStyle(fontFamily: 'Runtime'),
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                       ),

@@ -1,48 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'auth_provider.dart';
 
 class ThemeNotifier extends StateNotifier<ThemeState> {
-  ThemeNotifier() : super(ThemeState(
+  ThemeNotifier(this.ref) : super(ThemeState(
     themeData: AppThemes.catharsisSignature,
     themeName: 'catharsis_signature',
   )) {
-    _init(); // Use separate init method
+    _init();
   }
 
-  // Initialize theme loading
+  final Ref ref;
+  String? _currentUserId;
+
+  // Initialize theme loading and auth listener
   void _init() async {
-    if (mounted) { // Check if still mounted
-      await _loadTheme();
+    if (mounted) {
+      _listenToAuthChanges();
     }
   }
 
-  // Load theme from storage
-  Future<void> _loadTheme() async {
+  // Listen to auth state changes
+  void _listenToAuthChanges() {
+    ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+      final previousUser = previous?.whenOrNull(data: (user) => user);
+      final currentUser = next.whenOrNull(data: (user) => user);
+      
+      // Only handle user changes, not logouts
+      if (currentUser != null && currentUser.uid != _currentUserId) {
+        _currentUserId = currentUser.uid;
+        _loadThemeForUser(currentUser.uid);
+      }
+    });
+  }
+
+  // Load theme for specific user
+  Future<void> _loadThemeForUser(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString('selected_theme') ?? 'catharsis_signature';
+      // Use user-specific key for theme
+      final savedTheme = prefs.getString('theme_$userId') ?? 'catharsis_signature';
       
-      if (mounted) { // Check before setting state
-        setTheme(savedTheme, saveToStorage: false); // Don't save again
+      if (mounted) {
+        setTheme(savedTheme, saveToStorage: false);
       }
     } catch (e) {
-      // Handle error silently or log
+      print('Error loading theme for user: $e');
     }
   }
 
-  // Save theme to storage
+  // Save theme to storage with user-specific key
   Future<void> _saveTheme(String themeName) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('selected_theme', themeName);
+      if (_currentUserId != null) {
+        await prefs.setString('theme_$_currentUserId', themeName);
+      }
     } catch (e) {
-      // Handle error silently
+      print('Error saving theme: $e');
     }
   }
 
   void setTheme(String themeName, {bool saveToStorage = true}) {
-    if (!mounted) return; // Exit if disposed
+    if (!mounted) return;
     
     if (saveToStorage) {
       _saveTheme(themeName);
@@ -318,5 +340,5 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
   }
 }
 
-final themeProvider =
-    StateNotifierProvider<ThemeNotifier, ThemeState>((ref) => ThemeNotifier());
+// Updated provider that passes ref to ThemeNotifier
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeState>((ref) => ThemeNotifier(ref));

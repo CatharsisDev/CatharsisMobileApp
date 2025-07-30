@@ -82,10 +82,18 @@ class AuthService {
 
   Future<User?> registerWithEmail(String email, String password) async {
     try {
-      // Clear SharedPreferences BEFORE registration
+      // Clear SharedPreferences BEFORE registration (except theme data)
       print('Clearing all preferences before registration');
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      
+      // Get all keys and filter out theme-related keys
+      final allKeys = prefs.getKeys();
+      final keysToRemove = allKeys.where((key) => !key.startsWith('theme_')).toList();
+      
+      // Remove all non-theme keys
+      for (final key in keysToRemove) {
+        await prefs.remove(key);
+      }
       
       // Clear Hive data
       print('Clearing all Hive data before registration');
@@ -135,6 +143,14 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    // Get current user ID before signing out
+    final currentUserId = _auth.currentUser?.uid;
+    
+    // Clear user data but preserve theme
+    if (currentUserId != null) {
+      await _clearUserDataExceptTheme(currentUserId);
+    }
+    
     await _googleSignIn.signOut();
     await _auth.signOut();
     
@@ -163,6 +179,63 @@ class AuthService {
       }
     } catch (e) {
       print('Error clearing local data on sign out: $e');
+    }
+  }
+
+  Future<void> _clearUserDataExceptTheme(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // List of keys to clear (excluding theme)
+      final keysToClear = [
+        'user_avatar',
+        'user_username',
+        'selected_categories',
+        'liked_questions',
+        'seen_questions',
+        'has_seen_tutorial',
+        'has_seen_welcome',
+        'is_dark_mode', // Remove old theme key if exists
+        'selected_theme', // Remove old theme key if exists
+      ];
+      
+      // Clear specific keys
+      for (final key in keysToClear) {
+        await prefs.remove(key);
+      }
+      
+      // Note: We're NOT clearing theme_$userId
+      print('User data cleared successfully (theme preserved for user: $userId)');
+    } catch (e) {
+      print('Error clearing user data: $e');
+    }
+  }
+
+  // Helper method to clear all data including themes (for app reset)
+  Future<void> clearAllData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      // Clear all Hive boxes
+      final boxPrefixes = ['likedQuestions', 'swipeData', 'cachedQuestions', 'seenQuestions'];
+      
+      for (final prefix in boxPrefixes) {
+        try {
+          if (Hive.isBoxOpen(prefix)) {
+            final box = Hive.box(prefix);
+            await box.clear();
+            await box.close();
+          }
+          await Hive.deleteBoxFromDisk(prefix);
+        } catch (e) {
+          print('Error clearing box $prefix: $e');
+        }
+      }
+      
+      print('All app data cleared successfully');
+    } catch (e) {
+      print('Error clearing all data: $e');
     }
   }
 }

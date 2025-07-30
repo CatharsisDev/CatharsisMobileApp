@@ -409,7 +409,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             child: cardState.isLoading
               ? Center(
                   child: CircularProgressIndicator(
-                    color: theme.primaryColor,
+                    color: customTheme?.categoryChipColor ?? theme.primaryColor
                   )
                 )
               : FlutterFlowSwipeableStack(
