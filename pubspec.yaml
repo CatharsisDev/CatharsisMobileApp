@@ -119,6 +119,9 @@ flutter:
     - assets/images/avatar1.png
     - assets/images/avatar2.png
     - assets/images/avatar3.png
+    - assets/images/avatar4.png
+    - assets/images/avatar5.png
+    - assets/images/avatar6.png
     - assets/images/catharsis_word_only.png
     - assets/images/dark_mode_background.png
     - assets/images/dark_mode_stat_card.png

@@ -22,6 +22,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Profile setup state
   String? _selectedAvatar;
   final TextEditingController _usernameController = TextEditingController();
+  // Avatar carousel controller
+  late final PageController _avatarCarouselController;
+  int _currentAvatarIndex = 0;
   
   // Animation controller
   late AnimationController _animationController;
@@ -69,12 +72,22 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _usernameController.addListener(() {
       setState(() {});
     });
+    _avatarCarouselController = PageController(viewportFraction: 0.4)
+      ..addListener(() {
+        final page = (_avatarCarouselController.page ?? 0).round();
+        if (page != _currentAvatarIndex) {
+          setState(() {
+            _currentAvatarIndex = page;
+          });
+        }
+      });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _pageController.dispose();
+    _avatarCarouselController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
@@ -431,7 +444,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                     ),
                     const SizedBox(height: 50),
-                    
                     // Avatar Selection
                     Text(
                       'Choose Avatar',
@@ -443,19 +455,53 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                     ),
                     const SizedBox(height: 40),
+                    SizedBox(
+                      height: 100,
+                      child: PageView.builder(
+                        controller: _avatarCarouselController,
+                        itemCount: 6,
+                        itemBuilder: (context, index) {
+                          const avatars = [
+                            'assets/images/avatar1.png',
+                            'assets/images/avatar2.png',
+                            'assets/images/avatar3.png',
+                            'assets/images/avatar4.png',
+                            'assets/images/avatar5.png',
+                            'assets/images/avatar6.png',
+                          ];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedAvatar = avatars[index];
+                                  _avatarCarouselController.jumpToPage(index);
+                                });
+                              },
+                              child: _buildAvatarChoice(avatars[index], index),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildAvatarChoice('assets/images/avatar1.png', 0),
-                        const SizedBox(width: 20),
-                        _buildAvatarChoice('assets/images/avatar2.png', 1),
-                        const SizedBox(width: 20),
-                        _buildAvatarChoice('assets/images/avatar3.png', 2),
-                      ],
+                      children: List.generate(6, (i) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentAvatarIndex == i
+                                ? const Color.fromRGBO(42, 63, 44, 0.7)
+                                : Colors.grey,
+                          ),
+                        );
+                      }),
                     ),
-                    
                     const SizedBox(height: 40),
-                    
                     // Username Input
                     Text(
                       'Username',
@@ -478,6 +524,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                       child: TextField(
                         controller: _usernameController,
+                        cursorColor: const Color.fromRGBO(42, 63, 44, 1),
                         style: TextStyle(
                           fontFamily: 'Runtime',
                           fontSize: 16,
@@ -490,6 +537,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.5),
                           ),
                           border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
@@ -622,6 +670,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           _selectedAvatar = imagePath;
         });
       },
+      // Avatar isSelected indicator
       child: Container(
         width: 80,
         height: 80,
@@ -629,8 +678,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected
-                ? const Color.fromRGBO(152, 117, 84, 0.7)
-                : const Color(0xFF4A4A4A).withOpacity(0.3),
+                ? const Color.fromRGBO(42, 63, 44, 0.7)
+                : const Color(0xFF4A4A4A),
             width: isSelected ? 3 : 2,
           ),
         ),

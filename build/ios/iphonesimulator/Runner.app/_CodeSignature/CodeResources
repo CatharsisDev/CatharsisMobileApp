@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		hRFOikspjqeQvzpSXzLrSqx+4Sk=
+		HEw7QacbugVbpKUqjoWv8jeSTTY=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,7 +54,7 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		XWP9wbkUE++XsdZKCMiXUsQpNSU=
+		FCHjmjdVs6G4YJXD3uX3KEvHbzs=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<data>
@@ -62,11 +62,11 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
-		TB+NLcGXHTAJzR6F+su+b6Jdn7w=
+		ClmgCZxlh8Rzal2OVXSLlckAETM=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<data>
-		WTX38Xwt12V30wBntSnR6WHD2Zo=
+		o6ueaNY6eb/x2f4twFRCtb/p1nA=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
 		<data>
@@ -104,6 +104,98 @@
 		<data>
 		/Zv/bABqtkruJjjuKDsVnEvF+IY=
 		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/boat_illustration.png</key>
+		<data>
+		Y6TMazNq5kNpQBEz+HbtgPgg+zc=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/catharsis_word_only.png</key>
+		<data>
+		EKAH3UyOM0PH7eE/lqyDb59tulM=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/changetheme_icon.png</key>
+		<data>
+		cuXUVO0lyysY9kTmJWOsQmQ4HNk=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_background.png</key>
+		<data>
+		QVf1b5/sY7YAn7yOxae4rmaoUL0=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_stat_card.png</key>
+		<data>
+		nnbc/9zul6qlcGDayFDj3sEKmV8=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_theme_image.png</key>
+		<data>
+		WF6h7kmPiMmO6Ydnyo6X9j9Mv3w=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/default_theme_image.png</key>
+		<data>
+		UxpHnmWQdqyWSGGdLAxTXbw2GL0=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/heart_icon.png</key>
+		<data>
+		2nx/Tuwl9VpShtdWziepYuTPpmo=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/home_icon.png</key>
+		<data>
+		nY4+s9pgnq5lNPiyriaVDPD3EEE=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/interactions_relationships_icon.png</key>
+		<data>
+		TKqtVcQ9h41jTTaep7QY6RqX5kw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_background.png</key>
+		<data>
+		zY7wejVyi+1mIG8FbBpodYjq1Bw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_stat_card.png</key>
+		<data>
+		8i5uIf41HcrHPi+vs8oMdvsyQfc=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_theme_image.png</key>
+		<data>
+		MoPE6niuw76HZQdjvlSvRRQ+pvY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/logout_icon.png</key>
+		<data>
+		UUFI0thrvRzPmPtQ7K0QTj/c0qk=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/love_intimacy_icon.png</key>
+		<data>
+		BtefHlGtsZnX6O5fS78JrCaN9O4=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/personal_development_icon.png</key>
+		<data>
+		Lb/i+XUFs0iWMKb0DcrW7PxwXVY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/preferences_icon.png</key>
+		<data>
+		/4p2xUO+1m8X6dQFseUDWEaUXdU=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/profile_icon.png</key>
+		<data>
+		mLHjntYFe4LzDB0/2O8Wc0fiu1c=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/saved_icon.png</key>
+		<data>
+		sxrYtLMLG9BGZEwwnxq9arwzjxk=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/settings_icon.png</key>
+		<data>
+		z/lhIskYjCRAe7ErM12N+qgiVLE=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/share_icon.png</key>
+		<data>
+		3/x9DpUaKmqjG9dY9PO8ZMnipvo=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/society_icon.png</key>
+		<data>
+		8Q7uQyxukPsJbxJXzeb1s+zyBFI=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/spirituality_icon.png</key>
+		<data>
+		izfv+FHLZq+Z7kUj1iUWMG9h6tQ=
+		</data>
 		<key>Frameworks/App.framework/flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<data>
 		/CUoTuPQqqdexfyOT9lpJhV+2MQ=
@@ -114,7 +206,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		Hybg5zcOIECRoYVyS6VCy988yM4=
+		eAhDzSU7a/Fz0csDvnWN5vb3vOk=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -1243,7 +1335,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			aKEKDx5dmUAd6AiXge2QKLn2vSbhLeu+T3p0UzHfOZ4=
+			GWLdSy0eG22oqEn/peUMJs41oyg5WHYqgiTPM07YPzw=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -1257,7 +1349,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			qdVmyH/HCqMIuzgQ2ffrpDDtjRUhwykmD4LmFQ3ENps=
+			MKJ2/gaVpaOQbWj57WAQAWGqp9G3Yoo0keewRwNAGwU=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
@@ -1271,14 +1363,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			WKL5Wg+sNHTmB6s7PbCc/JqCVi5G7ljp+firu9yzi+o=
+			gBxz1PRscbTJYx83KIi7nu5B8a1xCz6Q8gUxgXqSLzw=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			L9EWyVNj07XpfaOjztI8o0uplVjhxv4yEzhL3F0BCPE=
+			4Senp6SKifcNe5mIMXos+B889LXUbrXq5zO1tVpTOnc=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
@@ -1344,6 +1436,167 @@
 			sYXbwiIt2cd5nzGLkvgQnau/l0+7ofuYMy0pfpIgGr0=
 			</data>
 		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/boat_illustration.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			dQiR5JKY2doUURQNw3CZNHTGrpakRlpVhkaWrRw8uyE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/catharsis_word_only.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			mzlnVLM3jr9aUWlfT7v9ZbbI9Uzl12qxD0t6+ffps7I=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/changetheme_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			SNQJA0PmuTaBtdMhh6eB1mCddQyRBIwmru+PxfyRtjc=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_background.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			+bTyjMe8wRz6EYmVFTglwmzpFPfxxvoIXL1XkJInav0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_mode_stat_card.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			QpsNBg1AU7whBD059MDwBKxnGU9aQNCgCN/kVwa9EK4=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/dark_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			QNwQCN7oUgCMhzd8HFZr/dATqkumE2oA/GIMAMH4xng=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/default_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			l/QzjJdeg7aPjmf0oY3SjtgRUaqeVK7wMuXkdMguQis=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/heart_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Oqt4o03kwxpMOqRpxznWmN8gQrKGUs7IoZSSB9W9myw=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/home_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			wVV1NlA1cNNSmBbvYy7xaR0JGvcTt1cSgwzP/oxIxjU=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/interactions_relationships_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			K2zMD7vQbPaY47//s7YV4+tHR/L8RWmFFjHgjzntsG8=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_background.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			pBPNQXY2WPtcerigWFpsVLWzxMHD1laVNZ97aAbbvf4=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_mode_stat_card.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			6CacfXyV5p7eeBWzAQLGDzrDOh15CgDX3dqEuB6CIks=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/light_theme_image.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			vbxTjbqrLYaapbHRFypj+qHoSXhKI6D3gxHMVQTMrqI=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/logout_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			gdFgRL7PSeHenN6FiYAFpFgDhC+J3BYwjs7JsGbkznE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/love_intimacy_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			1lPm9RplmOXuP02yuhQrNDgXByvHDz4J+uqJvBgsLLo=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/personal_development_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Ls3AIZjeRfNsdZQzHAhaqh9vDxru21BOHtfgiQyXlbg=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/preferences_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			viYHbx/EprWyYojQpbYxRmTVZ1trKJmGZxKUb10knac=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/profile_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			eM972SKsRO0UzAh+ZIp116mo4+XJUfMykL46nA4Qi68=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/saved_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			elsNcIVCFTtT7BILGfPY7BJRR2LbUbxeMxxQ5TfxGA0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/settings_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			mdeSBIn51zPnrFCfMbFvNpNAFTWWANTXIx6ZoUMVGS8=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/share_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			j//0qE4nNExwyzvR8Fo6GyeqRlQl4dRUmyPn59xf4EQ=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/society_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			dpWuhe0o2tBJvKGNHCFEz85qjaikZ7dvxz/aVfhaeWg=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/spirituality_icon.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			aZ2vGR7pEdVP8e6+1e3TXZr+XHxsk0BvZO3IU4zS9MQ=
+			</data>
+		</dict>
 		<key>Frameworks/App.framework/flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<dict>
 			<key>hash2</key>
@@ -1362,7 +1615,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			DRoBQxARHP066iOgnws3BniIPQ/2DevdiUlV4PE/WDo=
+			+2sYTka1FEPfEjh+LgAqnEfHvk3CRZz4Xevj4HwtBKU=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
