@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../provider/tutorial_state_provider.dart';
+import '../../provider/user_profile_provider.dart';
 import '../../index.dart'; 
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -17,29 +18,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  
+  // Profile setup state
+  String? _selectedAvatar;
+  final TextEditingController _usernameController = TextEditingController();
+  
+  // Animation controller
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
   
-  // Different translations of "Catharsis"
-  final List<Map<String, String>> _catharsisTranslations = [
-    {'text': 'Catharsis', 'language': 'English'},
-    {'text': 'Catarsis', 'language': 'Spanish'},
-    {'text': 'Catharsis', 'language': 'French'},
-    {'text': 'Katharsis', 'language': 'German'},
-    {'text': 'Catarsi', 'language': 'Italian'},
-    {'text': 'Κάθαρσις', 'language': 'Greek'},
-    {'text': 'カタルシス', 'language': 'Japanese'},
-    {'text': '净化', 'language': 'Chinese'},
-    {'text': 'Катарсис', 'language': 'Russian'},
-    {'text': 'تطهير', 'language': 'Arabic'},
-    {'text': '宣泄', 'language': 'Catonese'},
+  // Catharsis translations list (add this if you're using it)
+  final List<String> _catharsisTranslations = [
+    "Catharsis", "κάθαρσις", "カタルシス", "Catarse", "Katharsis"
   ];
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 17), // Reduced from 20 to 15 for faster cycles
+      duration: const Duration(seconds: 17),
       vsync: this,
     );
     
@@ -69,17 +66,21 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         _animationController.forward();
       }
     });
+    _usernameController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _pageController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
-    if (_currentPage < 3) {
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -88,6 +89,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _finishTutorial() async {
+    // Save profile data if provided
+    if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
+      await ref.read(userProfileProvider.notifier).updateProfile(
+        avatar: _selectedAvatar,
+        username: _usernameController.text.trim(),
+      );
+    }
+    
     await ref.read(tutorialProvider.notifier).setTutorialSeen();
     if (mounted) {
       context.go('/home');
@@ -115,90 +124,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           // Page 3: Categories Introduction
           _buildCategoriesPage(),
           
-          // Page 4: Get Started
-          _buildGetStartedPage(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedCatharsisPage() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black,
-            Colors.black.withOpacity(0.95),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Animated translations
-          Center(
-            child: Stack(
-              alignment: Alignment.center,
-              children: List.generate(
-                _catharsisTranslations.length,
-                (index) => AnimatedBuilder(
-                  animation: _fadeAnimations[index],
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: index == _catharsisTranslations.length - 1
-                          ? _fadeAnimations[index].value
-                          : (_fadeAnimations[index].value - 
-                             (index < _catharsisTranslations.length - 1 
-                                ? _fadeAnimations[index + 1].value 
-                                : 0)).clamp(0.0, 1.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _catharsisTranslations[index]['text']!,
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 48,
-                              fontWeight: FontWeight.w300,
-                              color: const Color.fromRGBO(32, 28, 17, 1),
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+          // Page 4: Profile Setup
+          _buildProfileSetupPage(),
           
-          // Skip/Continue button
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: TextButton(
-                onPressed: _nextPage,
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
-                    fontSize: 16,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ).animate(
-                onPlay: (controller) => controller.repeat(),
-              ).shimmer(
-                duration: const Duration(seconds: 2),
-                color: Colors.white.withOpacity(0.3),
-              ),
-            ),
-          ),
+          // Page 5: Get Started
+          _buildGetStartedPage(),
         ],
       ),
     );
@@ -447,6 +377,142 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
+  Widget _buildProfileSetupPage() {
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFFAF1E1),
+                const Color(0xFFFAF1E1).withOpacity(0.95),
+              ],
+            ),
+          ),
+        ),
+        Opacity(
+          opacity: 0.4,
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/background_texture.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+        Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Personalize Your Profile',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromRGBO(32, 28, 17, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    Text(
+                      'Choose your avatar and username',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    
+                    // Avatar Selection
+                    Text(
+                      'Choose Avatar',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color.fromRGBO(32, 28, 17, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildAvatarChoice('assets/images/avatar1.png', 0),
+                        const SizedBox(width: 20),
+                        _buildAvatarChoice('assets/images/avatar2.png', 1),
+                        const SizedBox(width: 20),
+                        _buildAvatarChoice('assets/images/avatar3.png', 2),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Username Input
+                    Text(
+                      'Username',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color.fromRGBO(32, 28, 17, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _usernameController,
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 16,
+                          color: const Color.fromRGBO(32, 28, 17, 1),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter your username',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Runtime',
+                            color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.5),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        maxLength: 20,
+                        buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: _buildNavigationButtons(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildGetStartedPage() {
     return Stack(
       children: [
@@ -495,7 +561,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   child: Icon(
                     Icons.check,
                     size: 60,
-                    color: const Color.fromRGBO(32, 28, 17, 1),
+                    color: const Color(0xFF4A4A4A),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -547,6 +613,46 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
+  Widget _buildAvatarChoice(String imagePath, int index) {
+    final isSelected = _selectedAvatar == imagePath;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedAvatar = imagePath;
+        });
+      },
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected
+                ? const Color.fromRGBO(152, 117, 84, 0.7)
+                : const Color(0xFF4A4A4A).withOpacity(0.3),
+            width: isSelected ? 3 : 2,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(6),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey[100],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureItem({
     required IconData icon,
     required String title,
@@ -564,7 +670,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
           child: Icon(
             icon,
-            color: const Color.fromRGBO(32, 28, 17, 1),
+            color: const Color(0xFF4A4A4A),
             size: 30,
           ),
         ),
@@ -604,28 +710,28 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       children: [
         // Left side - Back button or spacer
         _currentPage > 0
-          ? TextButton(
-              onPressed: () {
-                _pageController.previousPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: Text(
-                'Back',
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
-                  fontSize: 16,
+            ? TextButton(
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                child: Text(
+                  'Back',
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-            )
-          : const SizedBox(width: 60),
-        
+              )
+            : const SizedBox(width: 60),
+
         // Center - Dots indicator
         Row(
           children: List.generate(
-            4,
+            5,
             (index) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 8,
@@ -639,22 +745,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        
+
         // Right side - Next button or spacer
-        _currentPage < 3
-          ? TextButton(
-              onPressed: _nextPage,
-              child: Text(
-                'Next',
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  color: const Color.fromRGBO(32, 28, 17, 1),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+        _currentPage < 4
+            ? TextButton(
+                onPressed: (_currentPage == 3 && _usernameController.text.trim().isEmpty)
+                    ? null
+                    : _nextPage,
+                child: Text(
+                  'Next',
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: const Color.fromRGBO(32, 28, 17, 1),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            )
-          : const SizedBox(width: 60),
+              )
+            : const SizedBox(width: 60),
       ],
     );
   }
@@ -675,7 +783,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               entry['icon']!,
               width: 48,
               height: 48,
-              color: const Color.fromRGBO(32, 28, 17, 1),
+              color: const Color(0xFF4A4A4A),
             ),
             const SizedBox(width: 16),
             Flexible( 

@@ -2,9 +2,12 @@ import 'package:catharsis_cards/pages/main_settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/theme_provider.dart';
+import '../../provider/user_profile_provider.dart';
+import '../../services/user_profile_service.dart';
 import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +20,265 @@ class ProfilePageWidget extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
+
+  final TextEditingController _avatarUsernameController = TextEditingController();
+
+  void _showAvatarSelectionDialog() {
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+    final userProfile = ref.read(userProfileProvider);
+    final initialUsername = userProfile.whenOrNull(data: (profile) => profile?.username) ?? '';
+    _avatarUsernameController.text = initialUsername;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Consumer(
+        builder: (context, sheetRef, _) {
+          final currentAvatar = sheetRef.watch(userAvatarProvider);
+          return Container(
+            decoration: BoxDecoration(
+              color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.brightness == Brightness.dark 
+                          ? Colors.grey[500] 
+                          : Colors.grey[400],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Choose Avatar',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.titleLarge?.color,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Avatar 1
+                        _buildAvatarOption(
+                          'assets/images/avatar1.png',
+                          currentAvatar,
+                          theme,
+                          customTheme,
+                        ),
+                        // Avatar 2
+                        _buildAvatarOption(
+                          'assets/images/avatar2.png',
+                          currentAvatar,
+                          theme,
+                          customTheme,
+                        ),
+                        // Avatar 3
+                        _buildAvatarOption(
+                          'assets/images/avatar3.png',
+                          currentAvatar,
+                          theme,
+                          customTheme,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Edit Username',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _avatarUsernameController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter username',
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: (() {
+                                  final themeName = sheetRef.watch(themeProvider).themeName;
+                                  return themeName == 'light'
+                                      ? const Color(0xFF85A1AD)
+                                      : const Color(0xFF987554);
+                                }()),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: (() {
+                                  final themeName = sheetRef.watch(themeProvider).themeName;
+                                  return themeName == 'light'
+                                      ? const Color(0xFF85A1AD)
+                                      : const Color(0xFF987554);
+                                }()),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: (() {
+                                final themeName = sheetRef.watch(themeProvider).themeName;
+                                if (themeName == 'dark') return const Color.fromRGBO(232, 213, 255, 1);
+                                else if (themeName == 'light') return const Color(0xFFF2D1D1);
+                                else return const Color(0xFF2A3F2C);
+                              }()),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () async {
+                              await ref.read(userProfileProvider.notifier).updateProfile(
+                                username: _avatarUsernameController.text.trim(),
+                              );
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAvatarOption(
+    String? avatarPath,
+    String? currentAvatar,
+    ThemeData theme,
+    CustomThemeExtension? customTheme, {
+    bool isDefault = false,
+  }) {
+    final isSelected = currentAvatar == avatarPath;
+    final authState = ref.watch(authStateProvider);
+    final userProfile = ref.watch(userProfileProvider);
+    
+    return GestureDetector(
+      onTap: () async {
+        await ref.read(userProfileProvider.notifier).updateProfile(avatar: avatarPath);
+        // Navigator.pop(context); // Removed to keep modal open after avatar selection
+      },
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected 
+                ? (customTheme?.profileAvatarColor ?? const Color(0xFF987554))
+                : Colors.transparent,
+            width: 3,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: (customTheme?.profileAvatarColor ?? const Color(0xFF987554)).withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDefault 
+                ? (customTheme?.profileAvatarColor ?? const Color(0xFF987554))
+                : Colors.grey[200],
+          ),
+          child: ClipOval( 
+            child: isDefault
+                ? Center(
+                    child: Text(
+                      _getUserInitial(authState, userProfile),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : Image.asset(
+                    avatarPath!,
+                    fit: BoxFit.cover,
+                    width: 70,
+                    height: 70,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getUserInitial(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
+    // First try to get username from profile
+    final username = userProfile.whenOrNull(data: (profile) => profile?.username);
+    if (username != null && username.isNotEmpty) {
+      return username.substring(0, 1).toUpperCase();
+    }
+    
+    // Fallback to email
+    final email = authState.whenOrNull(data: (user) => user?.email);
+    if (email != null && email.isNotEmpty) {
+      return email.substring(0, 1).toUpperCase();
+    }
+    
+    return 'U';
+  }
+
+  String _getDisplayName(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
+    // First try to get username from profile
+    final username = userProfile.whenOrNull(data: (profile) => profile?.username);
+    if (username != null && username.isNotEmpty) {
+      return username;
+    }
+    
+    // Fallback to email prefix
+    final email = authState.whenOrNull(data: (user) => user?.email);
+    if (email != null && email.isNotEmpty) {
+      return email.split('@')[0];
+    }
+    
+    return 'User';
+  }
 
   void _showCategoryFilterDialog() {
     final cardState = ref.read(cardStateProvider);
@@ -199,6 +461,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final authState = ref.watch(authStateProvider);
     final authService = ref.read(authServiceProvider);
     final cardState = ref.watch(cardStateProvider);
+    final userProfile = ref.watch(userProfileProvider);
+    final selectedAvatar = userProfile.whenOrNull(data: (profile) => profile?.avatar);
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
     
@@ -352,71 +616,84 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: customTheme?.profileAvatarColor ?? const Color(0xFF987554),
+                                  color: selectedAvatar == null 
+                                      ? (customTheme?.profileAvatarColor ?? const Color(0xFF987554))
+                                      : Colors.grey[200],
                                 ),
-                                child: Center(
-                                  child: authState.when(
-                                    data: (user) => Text(
-                                      user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                                child: ClipOval(
+                                  child: selectedAvatar == null
+                                      ? Center(
+                                          child: Text(
+                                            _getUserInitial(authState, userProfile),
+                                            style: TextStyle(
+                                              fontSize: 48,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      : Image.asset(
+                                          selectedAvatar,
+                                          fit: BoxFit.cover,
+                                          width: 120,
+                                          height: 120,
+                                        ),
+                                ),
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Edit Avatar Button
+                            GestureDetector(
+                              onTap: _showAvatarSelectionDialog,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: customTheme?.profileAvatarColor?.withOpacity(0.1) ?? Colors.grey.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: customTheme?.profileAvatarColor ?? const Color(0xFF987554),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.edit,
+                                      size: 16,
+                                      color: customTheme?.profileAvatarColor ?? const Color(0xFF987554),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Edit Profile',
                                       style: TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        fontFamily: 'Runtime',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: customTheme?.profileAvatarColor ?? const Color(0xFF987554),
                                       ),
                                     ),
-                                    loading: () => CircularProgressIndicator(color: Colors.white),
-                                    error: (_, __) => Icon(Icons.error, color: Colors.white),
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),
                             
                             const SizedBox(height: 24),
                             
-                            // User Name
-                            authState.when(
-                              data: (user) => Text(
-                                user?.email?.split('@')[0] ?? 'User',
-                                style: TextStyle(
-                                  fontFamily: 'Runtime',
-                                  color: theme.textTheme.titleLarge?.color,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              loading: () => Text(
-                                'Loading...',
-                                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
-                              ),
-                              error: (_, __) => Text(
-                                'Error',
-                                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+                            // User Name (shows username or email prefix)
+                            Text(
+                              _getDisplayName(authState, userProfile),
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                color: theme.textTheme.titleLarge?.color,
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             
-                            const SizedBox(height: 8),
-                            
-                            // User Email
-                            authState.when(
-                              data: (user) => Text(
-                                user?.email ?? 'No email',
-                                style: TextStyle(
-                                  fontFamily: 'Runtime',
-                                  color: theme.brightness == Brightness.dark 
-                                      ? Colors.grey[400] 
-                                      : const Color.fromRGBO(32, 28, 17, 1),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              loading: () => Text(
-                                'Loading...',
-                                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
-                              ),
-                              error: (_, __) => Text(
-                                'Error',
-                                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
-                              ),
-                            ),
+                            // (User Email display removed)
                             
                             const SizedBox(height: 40),
                             
@@ -584,5 +861,10 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
         ],
       ),
     );
+  }
+  @override
+  void dispose() {
+    _avatarUsernameController.dispose();
+    super.dispose();
   }
 }
