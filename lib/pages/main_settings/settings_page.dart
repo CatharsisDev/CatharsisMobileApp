@@ -233,9 +233,12 @@ class SettingsMenuPage extends ConsumerWidget {
                               showDialog(
                                 context: context,
                                 barrierDismissible: false,
-                                builder: (context) => Center(
-                                  child: CircularProgressIndicator(
-                                    color: theme.primaryColor,
+                                builder: (context) => WillPopScope(
+                                  onWillPop: () async => false,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: theme.primaryColor,
+                                    ),
                                   ),
                                 ),
                               );
@@ -244,23 +247,16 @@ class SettingsMenuPage extends ConsumerWidget {
                               final cardStateNotifier = ref.read(cardStateProvider.notifier);
                               await cardStateNotifier.clearUserData();
                               
-                              // Sign out (this will trigger provider disposal)
+                              // Sign out (this will trigger navigation via router)
                               await authService.signOut();
                               
-                              // Navigate away before invalidating providers
-                              if (context.mounted) {
-                                Navigator.of(context).pop(); // Pop loading
-                                Navigator.of(context).pop(); // Pop settings page
-                              }
-                              
-                              // Now invalidate providers after navigation
-                              ref.invalidate(userProfileProvider);
-                              ref.invalidate(cardStateProvider);
-                              ref.invalidate(tutorialProvider);
+                              // Don't manually navigate - let the router handle it
+                              // The auth state change will trigger the router to redirect to login
                               
                             } catch (e) {
+                              // Only pop the loading dialog if context is still mounted
                               if (context.mounted) {
-                                Navigator.of(context).pop(); // Pop loading
+                                Navigator.of(context, rootNavigator: true).pop(); // Pop loading dialog only
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(

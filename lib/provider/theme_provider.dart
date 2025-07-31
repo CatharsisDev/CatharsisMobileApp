@@ -172,7 +172,7 @@ class AppThemes {
         showBackgroundTexture: true,
         backgroundImagePath: "assets/images/light_mode_background.png",
         categoryChipColor: Color.fromRGBO(212, 221, 255, 1),
-        preferenceButtonColor: Color.fromRGBO(242, 209, 209, 1),
+        preferenceButtonColor: Color.fromRGBO(252, 103, 77, 1),
         preferenceModalBackgroundColor: Colors.white,
         preferenceItemSelectedColor: Color.fromRGBO(227, 227, 227, 1),
         preferenceItemUnselectedColor: Color.fromRGBO(255, 255, 255, 1),

@@ -1,5 +1,6 @@
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
+import 'package:catharsis_cards/provider/user_profile_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'questions_model.dart';
@@ -77,15 +78,26 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Watch the theme provider instead of using the old theme mode
     final themeState = ref.watch(themeProvider);
 
-    // Auth state listener
+    // Auth state listener with proper cleanup
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
-      next.when(
-        data: (user) {
-          _router.refresh();
-        },
-        loading: () {},
-        error: (_, __) => _router.refresh(),
-      );
+      final previousUser = previous?.whenOrNull(data: (user) => user);
+      final currentUser = next.whenOrNull(data: (user) => user);
+      
+      // Handle logout scenario
+      if (previousUser != null && currentUser == null) {
+        // User logged out - invalidate providers after navigation
+        Future.delayed(Duration(milliseconds: 100), () {
+          if (mounted) {
+            // Invalidate providers to force fresh state on next login
+            ref.invalidate(userProfileProvider);
+            ref.invalidate(cardStateProvider);
+            ref.invalidate(tutorialProvider);
+          }
+        });
+      }
+      
+      // Always refresh router
+      _router.refresh();
     });
 
     // Tutorial state listener
