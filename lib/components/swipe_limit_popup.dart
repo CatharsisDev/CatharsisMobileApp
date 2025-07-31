@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../provider/theme_provider.dart';
+import '../provider/theme_provider.dart' show CustomThemeExtension;
 
 class SwipeLimitPopup extends ConsumerWidget {
   final DateTime? resetTime;
@@ -22,6 +22,8 @@ class SwipeLimitPopup extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const double borderRadiusValue = 15;
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
 
     return Stack(
       children: [
@@ -41,7 +43,7 @@ class SwipeLimitPopup extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(borderRadiusValue),
               border: Border.all(
-                color: const Color.fromARGB(255, 162, 156, 154),
+                color: customTheme?.preferenceBorderColor ?? theme.primaryColor,
                 width: 5,
               ),
               boxShadow: [
@@ -59,10 +61,10 @@ class SwipeLimitPopup extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
  ref.watch(themeProvider).themeName == 'dark'
-   ? 'assets/images/dark_mode_card_background.png'
+   ? 'assets/images/dark_mode_background.png'
    : ref.watch(themeProvider).themeName == 'light'
-     ? 'assets/images/light_mode_card_background.png'  
-     : 'assets/images/catharsis_signature_theme_card_background.png',
+     ? 'assets/images/light_mode_background.png'  
+     : 'assets/images/default_mode_background.png',
  fit: BoxFit.cover,
  width: 405,
  height: 555,
@@ -90,11 +92,12 @@ class SwipeLimitPopup extends ConsumerWidget {
                       Text(
                         'Swipe Limit Reached',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.raleway(
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
                           fontSize: 25,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: const [
+                          color: customTheme?.fontColor,
+                          shadows: [
                             Shadow(
                               color: Colors.black,
                               offset: Offset(1, 1),
@@ -107,10 +110,12 @@ class SwipeLimitPopup extends ConsumerWidget {
                       Text(
                         'You have used up your swipes for now. Please wait for the timer to reset or purchase additional swipes.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.raleway(
+                        style: const TextStyle(
+                          fontFamily: 'Runtime',
                           fontSize: 18,
                           color: Colors.white,
-                          shadows: const [
+                          fontWeight: FontWeight.bold,
+                          shadows: [
                             Shadow(
                               color: Colors.black,
                               offset: Offset(1, 1),
@@ -123,11 +128,12 @@ class SwipeLimitPopup extends ConsumerWidget {
                       if (resetTime != null)
                         CountdownTimer(
                           endTime: resetTime!.millisecondsSinceEpoch,
-                          textStyle: GoogleFonts.raleway(
+                          textStyle: const TextStyle(
+                            fontFamily: 'Runtime',
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                            shadows: const [
+                            color: Colors.white,
+                            shadows: [
                               Shadow(
                                 color: Colors.black,
                                 offset: Offset(1, 1),
@@ -140,7 +146,8 @@ class SwipeLimitPopup extends ConsumerWidget {
                       else
                         Text(
                           'No timer available',
-                          style: GoogleFonts.raleway(
+                          style: const TextStyle(
+                            fontFamily: 'Runtime',
                             fontSize: 20,
                             color: Colors.white,
                           ),
@@ -149,7 +156,7 @@ class SwipeLimitPopup extends ConsumerWidget {
                       ElevatedButton(
                         onPressed: onPurchase,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromRGBO(227, 95, 66, 1),
+                          backgroundColor: customTheme?.preferenceButtonColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -158,11 +165,13 @@ class SwipeLimitPopup extends ConsumerWidget {
                             horizontal: 40,
                           ),
                         ),
-                        child: Text(
-                          'Purchase Swipes',
-                          style: GoogleFonts.raleway(
+                        child: const Text(
+                          'Swipe without limits',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
                             fontSize: 20,
                             color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

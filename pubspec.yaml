@@ -124,6 +124,8 @@ flutter:
     - assets/images/avatar6.png
     - assets/images/catharsis_word_only.png
     - assets/images/dark_mode_background.png
+    - assets/images/light_mode_background.png
+    - assets/images/default_mode_background.png
     - assets/images/dark_mode_stat_card.png
     - assets/images/light_mode_stat_card.png
     - assets/images/changetheme_icon.png
@@ -138,5 +140,4 @@ flutter:
     - assets/images/interactions_relationships_icon.png
     - assets/images/personal_development_icon.png
     - assets/images/love_intimacy_icon.png
-    - assets/images/light_mode_background.png
     - .env

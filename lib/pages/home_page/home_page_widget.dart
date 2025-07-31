@@ -86,30 +86,29 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
     ));
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => SwipeLimitPopup(
-        resetTime: resetTime,
-        onDismiss: () {
-          Navigator.of(context).pop();
-          ref.read(popUpProvider.notifier).hidePopUp();
-        },
-        onPurchase: () {
-          // Add purchase logic
-        },
-        onTimerEnd: () {
-          Navigator.of(context).pop();
-          ref.read(popUpProvider.notifier).hidePopUp();
-        },
-      ),
-    );
-  }
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => SwipeLimitPopup(
+      resetTime: resetTime,
+      onDismiss: () {
+        Navigator.of(context).pop();
+        ref.read(popUpProvider.notifier).hidePopUp();
+      },
+      onPurchase: () { /* … */ },
+      onTimerEnd: () {
+        Navigator.of(context).pop();
+        ref.read(popUpProvider.notifier).hidePopUp();
+      },
+    ),
+  );
+}
 
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
@@ -130,7 +129,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             return Container(
               height: MediaQuery.of(context).size.height * 0.6,
               decoration: BoxDecoration(
-                color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
+                color: customTheme?.preferenceModalBackgroundColor ??
+                    theme.cardColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -159,11 +159,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           Align(
                             alignment: Alignment.centerLeft,
                             child: IconButton(
-                              icon: Icon(
-                                Icons.arrow_back_ios, 
-                                color: theme.iconTheme.color, 
-                                size: 24
-                              ),
+                              icon: Icon(Icons.arrow_back_ios,
+                                  color: theme.iconTheme.color, size: 24),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
                           ),
@@ -182,17 +179,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () => setState(() => tempSelectedKeys.clear()),
+                              onPressed: () =>
+                                  setState(() => tempSelectedKeys.clear()),
                               child: Text(
                                 'Clear All',
                                 style: TextStyle(
-                                  fontFamily: 'Runtime',
-                                  color: theme.brightness == Brightness.dark 
-                                      ? Colors.grey[400] 
-                                      : Colors.grey[600],
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold
-                                ),
+                                    fontFamily: 'Runtime',
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -205,9 +202,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         shrinkWrap: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: displayCats.map((display) {
-                          final key = QuestionCategories.normalizeCategory(display);
+                          final key =
+                              QuestionCategories.normalizeCategory(display);
                           final isSelected = tempSelectedKeys.contains(key);
-                          
+
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Material(
@@ -230,14 +228,20 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                     vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isSelected 
-                                        ? (customTheme?.preferenceItemSelectedColor?.withOpacity(0.8) ?? Colors.grey[700])
-                                        : (customTheme?.preferenceItemUnselectedColor ?? Colors.grey[800]), 
+                                    color: isSelected
+                                        ? (customTheme
+                                                ?.preferenceItemSelectedColor
+                                                ?.withOpacity(0.8) ??
+                                            Colors.grey[700])
+                                        : (customTheme
+                                                ?.preferenceItemUnselectedColor ??
+                                            Colors.grey[800]),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: customTheme?.preferenceBorderColor ?? Colors.grey[600]!, 
-                                      width: 1
-                                    ),
+                                        color: customTheme
+                                                ?.preferenceBorderColor ??
+                                            Colors.grey[600]!,
+                                        width: 1),
                                   ),
                                   child: Row(
                                     children: [
@@ -252,7 +256,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                               fontFamily: 'Runtime',
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: theme.textTheme.bodyMedium?.color,
+                                              color: theme
+                                                  .textTheme.bodyMedium?.color,
                                             ),
                                           ),
                                         ),
@@ -278,11 +283,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 _cacheKey = null;
                                 _currentCardIndex = 0;
                               });
-                              notifier.updateSelectedCategories(tempSelectedKeys);
+                              notifier
+                                  .updateSelectedCategories(tempSelectedKeys);
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.extension<CustomThemeExtension>()?.preferenceButtonColor ?? theme.primaryColor,
+                              backgroundColor: theme
+                                      .extension<CustomThemeExtension>()
+                                      ?.preferenceButtonColor ??
+                                  theme.primaryColor,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
@@ -368,8 +377,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       final allActive = cardState.activeQuestions;
       final unseenQuestions = allActive.where((q) {
         final questionId = '${q.text}_${q.category}';
-        return !cardState.seenQuestions.any((seen) =>
-            seen.text == q.text && seen.category == q.category) &&
+        return !cardState.seenQuestions.any(
+                (seen) => seen.text == q.text && seen.category == q.category) &&
             !_displayedQuestionIds.contains(questionId);
       }).toList();
 
@@ -382,7 +391,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     }
 
     // Track displayed questions
-    if (_cachedQuestions!.isNotEmpty && _currentCardIndex < _cachedQuestions!.length) {
+    if (_cachedQuestions!.isNotEmpty &&
+        _currentCardIndex < _cachedQuestions!.length) {
       final currentQ = _cachedQuestions![_currentCardIndex];
       _displayedQuestionIds.add('${currentQ.text}_${currentQ.category}');
     }
@@ -407,123 +417,140 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           // Theme-aware background
           Positioned.fill(
             child: cardState.isLoading
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: customTheme?.categoryChipColor ?? theme.primaryColor
-                  )
-                )
-              : FlutterFlowSwipeableStack(
-                  controller: _cardController,
-                  itemCount: questions.isEmpty ? 1 : questions.length,
-                  itemBuilder: (ctx, i) {
-                    if (questions.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No questions available',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            color: theme.textTheme.bodyMedium?.color,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
+                ? Center(
+                    child: CircularProgressIndicator(
+                        color: customTheme?.categoryChipColor ??
+                            theme.primaryColor))
+                : FlutterFlowSwipeableStack(
+                    controller: _cardController,
+                    itemCount: questions.isEmpty ? 1 : questions.length,
+                    itemBuilder: (ctx, i) {
+                      if (questions.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No questions available',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: theme.textTheme.bodyMedium?.color,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }
+                      final idx = i % questions.length;
+                      final q = questions[idx];
+                      return GestureDetector(
+                        onDoubleTap: () => notifier.toggleLiked(q),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(16),
+                              image: (customTheme?.showBackgroundTexture ??
+                                          false) &&
+                                      (customTheme?.backgroundImagePath != null)
+                                  ? DecorationImage(
+                                      image: AssetImage(
+                                          customTheme!.backgroundImagePath!),
+                                      fit: BoxFit.cover,
+                                      opacity: 0.4,
+                                    )
+                                  : null,
+                            ),
+                            child: Stack(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(40),
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const SizedBox(height: 100),
+                                      Flexible(
+                                        child: Center(
+                                          child: Text(
+                                            q.text,
+                                            style: TextStyle(
+                                              fontFamily: 'Runtime',
+                                              color: customTheme?.fontColor,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold,
+                                              height: 1.3,
+                                              letterSpacing: 2,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                      Column(
+                                        children: [
+                                          _buildCategoryChip(q.category),
+                                          const SizedBox(height: 230),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
-                    }
-                    final idx = i % questions.length;
-                    final q = questions[idx];
-                    return GestureDetector(
-                      onDoubleTap: () => notifier.toggleLiked(q),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: double.infinity,
-                          height: double.infinity,
-                          decoration: BoxDecoration(
-                            color: theme.cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            image: (customTheme?.showBackgroundTexture ?? false) &&
-                                   (customTheme?.backgroundImagePath != null)
-                                ? DecorationImage(
-                                    image: AssetImage(customTheme!.backgroundImagePath!),
-                                    fit: BoxFit.cover,
-                                    opacity: 0.4,
-                                  )
-                                : null,
-                          ),
-                          child: Stack(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(40),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const SizedBox(height: 100),
-                                    Flexible(
-                                      child: Center(
-                                        child: Text(
-                                          q.text,
-                                          style: TextStyle(
-                                            fontFamily: 'Runtime',
-                                            color: theme.textTheme.bodyMedium?.color,
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.3,
-                                            letterSpacing: 2,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                    Column(
-                                      children: [
-                                        _buildCategoryChip(q.category),
-                                        const SizedBox(height: 230),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  onLeftSwipe: (i) {
-                    if (questions.isNotEmpty && i < questions.length) {
-                      final question = questions[i];
-                      final activeQuestions = cardState.activeQuestions;
-                      final actualIndex = activeQuestions.indexWhere((q) =>
-                          q.text == question.text && q.category == question.category);
-
-                      if (actualIndex != -1) {
-                        notifier.handleCardSwiped(actualIndex, direction: 'left', velocity: 1.0);
+                    },
+                    onLeftSwipe: (i) {
+                      if (cardState.hasReachedSwipeLimit) {
+                        _showExtraPackagePopUp(
+                            context, cardState.swipeResetTime);
+                        return;
                       }
-                      Future.microtask(() => setState(() => _currentCardIndex += 1));
-                    }
-                  },
-                  onRightSwipe: (i) {
-                    if (questions.isNotEmpty && i < questions.length) {
-                      final question = questions[i];
-                      final activeQuestions = cardState.activeQuestions;
-                      final actualIndex = activeQuestions.indexWhere((q) =>
-                          q.text == question.text && q.category == question.category);
+                      if (questions.isNotEmpty && i < questions.length) {
+                        final question = questions[i];
+                        final activeQuestions = cardState.activeQuestions;
+                        final actualIndex = activeQuestions.indexWhere((q) =>
+                            q.text == question.text &&
+                            q.category == question.category);
 
-                      if (actualIndex != -1) {
-                        notifier.handleCardSwiped(actualIndex, direction: 'right', velocity: 1.0);
+                        if (actualIndex != -1) {
+                          notifier.handleCardSwiped(actualIndex,
+                              direction: 'left', velocity: 1.0);
+                        }
+                        Future.microtask(
+                            () => setState(() => _currentCardIndex += 1));
                       }
-                      setState(() => _currentCardIndex += 1);
-                    }
-                  },
-                  loop: false,
-                  onEnd: () => notifier.loadMoreQuestions(),
-                  cardDisplayCount: 3,
-                  scale: 1.0,
-                  threshold: 0.4,
-                  maxAngle: 0,
-                  cardPadding: EdgeInsets.zero,
-                  backCardOffset: Offset.zero,
-                ),
+                    },
+                    onRightSwipe: (i) {
+                      if (cardState.hasReachedSwipeLimit) {
+                        _showExtraPackagePopUp(
+                            context, cardState.swipeResetTime);
+                        return;
+                      }
+                      if (questions.isNotEmpty && i < questions.length) {
+                        final question = questions[i];
+                        final activeQuestions = cardState.activeQuestions;
+                        final actualIndex = activeQuestions.indexWhere((q) =>
+                            q.text == question.text &&
+                            q.category == question.category);
+
+                        if (actualIndex != -1) {
+                          notifier.handleCardSwiped(actualIndex,
+                              direction: 'right', velocity: 1.0);
+                        }
+                        setState(() => _currentCardIndex += 1);
+                      }
+                    },
+                    loop: false,
+                    onEnd: () => notifier.loadMoreQuestions(),
+                    cardDisplayCount: 3,
+                    scale: 1.0,
+                    threshold: 0.4,
+                    maxAngle: 0,
+                    cardPadding: EdgeInsets.zero,
+                    backCardOffset: Offset.zero,
+                  ),
           ),
           // Top preferences button
           Positioned(
@@ -532,7 +559,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -545,13 +573,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                          color: customTheme?.iconCircleColor ??
+                              Colors.white.withOpacity(0.1),
                         ),
                         child: Image.asset(
                           'assets/images/preferences_icon.png',
                           width: 24,
                           height: 24,
-                          color: customTheme?.iconColor ?? theme.iconTheme.color,
+                          color:
+                              customTheme?.iconColor ?? theme.iconTheme.color,
                         ),
                       ),
                     ),
@@ -595,7 +625,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             'assets/images/share_icon.png',
                             width: 24,
                             height: 24,
-                            color: customTheme?.likeAndShareIconColor ?? Colors.white.withOpacity(0.1),
+                            color: customTheme?.likeAndShareIconColor ??
+                                Colors.white.withOpacity(0.1),
                           ),
                         ),
                       ),
@@ -603,7 +634,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       InkWell(
                         onTap: () {
                           if (cardState.hasReachedSwipeLimit) {
-                            ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+                            ref
+                                .read(popUpProvider.notifier)
+                                .showPopUp(cardState.swipeResetTime);
                           } else if (currentQuestion != null) {
                             notifier.toggleLiked(currentQuestion);
                           }
@@ -671,7 +704,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           'assets/images/profile_icon.png',
                           width: 24,
                           height: 24,
-                          color: theme.brightness == Brightness.dark 
+                          color: theme.brightness == Brightness.dark
                               ? Colors.grey[400]
                               : Colors.grey[600],
                         ),
@@ -680,7 +713,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           "Profile",
                           style: TextStyle(
                             fontFamily: 'Runtime',
-                            color: theme.brightness == Brightness.dark 
+                            color: theme.brightness == Brightness.dark
                                 ? Colors.grey[400]
                                 : Colors.grey[600],
                             fontSize: 16,

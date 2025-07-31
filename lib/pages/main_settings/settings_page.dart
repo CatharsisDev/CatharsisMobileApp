@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/theme_provider.dart';
-import '../../provider/user_profile_provider.dart';
 import '../../provider/app_state_provider.dart';
-import '../../provider/tutorial_state_provider.dart';
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
 

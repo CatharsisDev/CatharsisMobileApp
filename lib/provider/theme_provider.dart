@@ -127,9 +127,9 @@ class AppThemes {
         profileStatCardImagePath: null,
         categoryChipColor: Color.fromRGBO(42, 63, 44, 1),
         preferenceButtonColor: Color.fromRGBO(42, 63, 44, 1),
-        preferenceModalBackgroundColor: Color(0xFFFAF1E1),
-        preferenceItemSelectedColor: Color.fromRGBO(152, 117, 84, 1),
-        preferenceItemUnselectedColor: Color.fromARGB(255, 251, 248, 231),
+        preferenceModalBackgroundColor: Color.fromRGBO(250, 241, 225, 1),
+        preferenceItemSelectedColor: Color.fromARGB(255, 242, 227, 200),
+        preferenceItemUnselectedColor: Color.fromRGBO(250, 241, 225, 1),
         preferenceBorderColor: Color(0xFF8B4F4F),
         profileAvatarColor: Color(0xFF987554),
         profileStatCardColor: Colors.transparent,
@@ -138,6 +138,7 @@ class AppThemes {
         iconColor: Color.fromRGBO(152, 117, 84, 1),
         iconCircleColor: Color.fromRGBO(152, 117, 84, 0.1),
         likeAndShareIconColor: Color.fromRGBO(152, 117, 84, 1),
+        fontColor: Color.fromRGBO(32, 28, 17, 1)
       ),
     ],
   );
@@ -185,6 +186,7 @@ class AppThemes {
         iconColor: Color.fromRGBO(133, 161, 173, 1),
         iconCircleColor: Color.fromRGBO(133, 161, 173, 0.1),
         likeAndShareIconColor: Color.fromRGBO(98, 98, 113, 1),
+        fontColor: Color.fromRGBO(16, 14, 66, 1),
       ),
     ],
   );
@@ -232,6 +234,7 @@ class AppThemes {
         iconColor: Color.fromRGBO(237, 239, 220, 1),
         iconCircleColor: Color.fromRGBO(255, 255, 255, 0.1),
         likeAndShareIconColor: Color.fromRGBO(237, 239, 220, 1),
+        fontColor: Color.fromRGBO(237, 239, 220, 1),
       ),
     ],
   );
@@ -255,6 +258,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
   final Color iconColor; 
   final Color? iconCircleColor; 
   final Color? likeAndShareIconColor;
+  final Color? fontColor;  
   
   const CustomThemeExtension({
     required this.showBackgroundTexture,
@@ -273,6 +277,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     required this.iconColor,
     required this.iconCircleColor,
     required this.likeAndShareIconColor,
+    required this.fontColor,
   });
 
   @override
@@ -311,6 +316,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       iconColor: iconColor ?? this.iconColor, 
       iconCircleColor: iconCircleColor ?? this.iconCircleColor,  
       likeAndShareIconColor: likeAndShareIconColor ?? this.likeAndShareIconColor,
+      fontColor: fontColor ?? this.fontColor,
     );
   }
 
@@ -336,6 +342,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       iconColor: Color.lerp(iconColor, other.iconColor, t)!,
       iconCircleColor: Color.lerp(iconCircleColor, other.iconCircleColor, t),
       likeAndShareIconColor: Color.lerp(likeAndShareIconColor, other.likeAndShareIconColor, t),
+      fontColor: Color.lerp(fontColor, other.fontColor, t)!,
     );
   }
 }

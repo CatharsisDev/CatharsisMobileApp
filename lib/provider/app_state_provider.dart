@@ -8,7 +8,7 @@ import 'auth_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 
-const int SWIPE_LIMIT = 20;
+const int SWIPE_LIMIT = 30;
 const Duration RESET_DURATION = Duration(minutes: 20);
 
 /// Normalize categories so that comparisons always match exactly.
@@ -26,6 +26,8 @@ class CardState {
   final int currentIndex;
   final Set<String> selectedCategories;
   final DateTime? swipeResetTime;
+  /// How many cards the user has swiped since last reset
+  final int swipeCount;
 
   CardState({
     required this.allQuestions,
@@ -35,6 +37,7 @@ class CardState {
     required this.isLoading,
     required this.currentIndex,
     required this.selectedCategories,
+    required this.swipeCount,
     this.swipeResetTime,
   });
 
@@ -52,6 +55,7 @@ class CardState {
     int? currentIndex,
     Set<String>? selectedCategories,
     DateTime? swipeResetTime,
+    int? swipeCount,
   }) {
     return CardState(
       allQuestions: allQuestions ?? this.allQuestions,
@@ -62,6 +66,7 @@ class CardState {
       currentIndex: currentIndex ?? this.currentIndex,
       selectedCategories: selectedCategories ?? this.selectedCategories,
       swipeResetTime: swipeResetTime ?? this.swipeResetTime,
+      swipeCount: swipeCount ?? this.swipeCount,
     );
   }
 
@@ -120,6 +125,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
           isLoading: true,
           currentIndex: 0,
           selectedCategories: {},
+          swipeCount: 0,
         )) {
     _initialize();
   }
@@ -195,6 +201,17 @@ class CardStateNotifier extends StateNotifier<CardState> {
       cacheBox = await Hive.openBox<Question>('cachedQuestions_default');
       seenBox = await Hive.openBox<Question>('seenQuestions_default');
     }
+
+    // Load persisted swipe count and cooldown
+    final savedCount = (swipeBox.get('swipe_count') as int?) ?? 0;
+    final rawReset = swipeBox.get('swipe_limit_reached') as String?;
+    final loadedReset = rawReset != null
+        ? DateTime.parse(rawReset).add(RESET_DURATION)
+        : null;
+    state = state.copyWith(
+      swipeCount: savedCount,
+      swipeResetTime: loadedReset,
+    );
 
     if (!mounted) return;
     
@@ -334,8 +351,13 @@ class CardStateNotifier extends StateNotifier<CardState> {
       final resetTime = DateTime.parse(raw).add(RESET_DURATION);
       if (DateTime.now().isAfter(resetTime)) {
         await swipeBox.delete('swipe_limit_reached');
+        // Reset swipe count on cooldown end
+        await swipeBox.put('swipe_count', 0);
         if (mounted) {
-          state = state.copyWith(swipeResetTime: null);
+          state = state.copyWith(
+            swipeResetTime: null,
+            swipeCount: 0,
+          );
         }
       } else {
         if (mounted) {
@@ -373,6 +395,23 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
     if (!mounted) return;
+    
+    // Track swipe count and enforce limit
+    final newCount = state.swipeCount + 1;
+    if (newCount >= SWIPE_LIMIT) {
+      final now = DateTime.now();
+      final resetTime = now.add(RESET_DURATION);
+      swipeBox.put('swipe_limit_reached', now.toIso8601String());
+      swipeBox.put('swipe_count', newCount);
+      state = state.copyWith(
+        swipeCount: newCount,
+        swipeResetTime: resetTime,
+      );
+      return;
+    } else {
+      swipeBox.put('swipe_count', newCount);
+      state = state.copyWith(swipeCount: newCount);
+    }
     
     // Get the cached unseen questions from the widget
     final allActive = state.activeQuestions;
@@ -575,6 +614,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
           isLoading: false,
           currentIndex: 0,
           selectedCategories: {},
+          swipeCount: 0,
         );
       }
     } catch (e) {
