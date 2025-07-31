@@ -1,6 +1,7 @@
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'questions_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -160,5 +161,45 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
         ],
       ),
     );
+  }
+}
+
+class DebugUtils {
+  static Future<void> printAllPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    
+    print('=== SharedPreferences Debug ===');
+    print('Total keys: ${keys.length}');
+    
+    for (final key in keys) {
+      final value = prefs.get(key);
+      print('$key: $value');
+    }
+    print('==============================');
+  }
+  
+  static Future<void> printTutorialStateForUser(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'has_seen_tutorial_$userId';
+    final value = prefs.getBool(key);
+    
+    print('=== Tutorial State Debug ===');
+    print('User ID: $userId');
+    print('Key: $key');
+    print('Value: $value');
+    print('===========================');
+  }
+  
+  static Future<void> clearAllTutorialStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    
+    for (final key in keys) {
+      if (key.startsWith('has_seen_tutorial_')) {
+        await prefs.remove(key);
+        print('Removed: $key');
+      }
+    }
   }
 }

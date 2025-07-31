@@ -130,8 +130,11 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box<Question> cacheBox;
   late Box<Question> seenBox;
   DateTime? _currentQuestionStartTime;
+  bool _isDisposed = false;
 
   Future<void> _initialize() async {
+    if (!mounted) return;
+    
     state = state.copyWith(isLoading: true);
     
     // Define all box prefixes
@@ -193,6 +196,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       seenBox = await Hive.openBox<Question>('seenQuestions_default');
     }
 
+    if (!mounted) return;
+    
     await _loadLiked();
     await _loadSeenQuestions();
     await _loadPersonalizedQuestions();
@@ -203,17 +208,26 @@ class CardStateNotifier extends StateNotifier<CardState> {
     await UserBehaviorService.startSession();
     _currentQuestionStartTime = DateTime.now();
 
-    state = state.copyWith(isLoading: false);
+    if (mounted) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   Future<void> _loadLiked() async {
+    if (!mounted) return;
+    
     // First load from local Hive
     final localLiked = likedBox.values.toList();
-    state = state.copyWith(likedQuestions: localLiked);
+    
+    if (mounted) {
+      state = state.copyWith(likedQuestions: localLiked);
+    }
     
     // Then sync with Firestore
     try {
       final firestoreLiked = await UserBehaviorService.getLikedQuestions();
+      if (!mounted) return;
+      
       if (firestoreLiked.isNotEmpty) {
         // Merge with local and update
         final mergedSet = {...localLiked, ...firestoreLiked};
@@ -223,7 +237,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
         await likedBox.clear();
         await likedBox.addAll(mergedList);
         
-        state = state.copyWith(likedQuestions: mergedList);
+        if (mounted) {
+          state = state.copyWith(likedQuestions: mergedList);
+        }
       }
     } catch (e) {
       print('Error syncing liked questions with Firestore: $e');
@@ -231,23 +247,37 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> _loadSeenQuestions() async {
+    if (!mounted) return;
+    
     final seenQuestions = seenBox.values.toList();
-    state = state.copyWith(seenQuestions: seenQuestions);
+    if (mounted) {
+      state = state.copyWith(seenQuestions: seenQuestions);
+    }
   }
 
   Future<void> _loadCache() async {
+    if (!mounted) return;
+    
     final cached = cacheBox.values.toList();
     if (cached.isNotEmpty) {
-      state = state.copyWith(allQuestions: cached..shuffle());
+      if (mounted) {
+        state = state.copyWith(allQuestions: cached..shuffle());
+      }
     } else {
       final qs = await QuestionsService.loadQuestionsWithAI();
+      if (!mounted) return;
+      
       await cacheBox.clear();
       await cacheBox.addAll(qs);
-      state = state.copyWith(allQuestions: qs..shuffle());
+      if (mounted) {
+        state = state.copyWith(allQuestions: qs..shuffle());
+      }
     }
   }
 
   Future<void> _loadPersonalizedQuestions() async {
+    if (!mounted) return;
+    
     try {
       // First load all questions
       final cached = cacheBox.values.toList();
@@ -257,6 +287,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
         allQuestions = cached;
       } else {
         allQuestions = await QuestionsService.loadQuestionsWithAI();
+        if (!mounted) return;
+        
         await cacheBox.clear();
         await cacheBox.addAll(allQuestions);
       }
@@ -267,7 +299,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
         count: allQuestions.length,
       );
       
-      state = state.copyWith(allQuestions: personalizedQuestions);
+      if (mounted) {
+        state = state.copyWith(allQuestions: personalizedQuestions);
+      }
     } catch (e) {
       print('Error loading personalized questions: $e');
       // Fallback to regular loading
@@ -276,30 +310,44 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void _maybeGenerateMore() {
+    if (!mounted) return;
+    
     if (state.allQuestions.isEmpty) return;
     final pct = state.seenQuestions.length / state.allQuestions.length;
     if (pct > 0.8) {
       QuestionsService.loadQuestionsWithAI().then((newQs) {
+        if (!mounted) return;
+        
         cacheBox.addAll(newQs);
-        state = state.copyWith(allQuestions: [...state.allQuestions, ...newQs]);
+        if (mounted) {
+          state = state.copyWith(allQuestions: [...state.allQuestions, ...newQs]);
+        }
       }).catchError((_) {});
     }
   }
 
   Future<void> _checkReset() async {
+    if (!mounted) return;
+    
     final raw = swipeBox.get('swipe_limit_reached') as String?;
     if (raw != null) {
       final resetTime = DateTime.parse(raw).add(RESET_DURATION);
       if (DateTime.now().isAfter(resetTime)) {
         await swipeBox.delete('swipe_limit_reached');
-        state = state.copyWith(swipeResetTime: null);
+        if (mounted) {
+          state = state.copyWith(swipeResetTime: null);
+        }
       } else {
-        state = state.copyWith(swipeResetTime: resetTime);
+        if (mounted) {
+          state = state.copyWith(swipeResetTime: resetTime);
+        }
       }
     }
   }
 
   void updateCategory(String cat) {
+    if (!mounted) return;
+    
     final norm = _normalizeCategory(cat);
     state = state.copyWith(
       currentCategory: norm,
@@ -312,6 +360,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void updateSelectedCategories(Set<String> cats) {
+    if (!mounted) return;
+    
     final normSet = cats.map(_normalizeCategory).toSet();
     state = state.copyWith(
       selectedCategories: normSet,
@@ -322,6 +372,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
+    if (!mounted) return;
+    
     // Get the cached unseen questions from the widget
     final allActive = state.activeQuestions;
     final unseenQuestions = allActive.where((q) => 
@@ -360,7 +412,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
         category: currentQuestion.category,
       );
       seen.add(seenQuestion);
-      state = state.copyWith(seenQuestions: seen);
+      if (mounted) {
+        state = state.copyWith(seenQuestions: seen);
+      }
       
       // Persist to Hive
       seenBox.add(seenQuestion);
@@ -373,6 +427,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   void markQuestionAsSeen(Question question) {
+    if (!mounted) return;
+    
     final seen = List<Question>.from(state.seenQuestions);
     if (!seen.any((q) => q.text == question.text && q.category == question.category)) {
       final seenQuestion = Question(
@@ -380,12 +436,16 @@ class CardStateNotifier extends StateNotifier<CardState> {
         category: question.category,
       );
       seen.add(seenQuestion);
-      state = state.copyWith(seenQuestions: seen);
+      if (mounted) {
+        state = state.copyWith(seenQuestions: seen);
+      }
       seenBox.add(seenQuestion);
     }
   }
 
   void handleCardSwipedWithQuestion(Question question, {String direction = 'unknown', double velocity = 0.0}) {
+    if (!mounted) return;
+    
     // Track asynchronously without blocking
     () async {
       if (_currentQuestionStartTime != null) {
@@ -412,7 +472,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
         category: question.category,
       );
       seen.add(seenQuestion);
-      state = state.copyWith(seenQuestions: seen);
+      if (mounted) {
+        state = state.copyWith(seenQuestions: seen);
+      }
       
       // Persist to Hive
       seenBox.add(seenQuestion);
@@ -426,6 +488,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   /// Toggle liked status without changing current card
   void toggleLiked(Question q) async {
+    if (!mounted) return;
+    
     // Create normalized comparison for checking existence
     final normCat = _normalizeCategory(q.category);
     final currentLikes = state.likedQuestions;
@@ -452,7 +516,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
     }
     
     // Update state immediately for UI
-    state = state.copyWith(likedQuestions: updatedLikes);
+    if (mounted) {
+      state = state.copyWith(likedQuestions: updatedLikes);
+    }
     
     // Update storage and Firestore asynchronously
     () async {
@@ -473,33 +539,53 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> loadMoreQuestions() async {
+    if (!mounted) return;
+    
     final newQs = await QuestionsService.loadQuestionsWithAI();
+    if (!mounted) return;
+    
     final updatedQuestions = [...state.allQuestions, ...newQs];
     await cacheBox.addAll(newQs);
-    state = state.copyWith(allQuestions: updatedQuestions);
+    if (mounted) {
+      state = state.copyWith(allQuestions: updatedQuestions);
+    }
   }
 
   // Add cleanup method for sign out
   Future<void> clearUserData() async {
+    if (!mounted) return;
+    
     try {
-      await likedBox.clear();
-      await swipeBox.clear();
-      await cacheBox.clear();
-      await seenBox.clear();
+      // Set a flag to prevent further operations
+      _isDisposed = true;
       
-      // Reset state
-      state = CardState(
-        allQuestions: [],
-        likedQuestions: [],
-        seenQuestions: [],
-        currentCategory: 'all',
-        isLoading: false,
-        currentIndex: 0,
-        selectedCategories: {},
-      );
+      // Close boxes instead of clearing them to prevent access after dispose
+      await likedBox.close();
+      await swipeBox.close();
+      await cacheBox.close();
+      await seenBox.close();
+      
+      // Only update state if still mounted
+      if (mounted) {
+        state = CardState(
+          allQuestions: [],
+          likedQuestions: [],
+          seenQuestions: [],
+          currentCategory: 'all',
+          isLoading: false,
+          currentIndex: 0,
+          selectedCategories: {},
+        );
+      }
     } catch (e) {
       print('Error clearing user data: $e');
     }
+  }
+  
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 }
 

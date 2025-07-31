@@ -202,7 +202,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                         child: ElevatedButton(
                                           onPressed: () => Navigator.pop(context, true),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
+                                            backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
                                             padding: EdgeInsets.symmetric(vertical: 16),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(12),
@@ -240,19 +240,24 @@ class SettingsMenuPage extends ConsumerWidget {
                                 ),
                               );
 
-                              // Clear all user-specific providers
-                              ref.invalidate(userProfileProvider);
-                              ref.invalidate(cardStateProvider);
-                              ref.invalidate(tutorialProvider);
+                              // Clear user-specific data before invalidating providers
+                              final cardStateNotifier = ref.read(cardStateProvider.notifier);
+                              await cardStateNotifier.clearUserData();
                               
-                              // Sign out (this will trigger theme reset via auth state listener)
+                              // Sign out (this will trigger provider disposal)
                               await authService.signOut();
                               
-                              // Pop loading indicator and settings page
+                              // Navigate away before invalidating providers
                               if (context.mounted) {
                                 Navigator.of(context).pop(); // Pop loading
                                 Navigator.of(context).pop(); // Pop settings page
                               }
+                              
+                              // Now invalidate providers after navigation
+                              ref.invalidate(userProfileProvider);
+                              ref.invalidate(cardStateProvider);
+                              ref.invalidate(tutorialProvider);
+                              
                             } catch (e) {
                               if (context.mounted) {
                                 Navigator.of(context).pop(); // Pop loading
