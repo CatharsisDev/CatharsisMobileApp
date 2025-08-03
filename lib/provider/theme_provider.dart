@@ -138,7 +138,8 @@ class AppThemes {
         iconColor: Color.fromRGBO(152, 117, 84, 1),
         iconCircleColor: Color.fromRGBO(152, 117, 84, 0.1),
         likeAndShareIconColor: Color.fromRGBO(152, 117, 84, 1),
-        fontColor: Color.fromRGBO(32, 28, 17, 1)
+        fontColor: Color.fromRGBO(32, 28, 17, 1),
+        buttonFontColor: Colors.white,
       ),
     ],
   );
@@ -187,6 +188,7 @@ class AppThemes {
         iconCircleColor: Color.fromRGBO(133, 161, 173, 0.1),
         likeAndShareIconColor: Color.fromRGBO(98, 98, 113, 1),
         fontColor: Color.fromRGBO(16, 14, 66, 1),
+        buttonFontColor: Color.fromRGBO(16, 14, 66, 1),
       ),
     ],
   );
@@ -235,6 +237,7 @@ class AppThemes {
         iconCircleColor: Color.fromRGBO(255, 255, 255, 0.1),
         likeAndShareIconColor: Color.fromRGBO(237, 239, 220, 1),
         fontColor: Color.fromRGBO(237, 239, 220, 1),
+        buttonFontColor: Color.fromRGBO(237, 239, 220, 1),
       ),
     ],
   );
@@ -259,6 +262,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
   final Color? iconCircleColor; 
   final Color? likeAndShareIconColor;
   final Color? fontColor;  
+  final Color? buttonFontColor;
   
   const CustomThemeExtension({
     required this.showBackgroundTexture,
@@ -278,6 +282,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     required this.iconCircleColor,
     required this.likeAndShareIconColor,
     required this.fontColor,
+    required this.buttonFontColor,
   });
 
   @override
@@ -298,6 +303,8 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     Color? iconColor,
     Color? iconCircleColor,
     Color? likeAndShareIconColor,
+    Color? fontColor,
+    Color? buttonFontColor,
   }) {
     return CustomThemeExtension(
       showBackgroundTexture: showBackgroundTexture ?? this.showBackgroundTexture,
@@ -317,6 +324,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       iconCircleColor: iconCircleColor ?? this.iconCircleColor,  
       likeAndShareIconColor: likeAndShareIconColor ?? this.likeAndShareIconColor,
       fontColor: fontColor ?? this.fontColor,
+      buttonFontColor: buttonFontColor ?? this.buttonFontColor,
     );
   }
 
@@ -328,21 +336,22 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     return CustomThemeExtension(
       showBackgroundTexture: t < 0.5 ? showBackgroundTexture : other.showBackgroundTexture,
       backgroundImagePath: t < 0.5 ? backgroundImagePath : other.backgroundImagePath,
-      categoryChipColor: Color.lerp(categoryChipColor, other.categoryChipColor, t)!,
-      preferenceButtonColor: Color.lerp(preferenceButtonColor, other.preferenceButtonColor, t)!,
-      preferenceModalBackgroundColor: Color.lerp(preferenceModalBackgroundColor, other.preferenceModalBackgroundColor, t)!,
-      preferenceItemSelectedColor: Color.lerp(preferenceItemSelectedColor, other.preferenceItemSelectedColor, t)!,
-      preferenceItemUnselectedColor: Color.lerp(preferenceItemUnselectedColor, other.preferenceItemUnselectedColor, t)!,
-      preferenceBorderColor: Color.lerp(preferenceBorderColor, other.preferenceBorderColor, t)!,
-      profileAvatarColor: Color.lerp(profileAvatarColor, other.profileAvatarColor, t)!,
-      profileStatCardColor: Color.lerp(profileStatCardColor, other.profileStatCardColor, t)!,
-      profileStatIconBackgroundColor: Color.lerp(profileStatIconBackgroundColor, other.profileStatIconBackgroundColor, t)!,
-      profileContentBackgroundColor: Color.lerp(profileContentBackgroundColor, other.profileContentBackgroundColor, t)!,
+      categoryChipColor: Color.lerp(categoryChipColor, other.categoryChipColor, t) ?? categoryChipColor,
+      preferenceButtonColor: Color.lerp(preferenceButtonColor, other.preferenceButtonColor, t) ?? preferenceButtonColor,
+      preferenceModalBackgroundColor: Color.lerp(preferenceModalBackgroundColor, other.preferenceModalBackgroundColor, t) ?? preferenceModalBackgroundColor,
+      preferenceItemSelectedColor: Color.lerp(preferenceItemSelectedColor, other.preferenceItemSelectedColor, t) ?? preferenceItemSelectedColor,
+      preferenceItemUnselectedColor: Color.lerp(preferenceItemUnselectedColor, other.preferenceItemUnselectedColor, t) ?? preferenceItemUnselectedColor,
+      preferenceBorderColor: Color.lerp(preferenceBorderColor, other.preferenceBorderColor, t) ?? preferenceBorderColor,
+      profileAvatarColor: Color.lerp(profileAvatarColor, other.profileAvatarColor, t) ?? profileAvatarColor,
+      profileStatCardColor: Color.lerp(profileStatCardColor, other.profileStatCardColor, t) ?? profileStatCardColor,
+      profileStatIconBackgroundColor: Color.lerp(profileStatIconBackgroundColor, other.profileStatIconBackgroundColor, t) ?? profileStatIconBackgroundColor,
+      profileContentBackgroundColor: Color.lerp(profileContentBackgroundColor, other.profileContentBackgroundColor, t) ?? profileContentBackgroundColor,
       profileStatCardImagePath: t < 0.5 ? profileStatCardImagePath : other.profileStatCardImagePath,
-      iconColor: Color.lerp(iconColor, other.iconColor, t)!,
+      iconColor: Color.lerp(iconColor, other.iconColor, t) ?? iconColor,
       iconCircleColor: Color.lerp(iconCircleColor, other.iconCircleColor, t),
       likeAndShareIconColor: Color.lerp(likeAndShareIconColor, other.likeAndShareIconColor, t),
-      fontColor: Color.lerp(fontColor, other.fontColor, t)!,
+      fontColor: Color.lerp(fontColor, other.fontColor, t) ?? fontColor,
+      buttonFontColor: Color.lerp(buttonFontColor, other.buttonFontColor, t) ?? buttonFontColor,
     );
   }
 }

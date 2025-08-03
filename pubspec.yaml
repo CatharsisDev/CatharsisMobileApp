@@ -92,6 +92,10 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
 
+  # Purchasing & Payments 
+  in_app_purchase: ^3.0.8
+  in_app_purchase_storekit: ^0.4.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

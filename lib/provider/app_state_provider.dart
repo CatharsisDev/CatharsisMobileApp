@@ -9,7 +9,7 @@ import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 
 const int SWIPE_LIMIT = 30;
-const Duration RESET_DURATION = Duration(minutes: 20);
+const Duration RESET_DURATION = Duration(minutes: 600, seconds: 0);
 
 /// Normalize categories so that comparisons always match exactly.
 String _normalizeCategory(String s) => s

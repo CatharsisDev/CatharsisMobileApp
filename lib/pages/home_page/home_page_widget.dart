@@ -441,7 +441,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       final idx = i % questions.length;
                       final q = questions[idx];
                       return GestureDetector(
-                        onDoubleTap: () => notifier.toggleLiked(q),
+                        onDoubleTap: () {
+                          HapticFeedback.lightImpact();
+                          notifier.toggleLiked(q);
+                        },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Container(
@@ -638,6 +641,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 .read(popUpProvider.notifier)
                                 .showPopUp(cardState.swipeResetTime);
                           } else if (currentQuestion != null) {
+                            HapticFeedback.lightImpact();
                             notifier.toggleLiked(currentQuestion);
                           }
                         },

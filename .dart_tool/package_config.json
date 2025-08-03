@@ -458,6 +458,30 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "in_app_purchase",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase-3.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "in_app_purchase_android",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_android-0.4.0+2",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "in_app_purchase_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_platform_interface-1.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "in_app_purchase_storekit",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_storekit-0.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
       "name": "intl",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/intl-0.20.2",
       "packageUri": "lib/",

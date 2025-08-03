@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../provider/theme_provider.dart';
 import '../provider/theme_provider.dart' show CustomThemeExtension;
+import '../pages/subscription_plans/subscription_plans_page.dart';
 
 class SwipeLimitPopup extends ConsumerWidget {
   final DateTime? resetTime;
@@ -96,7 +97,9 @@ class SwipeLimitPopup extends ConsumerWidget {
                           fontFamily: 'Runtime',
                           fontSize: 25,
                           fontWeight: FontWeight.bold,
-                          color: customTheme?.fontColor,
+                          color: customTheme?.fontColor
+        ?? theme.textTheme.bodyMedium?.color
+        ?? theme.primaryColor,
                           shadows: [
                             Shadow(
                               color: Colors.black,
@@ -110,10 +113,12 @@ class SwipeLimitPopup extends ConsumerWidget {
                       Text(
                         'You have used up your swipes for now. Please wait for the timer to reset or purchase additional swipes.',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Runtime',
                           fontSize: 18,
-                          color: Colors.white,
+                          color: customTheme?.fontColor
+        ?? theme.textTheme.bodyMedium?.color
+        ?? theme.primaryColor,
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
@@ -128,11 +133,13 @@ class SwipeLimitPopup extends ConsumerWidget {
                       if (resetTime != null)
                         CountdownTimer(
                           endTime: resetTime!.millisecondsSinceEpoch,
-                          textStyle: const TextStyle(
+                          textStyle: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: customTheme?.fontColor
+        ?? theme.textTheme.bodyMedium?.color
+        ?? theme.primaryColor,
                             shadows: [
                               Shadow(
                                 color: Colors.black,
@@ -154,7 +161,16 @@ class SwipeLimitPopup extends ConsumerWidget {
                         ),
                       const SizedBox(height: 40),
                       ElevatedButton(
-                        onPressed: onPurchase,
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (ctx) => SubscriptionPlansPage(
+                                onMonthlyPurchase: onPurchase,
+                                onAnnualPurchase: onPurchase,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: customTheme?.preferenceButtonColor,
                           shape: RoundedRectangleBorder(
@@ -165,16 +181,19 @@ class SwipeLimitPopup extends ConsumerWidget {
                             horizontal: 40,
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Swipe without limits',
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 20,
-                            color: Colors.white,
+                            color: customTheme?.buttonFontColor
+        ?? theme.textTheme.bodyMedium?.color
+        ?? theme.primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

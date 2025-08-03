@@ -27,6 +27,7 @@ import '/pages/profile/profile_page.dart';
 import '/pages/home_page/home_page_widget.dart';
 import 'app_router.dart' as app_router;
 
+
 class AppStateNotifier extends ChangeNotifier {
   static final AppStateNotifier _instance = AppStateNotifier._internal();
   factory AppStateNotifier() => _instance;
