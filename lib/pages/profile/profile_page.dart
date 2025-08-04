@@ -182,7 +182,25 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                   );
                                   Navigator.pop(context);
                                 },
-                                child: const Text('Save'),
+                                child: Text(
+                                  'Save',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme
+                                      .extension<CustomThemeExtension>()
+                                      ?.buttonFontColor,
+                                    shadows: 
+                                  [
+                Shadow(
+                  color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
+                  offset: Offset(0, 1),
+                  blurRadius: 15,
+                ),
+              ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -327,6 +345,15 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
             return Container(
               decoration: BoxDecoration(
                 color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
+                image: DecorationImage(
+                  image: AssetImage(
+                    theme.brightness == Brightness.light
+                        ? 'assets/images/light_mode_preference_menu.png'
+                        : 'assets/images/background_texture.png'
+                  ),
+                  fit: BoxFit.cover,
+                  opacity: 0.4,
+                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),

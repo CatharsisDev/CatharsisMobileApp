@@ -601,19 +601,71 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     backCardOffset: Offset.zero,
                   ),
           ),
-          // Top preferences button
+          // Top preferences and action buttons
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Preferences button
+                    Row(
+                      children: [
+                        // Share button moved to top left
+                        InkWell(
+                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Share feature coming soon!',
+                                style: TextStyle(fontFamily: 'Runtime', color: Colors.white),
+                              ),
+                              backgroundColor: theme.primaryColor,
+                              duration: Duration(seconds: 2),
+                            ),
+                          ),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            child: Image.asset(
+                              'assets/images/share_icon.png',
+                              width: 24,
+                              height: 24,
+                              color: customTheme?.likeAndShareIconColor ?? theme.iconTheme.color,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        // Like button moved to top left
+                        InkWell(
+                          onTap: () {
+                            if (cardState.hasReachedSwipeLimit) {
+                              ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+                            } else if (currentQuestion != null) {
+                              HapticFeedback.lightImpact();
+                              notifier.toggleLiked(currentQuestion);
+                            }
+                          },
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            child: Image.asset(
+                              'assets/images/heart_icon.png',
+                              width: 28,
+                              height: 28,
+                              color: isCurrentLiked
+                                  ? Colors.red
+                                  : (customTheme?.likeAndShareIconColor ?? theme.iconTheme.color),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Existing preferences button
                     InkWell(
                       onTap: _openPreferences,
                       customBorder: const CircleBorder(),
@@ -622,94 +674,19 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: customTheme?.iconCircleColor ??
-                              Colors.white.withOpacity(0.1),
+                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
                         ),
                         child: Image.asset(
                           'assets/images/preferences_icon.png',
                           width: 24,
                           height: 24,
-                          color:
-                              customTheme?.iconColor ?? theme.iconTheme.color,
+                          color: customTheme?.iconColor ?? theme.iconTheme.color,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          // Bottom action buttons
-          Positioned(
-            bottom: 130,
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 30),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      InkWell(
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Share feature coming soon!',
-                              style: TextStyle(
-                                fontFamily: 'Runtime',
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: theme.primaryColor,
-                            duration: Duration(seconds: 2),
-                          ),
-                        ),
-                        customBorder: const CircleBorder(),
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          child: Image.asset(
-                            'assets/images/share_icon.png',
-                            width: 24,
-                            height: 24,
-                            color: customTheme?.likeAndShareIconColor ??
-                                Colors.white.withOpacity(0.1),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 60),
-                      InkWell(
-                        onTap: () {
-                          if (cardState.hasReachedSwipeLimit) {
-                            ref
-                                .read(popUpProvider.notifier)
-                                .showPopUp(cardState.swipeResetTime);
-                          } else if (currentQuestion != null) {
-                            HapticFeedback.lightImpact();
-                            notifier.toggleLiked(currentQuestion);
-                          }
-                        },
-                        customBorder: const CircleBorder(),
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          child: Image.asset(
-                            'assets/images/heart_icon.png',
-                            width: 28,
-                            height: 28,
-                            color: isCurrentLiked
-                                ? Colors.red
-                                : (customTheme?.likeAndShareIconColor ??
-                                    const Color.fromARGB(221, 255, 255, 255)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
           // Bottom navigation

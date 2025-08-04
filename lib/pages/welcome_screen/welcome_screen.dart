@@ -25,6 +25,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Avatar carousel controller - increased viewportFraction for wider view
   late final PageController _avatarCarouselController;
   int _currentAvatarIndex = 0;
+
+  // Appearance carousel controller & state
+  late final PageController _appearanceController;
+  int _currentAppearancePage = 0;
   
   // Animation controller
   late AnimationController _animationController;
@@ -72,13 +76,23 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _usernameController.addListener(() {
       setState(() {});
     });
-    // Increased viewportFraction from 0.4 to 0.6 for wider carousel
-    _avatarCarouselController = PageController(viewportFraction: 0.6)
+    // Changed viewportFraction from 0.6 to 0.4 for narrower carousel
+    _avatarCarouselController = PageController(viewportFraction: 0.4)
       ..addListener(() {
         final page = (_avatarCarouselController.page ?? 0).round();
         if (page != _currentAvatarIndex) {
           setState(() {
             _currentAvatarIndex = page;
+          });
+        }
+      });
+    // Appearance carousel setup
+    _appearanceController = PageController(viewportFraction: 0.8)
+      ..addListener(() {
+        final page = (_appearanceController.page ?? 0).round();
+        if (page != _currentAppearancePage) {
+          setState(() {
+            _currentAppearancePage = page;
           });
         }
       });
@@ -89,12 +103,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _animationController.dispose();
     _pageController.dispose();
     _avatarCarouselController.dispose();
+    _appearanceController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
-    if (_currentPage < 4) {
+    if (_currentPage < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -138,10 +153,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           // Page 3: Categories Introduction
           _buildCategoriesPage(),
           
-          // Page 4: Profile Setup
+          // Page 4: Appearance Theme Selection
+          _buildAppearancePage(),
+          
+          // Page 5: Profile Setup
           _buildProfileSetupPage(),
           
-          // Page 5: Get Started
+          // Page 6: Get Started
           _buildGetStartedPage(),
         ],
       ),
@@ -490,7 +508,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       },
                       blendMode: BlendMode.dstIn,
                       child: SizedBox(
-                        height: 180,
+                        height: 100,
                         child: PageView.builder(
                           controller: _avatarCarouselController,
                           itemCount: 6,
@@ -504,12 +522,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                               'assets/images/avatar6.png',
                             ];
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
                               child: GestureDetector(
                                 onTap: () {
                                   setState(() {
                                     _selectedAvatar = avatars[index];
-                                    _avatarCarouselController.jumpToPage(index);
+                                    _avatarCarouselController.animateToPage(
+                                      index,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
                                   });
                                 },
                                 child: _buildAvatarChoice(avatars[index], index),
@@ -708,10 +730,277 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
+  Widget _buildAppearancePage() {
+    // Local theme state for demo purposes only
+    final selectedTheme = _currentAppearancePage == 0 ? 'catharsis_signature' 
+                        : _currentAppearancePage == 1 ? 'dark' 
+                        : 'light';
+    
+    // Define theme-specific colors for demo
+    Color backgroundColor;
+    Color textColor;
+    Color secondaryTextColor;
+    
+    switch (selectedTheme) {
+      case 'dark':
+        backgroundColor = const Color(0xFF1A1A1A);
+        textColor = Colors.white;
+        secondaryTextColor = Colors.white70;
+        break;
+      case 'light':
+        backgroundColor = const Color(0xFFF5F5F5);
+        textColor = const Color(0xFF333333);
+        secondaryTextColor = const Color(0xFF666666);
+        break;
+      default: // catharsis_signature
+        backgroundColor = const Color(0xFFFAF1E1);
+        textColor = const Color.fromRGBO(32, 28, 17, 1);
+        secondaryTextColor = const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8);
+    }
+
+    return Stack(
+      children: [
+        // Dynamic background based on selected theme
+        if (selectedTheme == 'catharsis_signature')
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFFFAF1E1),
+                  const Color(0xFFFAF1E1).withOpacity(0.95),
+                ],
+              ),
+            ),
+          )
+        else
+          Positioned.fill(
+            child: Image.asset(
+              selectedTheme == 'dark'
+                  ? 'assets/images/dark_mode_background.png'
+                  : 'assets/images/light_mode_background.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+        // Texture overlay for default theme only
+        if (selectedTheme == 'catharsis_signature')
+          Opacity(
+            opacity: 0.4,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/background_texture.png"),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                      child: const Text(
+                        'Choose Your Theme',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 16,
+                        color: secondaryTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      child: const Text(
+                        'Select the appearance that suits you best',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      height: 350,
+                      child: PageView.builder(
+                        controller: _appearanceController,
+                        itemCount: 3,
+                        onPageChanged: (i) => setState(() => _currentAppearancePage = i),
+                        itemBuilder: (ctx, i) {
+                          final opts = [
+                            {'title': 'Default', 'image': 'assets/images/default_theme_image.png', 'value': 'catharsis_signature'},
+                            {'title': 'Dark', 'image': 'assets/images/dark_theme_image.png', 'value': 'dark'},
+                            {'title': 'Light', 'image': 'assets/images/light_theme_image.png', 'value': 'light'},
+                          ];
+                          final o = opts[i];
+                          final isSelected = i == _currentAppearancePage;
+                          return GestureDetector(
+                            onTap: () {
+                              _appearanceController.animateToPage(
+                                i,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.asset(
+                                    o['image']!,
+                                    height: 250,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 300),
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                  child: Text(o['title']!),
+                                ),
+                                const SizedBox(height: 8),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: textColor.withOpacity(0.5),
+                                      width: 1.5,
+                                    ),
+                                    color: isSelected 
+                                        ? const Color.fromRGBO(42, 63, 44, 0.7) 
+                                        : Colors.transparent,
+                                  ),
+                                  child: isSelected 
+                                      ? const Icon(Icons.check, size: 16, color: Colors.white) 
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (i) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentAppearancePage == i
+                                ? textColor
+                                : textColor.withOpacity(0.3),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 50),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        color: secondaryTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      child: const Text(
+                        'This is just a preview - you can change themes later in settings',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Navigation buttons with dynamic colors
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: textColor.withOpacity(0.8),
+                        fontSize: 16,
+                      ),
+                      child: const Text('Back'),
+                    ),
+                  ),
+                  Row(
+                    children: List.generate(
+                      6,
+                      (index) => Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _currentPage == index
+                              ? textColor
+                              : textColor.withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _nextPage,
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      child: const Text('Next'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildAvatarChoice(String imagePath, int index) {
     final isSelected = _selectedAvatar == imagePath;
-    final isCurrent   = _currentAvatarIndex == index;
-
+    final isCurrent = _currentAvatarIndex == index;
+    
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -723,34 +1012,32 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           );
         });
       },
+      // Avatar with original size but enhanced selection states
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: isSelected || isCurrent ? 90 : 80,
-        height: isSelected || isCurrent ? 90 : 80,
+        width: 100,
+        height: 100,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected
-                ? const Color.fromRGBO(42, 63, 44, 0.7)
+                ? const Color.fromRGBO(152, 117, 84, 1)
                 : isCurrent
-                    ? const Color.fromRGBO(42, 63, 44, 0.4)
+                    ? const Color.fromRGBO(152, 117, 84, 0.7)
                     : const Color(0xFF4A4A4A).withOpacity(0.3),
-            width: isSelected ? 4 : isCurrent ? 2 : 1,
+            width: isSelected ? 4 : isCurrent ? 2.5 : 2,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color.fromRGBO(42, 63, 44, 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : [],
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color.fromRGBO(42, 63, 44, 0.3),
+              blurRadius: 8,
+              spreadRadius: 2,
+            )
+          ] : [],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(8),
+          child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.grey[100],
@@ -845,7 +1132,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         // Center - Dots indicator
         Row(
           children: List.generate(
-            5,
+            6,
             (index) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 8,
@@ -861,7 +1148,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
 
         // Right side - Next button or spacer
-        _currentPage < 4
+        _currentPage < 5
             ? TextButton(
                 onPressed: (_currentPage == 3 && _usernameController.text.trim().isEmpty)
                     ? null
@@ -880,7 +1167,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       ],
     );
   }
-  
+
   /// Builds a single category introduction item for the tutorial.
   Widget _buildCategoryItem(Map<String, String> entry) {
     return Padding(
