@@ -22,7 +22,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Profile setup state
   String? _selectedAvatar;
   final TextEditingController _usernameController = TextEditingController();
-  // Avatar carousel controller
+  // Avatar carousel controller - increased viewportFraction for wider view
   late final PageController _avatarCarouselController;
   int _currentAvatarIndex = 0;
   
@@ -72,7 +72,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _usernameController.addListener(() {
       setState(() {});
     });
-    _avatarCarouselController = PageController(viewportFraction: 0.4)
+    // Increased viewportFraction from 0.4 to 0.6 for wider carousel
+    _avatarCarouselController = PageController(viewportFraction: 0.6)
       ..addListener(() {
         final page = (_avatarCarouselController.page ?? 0).round();
         if (page != _currentAvatarIndex) {
@@ -189,7 +190,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       width: 300,
                       height: 300,
                       fit: BoxFit.contain,
-                    ),
+                    )
+                        .animate(
+                          onPlay: (controller) => controller.forward(),
+                        )
+                        .slideX(
+                          begin: 1.0,
+                          end: 0.0,
+                          duration: Duration(seconds: 2),
+                          curve: Curves.easeInOut,
+                        )
+                        .fadeIn(duration: Duration(seconds: 1)),
                     const SizedBox(height: 40),
                     Text(
                       'Welcome to\nCatharsis Cards',
@@ -374,7 +385,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                     ),
                     const SizedBox(height: 40),
-                    ...categories.map((entry) => _buildCategoryItem(entry)).toList(),
+                    ...categories.asMap().entries.map((e) {
+                      final idx = e.key;
+                      final entry = e.value;
+                      return _buildCategoryItem(entry)
+                        .animate()
+                        .fadeIn(delay: Duration(milliseconds: 200 * (idx + 1)))
+                        .slideY(begin: 0.2);
+                    }).toList(),
                   ],
                 ),
               ),
@@ -455,33 +473,50 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                     ),
                     const SizedBox(height: 40),
-                    SizedBox(
-                      height: 100,
-                      child: PageView.builder(
-                        controller: _avatarCarouselController,
-                        itemCount: 6,
-                        itemBuilder: (context, index) {
-                          const avatars = [
-                            'assets/images/avatar1.png',
-                            'assets/images/avatar2.png',
-                            'assets/images/avatar3.png',
-                            'assets/images/avatar4.png',
-                            'assets/images/avatar5.png',
-                            'assets/images/avatar6.png',
-                          ];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedAvatar = avatars[index];
-                                  _avatarCarouselController.jumpToPage(index);
-                                });
-                              },
-                              child: _buildAvatarChoice(avatars[index], index),
-                            ),
-                          );
-                        },
+                    // Added ShaderMask for edge blur effect
+                    ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black,
+                            Colors.black,
+                            Colors.transparent,
+                          ],
+                          stops: [0.0, 0.1, 0.9, 1.0],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.dstIn,
+                      child: SizedBox(
+                        height: 180,
+                        child: PageView.builder(
+                          controller: _avatarCarouselController,
+                          itemCount: 6,
+                          itemBuilder: (context, index) {
+                            const avatars = [
+                              'assets/images/avatar1.png',
+                              'assets/images/avatar2.png',
+                              'assets/images/avatar3.png',
+                              'assets/images/avatar4.png',
+                              'assets/images/avatar5.png',
+                              'assets/images/avatar6.png',
+                            ];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedAvatar = avatars[index];
+                                    _avatarCarouselController.jumpToPage(index);
+                                  });
+                                },
+                                child: _buildAvatarChoice(avatars[index], index),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -653,6 +688,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     ),
                   ),
                 ),
+                const SizedBox(height: 40),
+                Text(
+                  'Ad Astra Per Aspera',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.6),
+                  ),
+                ),
               ],
             ),
           ),
@@ -663,29 +710,47 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Widget _buildAvatarChoice(String imagePath, int index) {
     final isSelected = _selectedAvatar == imagePath;
-    
+    final isCurrent   = _currentAvatarIndex == index;
+
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedAvatar = imagePath;
+          _avatarCarouselController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
         });
       },
-      // Avatar isSelected indicator
-      child: Container(
-        width: 80,
-        height: 80,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isSelected || isCurrent ? 90 : 80,
+        height: isSelected || isCurrent ? 90 : 80,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected
                 ? const Color.fromRGBO(42, 63, 44, 0.7)
-                : const Color(0xFF4A4A4A),
-            width: isSelected ? 3 : 2,
+                : isCurrent
+                    ? const Color.fromRGBO(42, 63, 44, 0.4)
+                    : const Color(0xFF4A4A4A).withOpacity(0.3),
+            width: isSelected ? 4 : isCurrent ? 2 : 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color.fromRGBO(42, 63, 44, 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [],
         ),
         child: Padding(
-          padding: EdgeInsets.all(6),
-          child: Container(
+          padding: const EdgeInsets.all(6),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.grey[100],
@@ -815,7 +880,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       ],
     );
   }
-
+  
   /// Builds a single category introduction item for the tutorial.
   Widget _buildCategoryItem(Map<String, String> entry) {
     return Padding(

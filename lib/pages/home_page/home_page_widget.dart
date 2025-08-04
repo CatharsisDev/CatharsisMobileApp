@@ -138,7 +138,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
               child: Stack(
                 children: [
-                  if (theme.brightness == Brightness.light)
+                  if (ref.watch(themeProvider).themeName == 'light')
                     Positioned.fill(
                       child: IgnorePointer(
                         child: Align(
@@ -356,12 +356,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final customTheme = theme.extension<CustomThemeExtension>();
     final categoryColor = customTheme?.categoryChipColor ?? theme.primaryColor;
     final categoryIcon = _categoryIcons[category] ?? '📌';
+    final themeName = ref.watch(themeProvider).themeName;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         color: categoryColor,
-        image: theme.brightness == Brightness.light
+        image: themeName == 'light'
             ? const DecorationImage(
                 image: AssetImage("assets/images/light_mode_preference_menu.png"),
                 fit: BoxFit.cover,
@@ -505,7 +506,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                       image: AssetImage(
                                           customTheme!.backgroundImagePath!),
                                       fit: BoxFit.cover,
-                                      opacity: 1,
+                                      opacity: 0.4,
                                     )
                                   : null,
                             ),

@@ -22,8 +22,8 @@ class ProfilePageWidget extends ConsumerStatefulWidget {
 class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
 
   final TextEditingController _avatarUsernameController = TextEditingController();
-  final PageController _avatarController = PageController(viewportFraction: 0.3);
-  int _avatarPage = 0;
+  late final PageController _avatarSelectionController;
+  int _avatarSelectionPage = 0;
 
   void _showAvatarSelectionDialog() {
     final theme = Theme.of(context);
@@ -78,11 +78,11 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                       ),
                       const SizedBox(height: 30),
                       SizedBox(
-                        height: 80,
+                        height: 100,
                         child: PageView.builder(
-                          controller: _avatarController,
+                          controller: _avatarSelectionController,
                           itemCount: 6,
-                          onPageChanged: (i) => setModalState(() => _avatarPage = i),
+                          onPageChanged: (i) => setModalState(() => _avatarSelectionPage = i),
                           itemBuilder: (ctx, idx) {
                             final avatarAssets = [
                               'assets/images/avatar1.png',
@@ -93,12 +93,13 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                               'assets/images/avatar6.png',
                             ];
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
                               child: _buildAvatarOption(
                                 avatarAssets[idx],
                                 currentAvatar,
                                 theme,
                                 customTheme,
+                                index: idx,
                               ),
                             );
                           },
@@ -113,7 +114,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _avatarPage == i
+                            color: _avatarSelectionPage == i
                                 ? (customTheme?.profileAvatarColor ?? theme.primaryColor)
                                 : (theme.textTheme.bodyMedium?.color ?? Colors.black).withOpacity(0.3),
                           ),
@@ -205,15 +206,23 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     ThemeData theme,
     CustomThemeExtension? customTheme, {
     bool isDefault = false,
+    required int index,
   }) {
     final isSelected = currentAvatar == avatarPath;
     final authState = ref.watch(authStateProvider);
     final userProfile = ref.watch(userProfileProvider);
-    
+    final bool isFocused = index == _avatarSelectionPage;
+    final focusColor = customTheme?.profileAvatarColor?.withOpacity(0.4) ?? Colors.grey.withOpacity(0.4);
     return GestureDetector(
       onTap: () async {
+        // scroll carousel to center this avatar
+        _avatarSelectionController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
         await ref.read(userProfileProvider.notifier).updateProfile(avatar: avatarPath);
-        // Navigator.pop(context); // Removed to keep modal open after avatar selection
+        // Navigator.pop(context); // keep modal open
       },
       child: Container(
         width: 70,
@@ -224,8 +233,10 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
           border: Border.all(
             color: isSelected
                 ? (customTheme?.profileAvatarColor ?? const Color(0xFF987554))
-                : Colors.transparent,
-            width: 3,
+                : isFocused
+                    ? focusColor
+                    : Colors.transparent,
+            width: isSelected ? 3 : isFocused ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
@@ -879,8 +890,22 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     );
   }
   @override
+  void initState() {
+    super.initState();
+    _avatarSelectionController = PageController(viewportFraction: 0.4)
+      ..addListener(() {
+        final page = (_avatarSelectionController.page ?? 0).round();
+        if (page != _avatarSelectionPage) {
+          _avatarSelectionPage = page;
+          // we don't need setState here since modal uses setModalState
+        }
+      });
+  }
+
+  @override
   void dispose() {
     _avatarUsernameController.dispose();
+    _avatarSelectionController.dispose();
     super.dispose();
   }
 }
