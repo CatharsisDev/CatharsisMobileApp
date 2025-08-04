@@ -136,10 +136,25 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                   topRight: Radius.circular(20),
                 ),
               ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              child: Stack(
+                children: [
+                  if (theme.brightness == Brightness.light)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Image.asset(
+                            "assets/images/light_mode_preference_menu.png",
+                            fit: BoxFit.contain,
+                            width: double.infinity,
+                          ),
+                        ),
+                      ),
+                    ),
+                  SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                     const SizedBox(height: 12),
                     Container(
                       width: 40,
@@ -302,18 +317,29 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               'Apply',
                               style: TextStyle(
                                 fontFamily: 'Runtime',
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
+                                color: theme
+                                      .extension<CustomThemeExtension>()
+                                      ?.buttonFontColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.25),
+                                    offset: Offset(0, 1),
+                                    blurRadius: 15,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                      ],
+                    ),
+                  ) // end SafeArea
+                ], // end children
+              ), // end Stack
             );
           },
         );
@@ -335,6 +361,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         color: categoryColor,
+        image: theme.brightness == Brightness.light
+            ? const DecorationImage(
+                image: AssetImage("assets/images/light_mode_preference_menu.png"),
+                fit: BoxFit.cover,
+                opacity: 1,
+              )
+            : null,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -349,9 +382,16 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             category,
             style: TextStyle(
               fontFamily: 'Runtime',
-              color: Colors.white,
+              color: customTheme?.buttonFontColor,
               fontSize: 16,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
+                  offset: Offset(0, 1),
+                  blurRadius: 15,
+                ),
+              ],
             ),
           ),
         ],
@@ -416,6 +456,11 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         children: [
           // Theme-aware background
           Positioned.fill(
+            child: Container(
+              color: theme.scaffoldBackgroundColor,
+            ),
+          ),
+          Positioned.fill(
             child: cardState.isLoading
                 ? Center(
                     child: CircularProgressIndicator(
@@ -460,7 +505,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                       image: AssetImage(
                                           customTheme!.backgroundImagePath!),
                                       fit: BoxFit.cover,
-                                      opacity: 0.4,
+                                      opacity: 1,
                                     )
                                   : null,
                             ),

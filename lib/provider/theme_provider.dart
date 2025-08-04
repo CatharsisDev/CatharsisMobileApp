@@ -139,7 +139,7 @@ class AppThemes {
         iconCircleColor: Color.fromRGBO(152, 117, 84, 0.1),
         likeAndShareIconColor: Color.fromRGBO(152, 117, 84, 1),
         fontColor: Color.fromRGBO(32, 28, 17, 1),
-        buttonFontColor: Colors.white,
+        buttonFontColor: Color.fromRGBO(32, 28, 17, 1),
       ),
     ],
   );
@@ -179,7 +179,7 @@ class AppThemes {
         preferenceItemSelectedColor: Color.fromRGBO(227, 227, 227, 1),
         preferenceItemUnselectedColor: Color.fromRGBO(255, 255, 255, 1),
         preferenceBorderColor: Color.fromARGB(255, 214, 214, 214),
-        profileAvatarColor: Color.fromRGBO(242, 209, 209, 1),
+        profileAvatarColor: Color.fromRGBO(252, 102, 77, 1),
         profileStatCardColor: Colors.transparent,
         profileStatIconBackgroundColor: Colors.white,
         profileContentBackgroundColor: Colors.white,

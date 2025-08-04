@@ -26,8 +26,8 @@ class PricingService {
     // United States
     'US': RegionalPricing(
       currencyCode: 'USD',
-      monthlyPrice: 4.99,
-      annualPrice: 49.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.10,
       countryCode: 'US',
     ),
     // European Union (Euro)

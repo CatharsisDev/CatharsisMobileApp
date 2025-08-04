@@ -170,7 +170,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                   backgroundColor: (() {
                                     final themeName = sheetRef.watch(themeProvider).themeName;
                                     if (themeName == 'dark') return const Color.fromRGBO(232, 213, 255, 1);
-                                    else if (themeName == 'light') return const Color(0xFFF2D1D1);
+                                    else if (themeName == 'light') return const Color.fromRGBO(252, 102, 77, 1);
                                     else return const Color(0xFF2A3F2C);
                                   }()),
                                   foregroundColor: Colors.white,
