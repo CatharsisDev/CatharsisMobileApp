@@ -145,7 +145,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                             TextField(
                               controller: _avatarUsernameController,
                               inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'^[A-Za-z0-9_]+$')),
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[\p{L}\p{N}_]', unicode: true),
+                                ),
                               ],
                               decoration: InputDecoration(
                                 hintText: 'Enter username',
@@ -206,7 +208,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                     });
                                     return;
                                   }
-                                  if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(username)) {
+                                  if (!RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(username)) {
                                     setModalState(() {
                                       usernameError = 'Username may only include letters, numbers, and underscores';
                                     });

@@ -586,13 +586,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         ),
                       ),
                       child: TextField(
-                        controller: _usernameController,
                         onChanged: (value) {
                           setState(() {
                             _hasProfanity = _profanityFilter.hasProfanity(value);
-                            _hasInvalidChars = !RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value);
+                            _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
                           });
                         },
+                        controller: _usernameController,
                         cursorColor: const Color.fromRGBO(42, 63, 44, 1),
                         style: TextStyle(
                           fontFamily: 'Runtime',
