@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:profanity_filter/profanity_filter.dart';
+import 'package:flutter/services.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/theme_provider.dart';
@@ -22,6 +24,7 @@ class ProfilePageWidget extends ConsumerStatefulWidget {
 class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
 
   final TextEditingController _avatarUsernameController = TextEditingController();
+  final ProfanityFilter _profanityFilter = ProfanityFilter.filterAdditionally(['nazi', 'hitler']);
   late final PageController _avatarSelectionController;
   int _avatarSelectionPage = 0;
 
@@ -34,13 +37,17 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Consumer(
-            builder: (context, sheetRef, _) {
-              final currentAvatar = sheetRef.watch(userAvatarProvider);
-              return Container(
+      builder: (context) {
+        // Local state for username error message
+        String? usernameError;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Consumer(
+              builder: (context, sheetRef, _) {
+                final currentAvatar = sheetRef.watch(userAvatarProvider);
+                return Container(
                 decoration: BoxDecoration(
                   color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
                   borderRadius: const BorderRadius.only(
@@ -137,6 +144,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _avatarUsernameController,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'^[A-Za-z0-9_]+$')),
+                              ],
                               decoration: InputDecoration(
                                 hintText: 'Enter username',
                                 enabledBorder: OutlineInputBorder(
@@ -163,6 +173,18 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                 ),
                               ),
                             ),
+                            if (usernameError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  usernameError!,
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 14,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
@@ -177,9 +199,20 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                   foregroundColor: Colors.white,
                                 ),
                                 onPressed: () async {
-                                  await ref.read(userProfileProvider.notifier).updateProfile(
-                                    username: _avatarUsernameController.text.trim(),
-                                  );
+                                  final username = _avatarUsernameController.text.trim();
+                                  if (_profanityFilter.hasProfanity(username)) {
+                                    setModalState(() {
+                                      usernameError = 'Username contains inappropriate words';
+                                    });
+                                    return;
+                                  }
+                                  if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(username)) {
+                                    setModalState(() {
+                                      usernameError = 'Username may only include letters, numbers, and underscores';
+                                    });
+                                    return;
+                                  }
+                                  await ref.read(userProfileProvider.notifier).updateProfile(username: username);
                                   Navigator.pop(context);
                                 },
                                 child: Text(
@@ -206,15 +239,16 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      // Removed trailing SizedBox(height: 40),
                     ],
                   ),
                 ),
               );
-            },
-          );
-        },
-      ),
+              },
+            );
+          },
+        );
+      },
     );
   }
 

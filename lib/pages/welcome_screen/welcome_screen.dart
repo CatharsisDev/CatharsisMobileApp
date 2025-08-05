@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:profanity_filter/profanity_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -39,6 +40,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     "Catharsis", "κάθαρσις", "カタルシス", "Catarse", "Katharsis"
   ];
 
+  late final ProfanityFilter _profanityFilter;
+  bool _hasProfanity = false;
+  bool _hasInvalidChars = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +78,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         _animationController.forward();
       }
     });
+    _profanityFilter = ProfanityFilter.filterAdditionally(['nazi', 'hitler']);
     _usernameController.addListener(() {
       setState(() {});
     });
@@ -581,6 +587,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                       child: TextField(
                         controller: _usernameController,
+                        onChanged: (value) {
+                          setState(() {
+                            _hasProfanity = _profanityFilter.hasProfanity(value);
+                            _hasInvalidChars = !RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value);
+                          });
+                        },
                         cursorColor: const Color.fromRGBO(42, 63, 44, 1),
                         style: TextStyle(
                           fontFamily: 'Runtime',
@@ -604,6 +616,30 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                       ),
                     ),
+                    if (_hasProfanity)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Username contains inappropriate language',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 14,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    if (_hasInvalidChars)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Username can only contain letters, numbers, and underscores',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 14,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1150,7 +1186,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         // Right side - Next button or spacer
         _currentPage < 5
             ? TextButton(
-                onPressed: (_currentPage == 3 && _usernameController.text.trim().isEmpty)
+                onPressed: (_currentPage == 4 && (_usernameController.text.trim().isEmpty || _hasProfanity || _hasInvalidChars))
                     ? null
                     : _nextPage,
                 child: Text(

@@ -95,6 +95,7 @@ dependencies:
   # Purchasing & Payments 
   in_app_purchase: ^3.0.8
   in_app_purchase_storekit: ^0.4.3
+  profanity_filter: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -102,6 +103,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.7
   hive_generator: ^2.0.1
+  flutter_launcher_icons: ^0.10.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon2.jpeg"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

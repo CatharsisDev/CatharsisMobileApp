@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Temporary open access until 2025-08-08
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 8, 8);
+    }
+  }
+}
