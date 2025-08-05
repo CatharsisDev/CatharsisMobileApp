@@ -139,7 +139,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   bool _isDisposed = false;
 
   Future<void> _initialize() async {
-    if (!mounted) return;
+    if (!mounted || _isDisposed) return;
     
     state = state.copyWith(isLoading: true);
     
@@ -208,6 +208,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     final loadedReset = rawReset != null
         ? DateTime.parse(rawReset).add(RESET_DURATION)
         : null;
+    if (!mounted || _isDisposed) return;
     state = state.copyWith(
       swipeCount: savedCount,
       swipeResetTime: loadedReset,

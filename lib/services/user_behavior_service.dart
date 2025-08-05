@@ -237,23 +237,25 @@ class UserBehaviorService {
 
   // Track session data
   static Future<void> startSession() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+ final user = _auth.currentUser;
+ if (user == null) return;
 
-    // Use a custom event name instead of the reserved "session_start"
-    await _analytics.logEvent(name: 'app_session_start');
+ // Use a custom event name instead of the reserved "session_start"
+ await _analytics.logEvent(name: 'app_session_start');
 
-    await _firestore
-        .collection('user_sessions')
-        .doc(user.uid)
-        .collection('sessions')
-        .add({
-      'startTime': FieldValue.serverTimestamp(),
-      'deviceInfo': {
-        // Add device info if needed
-      },
-    });
-  }
+ await _firestore
+     .collection('user_sessions')
+     .doc(user.uid)
+     .collection('sessions')
+     .add({
+   'userId': user.uid,  // Add this line
+   'startTime': FieldValue.serverTimestamp(),
+   'deviceInfo': {
+     // Add device info if needed
+   },
+ });
+}
+
 
   // Get user insights for AI training
   static Future<Map<String, dynamic>> getUserInsights() async {
