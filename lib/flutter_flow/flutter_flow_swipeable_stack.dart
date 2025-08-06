@@ -7,8 +7,7 @@ class FlutterFlowSwipeableStack extends StatefulWidget {
     required this.itemBuilder,
     required this.itemCount,
     required this.controller,
-    required this.onRightSwipe,
-    required this.onLeftSwipe,
+    this.onSwipe,
     required this.loop,
     required this.cardDisplayCount,
     required this.scale,
@@ -22,8 +21,7 @@ class FlutterFlowSwipeableStack extends StatefulWidget {
   final Widget Function(BuildContext, int) itemBuilder;
   final CardSwiperController controller;
   final int itemCount;
-  final Function(int) onRightSwipe;
-  final Function(int) onLeftSwipe;
+  final bool Function(int previousIndex, int currentIndex, CardSwiperDirection direction)? onSwipe;
   final bool loop;
   final int cardDisplayCount;
   final double scale;
@@ -43,10 +41,12 @@ class _FFSwipeableStackState extends State<FlutterFlowSwipeableStack> {
     return CardSwiper(
       controller: widget.controller,
       onSwipe: (previousIndex, currentIndex, direction) {
-        if (direction == CardSwiperDirection.left) {
-          widget.onLeftSwipe(previousIndex);
-        } else if (direction == CardSwiperDirection.right) {
-          widget.onRightSwipe(previousIndex);
+        if (widget.onSwipe != null) {
+          widget.onSwipe!(
+            previousIndex ?? 0,
+            currentIndex ?? 0,
+            direction,
+          );
         }
         return true;
       },

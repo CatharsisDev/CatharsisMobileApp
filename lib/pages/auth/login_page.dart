@@ -286,7 +286,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     return 'Password must contain a number';
                                   }
                                   // Special character
-                                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>_]').hasMatch(value)) {
                                     return 'Password must contain a special character';
                                   }
                                 }

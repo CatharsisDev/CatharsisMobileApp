@@ -17,6 +17,14 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with TickerProviderStateMixin {
+  static const List<String> _avatars = [
+    'assets/images/avatar1.png',
+    'assets/images/avatar2.png',
+    'assets/images/avatar3.png',
+    'assets/images/avatar4.png',
+    'assets/images/avatar5.png',
+    'assets/images/avatar6.png',
+  ];
   final PageController _pageController = PageController();
   int _currentPage = 0;
   
@@ -89,9 +97,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         if (page != _currentAvatarIndex) {
           setState(() {
             _currentAvatarIndex = page;
+            _selectedAvatar = _avatars[page];
           });
         }
       });
+    _selectedAvatar = _avatars[0];
     // Appearance carousel setup
     _appearanceController = PageController(viewportFraction: 0.8)
       ..addListener(() {
@@ -517,30 +527,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         height: 100,
                         child: PageView.builder(
                           controller: _avatarCarouselController,
-                          itemCount: 6,
+                          itemCount: _avatars.length,
                           itemBuilder: (context, index) {
-                            const avatars = [
-                              'assets/images/avatar1.png',
-                              'assets/images/avatar2.png',
-                              'assets/images/avatar3.png',
-                              'assets/images/avatar4.png',
-                              'assets/images/avatar5.png',
-                              'assets/images/avatar6.png',
-                            ];
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
                               child: GestureDetector(
                                 onTap: () {
-                                  setState(() {
-                                    _selectedAvatar = avatars[index];
-                                    _avatarCarouselController.animateToPage(
-                                      index,
-                                      duration: const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                  });
+                                  _avatarCarouselController.animateToPage(
+                                    index,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
                                 },
-                                child: _buildAvatarChoice(avatars[index], index),
+                                child: _buildAvatarChoice(_avatars[index], index),
                               ),
                             );
                           },
@@ -550,7 +549,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(6, (i) {
+                      children: List.generate(_avatars.length, (i) {
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width: 8,
@@ -1036,53 +1035,41 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   Widget _buildAvatarChoice(String imagePath, int index) {
     final isSelected = _selectedAvatar == imagePath;
     final isCurrent = _currentAvatarIndex == index;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedAvatar = imagePath;
-          _avatarCarouselController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        });
-      },
-      // Avatar with original size but enhanced selection states
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected
-                ? const Color.fromRGBO(152, 117, 84, 1)
-                : isCurrent
-                    ? const Color.fromRGBO(152, 117, 84, 0.7)
-                    : const Color(0xFF4A4A4A).withOpacity(0.3),
-            width: isSelected ? 4 : isCurrent ? 2.5 : 2,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: const Color.fromRGBO(42, 63, 44, 0.3),
-              blurRadius: 8,
-              spreadRadius: 2,
-            )
-          ] : [],
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected
+              ? const Color.fromRGBO(152, 117, 84, 1)
+              : isCurrent
+                  ? const Color.fromRGBO(152, 117, 84, 0.7)
+                  : const Color(0xFF4A4A4A).withOpacity(0.3),
+          width: isSelected ? 4 : isCurrent ? 2.5 : 2,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[100],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-              ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: const Color.fromRGBO(42, 63, 44, 0.3),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                )
+              ]
+            : [],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey[100],
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
             ),
           ),
         ),

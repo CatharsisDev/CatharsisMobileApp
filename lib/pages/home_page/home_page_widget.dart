@@ -550,46 +550,27 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         ),
                       );
                     },
-                    onLeftSwipe: (i) {
+                    onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
                       if (cardState.hasReachedSwipeLimit) {
-                        _showExtraPackagePopUp(
-                            context, cardState.swipeResetTime);
-                        return;
+                        _showExtraPackagePopUp(context, cardState.swipeResetTime);
+                        return false;
                       }
-                      if (questions.isNotEmpty && i < questions.length) {
-                        final question = questions[i];
+                      if (questions.isNotEmpty && currentIndex < questions.length) {
+                        final question = questions[currentIndex];
                         final activeQuestions = cardState.activeQuestions;
                         final actualIndex = activeQuestions.indexWhere((q) =>
-                            q.text == question.text &&
-                            q.category == question.category);
-
+                          q.text == question.text && q.category == question.category
+                        );
                         if (actualIndex != -1) {
-                          notifier.handleCardSwiped(actualIndex,
-                              direction: 'left', velocity: 1.0);
+                          notifier.handleCardSwiped(
+                            actualIndex,
+                            direction: direction.name,
+                            velocity: 1.0,
+                          );
                         }
-                        Future.microtask(
-                            () => setState(() => _currentCardIndex += 1));
                       }
-                    },
-                    onRightSwipe: (i) {
-                      if (cardState.hasReachedSwipeLimit) {
-                        _showExtraPackagePopUp(
-                            context, cardState.swipeResetTime);
-                        return;
-                      }
-                      if (questions.isNotEmpty && i < questions.length) {
-                        final question = questions[i];
-                        final activeQuestions = cardState.activeQuestions;
-                        final actualIndex = activeQuestions.indexWhere((q) =>
-                            q.text == question.text &&
-                            q.category == question.category);
-
-                        if (actualIndex != -1) {
-                          notifier.handleCardSwiped(actualIndex,
-                              direction: 'right', velocity: 1.0);
-                        }
-                        setState(() => _currentCardIndex += 1);
-                      }
+                      setState(() => _currentCardIndex += 1);
+                      return true;
                     },
                     loop: false,
                     onEnd: () => notifier.loadMoreQuestions(),
