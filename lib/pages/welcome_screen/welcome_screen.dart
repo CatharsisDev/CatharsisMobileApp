@@ -46,8 +46,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       setState(() {
         _customAvatarFile = picked;
         _selectedAvatar = picked.path;
-        // Jump carousel to the custom slot (optional)
       });
+      // After adding the custom avatar, jump the carousel to focus it
+      final newIndex = _avatars.length;
+      _avatarCarouselController.animateToPage(
+        newIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 

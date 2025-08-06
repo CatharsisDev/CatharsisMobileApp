@@ -584,10 +584,24 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     if (file != null) {
       final path = file.path;
       await ref.read(userProfileProvider.notifier).updateProfile(avatar: path);
-      // refresh dialog to include custom avatar at end
+      // After uploading custom avatar, focus it in carousel
+      const presetAssets = [
+        'assets/images/avatar1.png',
+        'assets/images/avatar2.png',
+        'assets/images/avatar3.png',
+        'assets/images/avatar4.png',
+        'assets/images/avatar5.png',
+        'assets/images/avatar6.png',
+      ];
+      final customIndex = presetAssets.length;
       setModalState(() {
-        // nothing else; rebuilding will include new avatar slot
+        _avatarSelectionPage = customIndex;
       });
+      _avatarSelectionController.animateToPage(
+        customIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
