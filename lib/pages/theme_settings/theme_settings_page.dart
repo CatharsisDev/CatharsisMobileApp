@@ -67,12 +67,18 @@ class ThemeSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
-  final PageController _pageController = PageController(viewportFraction: 0.8);
+  late final PageController _pageController;
   int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    final initialTheme = ref.read(themeProvider).themeName;
+    const availableThemes = ['catharsis_signature', 'dark', 'light'];
+    final idx = availableThemes.indexOf(initialTheme);
+    final initialPage = idx >= 0 ? idx : 0;
+    _pageController = PageController(viewportFraction: 0.8, initialPage: initialPage);
+
     _pageController.addListener(() {
       final page = _pageController.page?.round() ?? 0;
       if (page != _currentPage) {
@@ -172,7 +178,14 @@ class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
                                   imageAsset: o['image']!,
                                   value: o['value']!,
                                   groupValue: themeState.themeName,
-                                  onChanged: (_) => themeNotifier.setTheme(o['value']!),
+                                  onChanged: (_) {
+                                    themeNotifier.setTheme(o['value']!);
+                                    _pageController.animateToPage(
+                                      i,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  },
                                 ),
                               );
                             },
