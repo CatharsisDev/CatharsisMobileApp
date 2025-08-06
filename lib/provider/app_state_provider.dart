@@ -139,6 +139,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   bool _isDisposed = false;
 
   Future<void> _initialize() async {
+    print('INITIALIZE CALLED - isDisposed: $_isDisposed, mounted: $mounted');
     if (!mounted || _isDisposed) return;
     
     state = state.copyWith(isLoading: true);
@@ -268,6 +269,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (!mounted) return;
     
     final seenQuestions = seenBox.values.toList();
+    print('Loading seen questions from Hive: ${seenQuestions.length} items');
     if (mounted) {
       state = state.copyWith(seenQuestions: seenQuestions);
     }
@@ -376,10 +378,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       currentCategory: norm,
       selectedCategories: {norm},
       currentIndex: 0,
-      seenQuestions: [],
     );
-    // Clear seen questions when category changes
-    seenBox.clear();
   }
 
   void updateSelectedCategories(Set<String> cats) {
@@ -394,7 +393,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     // Don't clear seen questions box
   }
 
-  void handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) {
+  Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
     if (!mounted) return;
     
     // Track swipe count and enforce limit
@@ -457,7 +456,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       }
       
       // Persist to Hive
-      seenBox.add(seenQuestion);
+      await seenBox.put(seenQuestion.text.hashCode.toString(), seenQuestion);
     }
     
     // Set start time for next question
@@ -596,16 +595,13 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (!mounted) return;
     
     try {
-      // Set a flag to prevent further operations
       _isDisposed = true;
       
-      // Close boxes instead of clearing them to prevent access after dispose
-      await likedBox.close();
-      await swipeBox.close();
-      await cacheBox.close();
-      await seenBox.close();
+      await likedBox.clear();
+      await swipeBox.clear();
+      await cacheBox.clear();
+      await seenBox.clear();
       
-      // Only update state if still mounted
       if (mounted) {
         state = CardState(
           allQuestions: [],
@@ -636,10 +632,10 @@ final cardStateProvider = StateNotifierProvider<CardStateNotifier, CardState>((r
     final previousUser = previous?.whenOrNull(data: (user) => user);
     final currentUser = next.whenOrNull(data: (user) => user);
     
-    // If user changed (including null -> user or user -> null)
-    if (previousUser?.uid != currentUser?.uid) {
-      print('Auth state changed - User changed from ${previousUser?.uid} to ${currentUser?.uid}');
-      // Force provider to rebuild
+    // Only invalidate on actual user change (login/logout), not on navigation
+    if (previousUser?.uid != currentUser?.uid && 
+        (previousUser == null || currentUser == null)) {
+      print('Auth state changed - User signed in/out: ${previousUser?.uid} -> ${currentUser?.uid}');
       ref.invalidateSelf();
     }
   });

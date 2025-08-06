@@ -33,82 +33,82 @@ class PricingService {
     // European Union (Euro)
     'DE': RegionalPricing(
       currencyCode: 'EUR',
-      monthlyPrice: 4.49,
-      annualPrice: 44.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.10,
       countryCode: 'DE',
     ),
     'FR': RegionalPricing(
       currencyCode: 'EUR',
-      monthlyPrice: 4.49,
-      annualPrice: 44.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.10,
       countryCode: 'FR',
     ),
     'IT': RegionalPricing(
       currencyCode: 'EUR',
-      monthlyPrice: 4.49,
-      annualPrice: 44.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.10,
       countryCode: 'IT',
     ),
     'ES': RegionalPricing(
       currencyCode: 'EUR',
-      monthlyPrice: 4.49,
-      annualPrice: 44.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.10,
       countryCode: 'ES',
     ),
     // United Kingdom
     'GB': RegionalPricing(
       currencyCode: 'GBP',
-      monthlyPrice: 3.99,
-      annualPrice: 39.99,
+      monthlyPrice: 1.50, // 1.99 * 0.7526
+      annualPrice: 14.98, // 19.91 * 0.7526
       countryCode: 'GB',
     ),
     // Canada
     'CA': RegionalPricing(
       currencyCode: 'CAD',
-      monthlyPrice: 6.49,
-      annualPrice: 64.99,
+      monthlyPrice: 2.74, // 1.99 * 1.3769
+      annualPrice: 27.42, // 19.91 * 1.3769
       countryCode: 'CA',
     ),
     // Australia
     'AU': RegionalPricing(
       currencyCode: 'AUD',
-      monthlyPrice: 7.49,
-      annualPrice: 74.99,
+      monthlyPrice: 3.04, // 1.99 * 1.529
+      annualPrice: 30.43, // 19.91 * 1.529
       countryCode: 'AU',
     ),
     // Japan
     'JP': RegionalPricing(
       currencyCode: 'JPY',
-      monthlyPrice: 700,
-      annualPrice: 7000,
+      monthlyPrice: 290.60, // 1.99 * 146.05
+      annualPrice: 2905.30, // 19.91 * 146.05
       countryCode: 'JP',
     ),
     // India
     'IN': RegionalPricing(
       currencyCode: 'INR',
-      monthlyPrice: 399,
-      annualPrice: 3999,
+      monthlyPrice: 164.65, // 1.99 * 82.80
+      annualPrice: 1648.60, // 19.91 * 82.80
       countryCode: 'IN',
     ),
     // Brazil
     'BR': RegionalPricing(
       currencyCode: 'BRL',
-      monthlyPrice: 24.90,
-      annualPrice: 249.90,
+      monthlyPrice: 10.29, // 1.99 * 5.17
+      annualPrice: 102.92, // 19.91 * 5.17
       countryCode: 'BR',
     ),
     // Mexico
     'MX': RegionalPricing(
       currencyCode: 'MXN',
-      monthlyPrice: 89,
-      annualPrice: 890,
+      monthlyPrice: 34.52, // 1.99 * 17.35
+      annualPrice: 345.57, // 19.91 * 17.35
       countryCode: 'MX',
     ),
     // South Korea
     'KR': RegionalPricing(
       currencyCode: 'KRW',
-      monthlyPrice: 6500,
-      annualPrice: 65000,
+      monthlyPrice: 2605.25, // 1.99 * 1309.17
+      annualPrice: 26076.80, // 19.91 * 1309.17
       countryCode: 'KR',
     ),
     // Default fallback (USD)

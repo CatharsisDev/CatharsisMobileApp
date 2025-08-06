@@ -87,7 +87,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       case 'invalid-email':
         return 'Invalid email address';
       case 'weak-password':
-        return 'Password is too weak';
+      case 'invalid-password':
+        return 'Password does not meet requirements (min 8 chars, uppercase, lowercase, number & special char)';
       default:
         return 'An error occurred. Please try again.';
     }
@@ -267,8 +268,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your password';
                                 }
-                                if (!_isLogin && value.length < 6) {
-                                  return 'Password must be at least 6 characters';
+                                if (!_isLogin) {
+                                  // Minimum length
+                                  if (value.length < 8) {
+                                    return 'Password must be at least 8 characters';
+                                  }
+                                  // Uppercase letter
+                                  if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                    return 'Password must contain an uppercase letter';
+                                  }
+                                  // Lowercase letter
+                                  if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                    return 'Password must contain a lowercase letter';
+                                  }
+                                  // Numeric digit
+                                  if (!RegExp(r'\d').hasMatch(value)) {
+                                    return 'Password must contain a number';
+                                  }
+                                  // Special character
+                                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                                    return 'Password must contain a special character';
+                                  }
                                 }
                                 return null;
                               },

@@ -8,6 +8,9 @@
       location = "group:../CatharsisAppPurchases.storekit/Configuration.storekit">
    </FileRef>
    <FileRef
+      location = "group:../CatharsisAppPurchases.storekit/Configuration.storekit/Configuration.storekit">
+   </FileRef>
+   <FileRef
       location = "group:Runner.xcodeproj">
    </FileRef>
    <FileRef
