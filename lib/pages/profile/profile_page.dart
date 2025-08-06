@@ -13,6 +13,7 @@ import '../../services/user_profile_service.dart';
 import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -22,6 +23,8 @@ class ProfilePageWidget extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
+
+  final ImagePicker _imagePicker = ImagePicker();
 
   final TextEditingController _avatarUsernameController = TextEditingController();
   final ProfanityFilter _profanityFilter = ProfanityFilter.filterAdditionally(['nazi', 'hitler']);
@@ -46,87 +49,117 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
           builder: (context, setModalState) {
             return Consumer(
               builder: (context, sheetRef, _) {
+                // Dynamic avatar assets logic
+                final presetAssets = [
+                  'assets/images/avatar1.png',
+                  'assets/images/avatar2.png',
+                  'assets/images/avatar3.png',
+                  'assets/images/avatar4.png',
+                  'assets/images/avatar5.png',
+                  'assets/images/avatar6.png',
+                ];
                 final currentAvatar = sheetRef.watch(userAvatarProvider);
+                final hasCustom = currentAvatar != null && !presetAssets.contains(currentAvatar);
+                final avatarAssets = [...presetAssets, if (hasCustom) currentAvatar else null];
                 return Container(
-                decoration: BoxDecoration(
-                  color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(20),
+                  decoration: BoxDecoration(
+                    color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(20),
+                    ),
                   ),
-                ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 12),
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: theme.brightness == Brightness.dark 
-                              ? Colors.grey[500] 
-                              : Colors.grey[400],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Choose Avatar',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textTheme.titleLarge?.color,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      SizedBox(
-                        height: 100,
-                        child: PageView.builder(
-                          controller: _avatarSelectionController,
-                          itemCount: 6,
-                          onPageChanged: (i) => setModalState(() => _avatarSelectionPage = i),
-                          itemBuilder: (ctx, idx) {
-                            final avatarAssets = [
-                              'assets/images/avatar1.png',
-                              'assets/images/avatar2.png',
-                              'assets/images/avatar3.png',
-                              'assets/images/avatar4.png',
-                              'assets/images/avatar5.png',
-                              'assets/images/avatar6.png',
-                            ];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                              child: _buildAvatarOption(
-                                avatarAssets[idx],
-                                currentAvatar,
-                                theme,
-                                customTheme,
-                                index: idx,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(6, (i) => Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 12),
+                        Container(
+                          width: 40,
+                          height: 4,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _avatarSelectionPage == i
-                                ? (customTheme?.profileAvatarColor ?? theme.primaryColor)
-                                : (theme.textTheme.bodyMedium?.color ?? Colors.black).withOpacity(0.3),
+                            color: theme.brightness == Brightness.dark 
+                                ? Colors.grey[500] 
+                                : Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                        )),
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Choose Avatar',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: theme.textTheme.titleLarge?.color,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          height: 100,
+                          child: PageView.builder(
+                            controller: _avatarSelectionController,
+                            itemCount: avatarAssets.length,
+                            onPageChanged: (i) => setModalState(() => _avatarSelectionPage = i),
+                            itemBuilder: (ctx, idx) {
+                              final avatarPath = avatarAssets[idx];
+                              if (avatarPath == null) {
+                                // placeholder for custom upload
+                                return GestureDetector(
+                                  onTap: () => _pickCustomAvatar(setModalState),
+                                  child: Container(
+                                    width: 70,
+                                    height: 70,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: (customTheme?.profileAvatarColor ?? theme.primaryColor).withOpacity(0.4),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      size: 32,
+                                      color: (customTheme?.profileAvatarColor ?? theme.primaryColor),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                  child: _buildAvatarOption(
+                                    avatarPath,
+                                    currentAvatar,
+                                    theme,
+                                    customTheme,
+                                    index: idx,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            avatarAssets.length,
+                            (i) => Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _avatarSelectionPage == i
+                                    ? (customTheme?.profileAvatarColor ?? theme.primaryColor)
+                                    : (theme.textTheme.bodyMedium?.color ?? Colors.black).withOpacity(0.3),
+                              ),
+                            ),
+                          ),
+                        ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         child: Column(
@@ -544,6 +577,18 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
         );
       },
     );
+  }
+
+  Future<void> _pickCustomAvatar(StateSetter setModalState) async {
+    final XFile? file = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (file != null) {
+      final path = file.path;
+      await ref.read(userProfileProvider.notifier).updateProfile(avatar: path);
+      // refresh dialog to include custom avatar at end
+      setModalState(() {
+        // nothing else; rebuilding will include new avatar slot
+      });
+    }
   }
 
   @override

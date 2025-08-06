@@ -54,5 +54,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to upload an avatar.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to take a photo for your avatar.</string>
 </dict>
 </plist>

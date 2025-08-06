@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../provider/tutorial_state_provider.dart';
 import '../../provider/user_profile_provider.dart';
 import '../../index.dart'; 
@@ -34,6 +36,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Avatar carousel controller - increased viewportFraction for wider view
   late final PageController _avatarCarouselController;
   int _currentAvatarIndex = 0;
+  // Image picker for custom avatar
+  final ImagePicker _imagePicker = ImagePicker();
+  XFile? _customAvatarFile;
+  Future<void> _pickCustomAvatar() async {
+    final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() {
+        _customAvatarFile = picked;
+        _selectedAvatar = picked.path;
+        // Jump carousel to the custom slot (optional)
+      });
+    }
+  }
 
   // Appearance carousel controller & state
   late final PageController _appearanceController;
@@ -97,7 +112,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         if (page != _currentAvatarIndex) {
           setState(() {
             _currentAvatarIndex = page;
-            _selectedAvatar = _avatars[page];
+            final avatarList = List<String>.from(_avatars);
+            if (_customAvatarFile != null) {
+              avatarList.add(_customAvatarFile!.path);
+            }
+            _selectedAvatar = avatarList[page];
           });
         }
       });
@@ -443,6 +462,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildProfileSetupPage() {
+    final avatarList = List<String>.from(_avatars);
+    if (_customAvatarFile != null) {
+      avatarList.add(_customAvatarFile!.path);
+    }
     return Stack(
       children: [
         Container(
@@ -527,8 +550,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         height: 100,
                         child: PageView.builder(
                           controller: _avatarCarouselController,
-                          itemCount: _avatars.length,
+                          itemCount: avatarList.length,
                           itemBuilder: (context, index) {
+                            final imagePath = avatarList[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
                               child: GestureDetector(
@@ -539,7 +563,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                     curve: Curves.easeInOut,
                                   );
                                 },
-                                child: _buildAvatarChoice(_avatars[index], index),
+                                child: _buildAvatarChoice(imagePath, index),
                               ),
                             );
                           },
@@ -549,7 +573,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_avatars.length, (i) {
+                      children: List.generate(avatarList.length, (i) {
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width: 8,
@@ -563,6 +587,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         );
                       }),
                     ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: _pickCustomAvatar,
+                        icon: const Icon(Icons.upload),
+                        label: const Text('Upload Avatar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const SizedBox(height: 40),
                     // Username Input
                     Text(
@@ -1067,10 +1104,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             color: Colors.grey[100],
           ),
           child: ClipOval(
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
-            ),
+            child: imagePath == _customAvatarFile?.path
+                ? Image.file(File(imagePath), fit: BoxFit.cover)
+                : Image.asset(imagePath, fit: BoxFit.cover),
           ),
         ),
       ),

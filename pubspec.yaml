@@ -88,6 +88,8 @@ dependencies:
   csv: ^6.0.0
   flutter_countdown_timer: ^4.1.0
   flutter_dotenv: ^5.2.1
+  image_picker: ^1.0.4
+  flutter_local_notifications: ^19.4.0
   
   # Icons
   cupertino_icons: ^1.0.8

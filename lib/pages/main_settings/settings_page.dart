@@ -1,3 +1,4 @@
+import 'package:catharsis_cards/pages/account_settings/acount_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -103,6 +104,27 @@ class SettingsMenuPage extends ConsumerWidget {
                         },
                       ),
                       
+                      SizedBox(height: 16),
+
+                      // Account Settings
+                      _buildSettingsItem(
+                        context: context,
+                        theme: theme,
+                        icon: Icons.person,
+                        title: 'Account',
+                        assetIcon: 'assets/images/profile_icon.png',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AccountSettingsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      SizedBox(height: 16),
+
                       SizedBox(height: 40),
                       Divider(color: theme.brightness == Brightness.dark ? Colors.white24 : Colors.grey[300]),
                       SizedBox(height: 20),
