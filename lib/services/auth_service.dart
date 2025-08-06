@@ -129,13 +129,18 @@ class AuthService {
         email: email,
         password: password,
       );
+      final user = result.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        print('Verification email sent to ${user.email}');
+      }
       
       print('New user registered successfully: ${result.user?.email}');
       
       // Force a small delay to ensure preferences are cleared
       await Future.delayed(Duration(milliseconds: 100));
       
-      return result.user;
+      return user;
     } on FirebaseAuthException catch (e) {
       print('Email Registration Error: ${e.code} - ${e.message}');
       throw e;
