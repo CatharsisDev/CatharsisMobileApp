@@ -7,9 +7,10 @@ import 'pop_up_provider.dart';
 import 'auth_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
+import 'package:catharsis_cards/services/notification_service.dart';
 
 const int SWIPE_LIMIT = 30;
-const Duration RESET_DURATION = Duration(minutes: 600, seconds: 0);
+const Duration RESET_DURATION = Duration(minutes: 0, seconds: 20);
 
 /// Normalize categories so that comparisons always match exactly.
 String _normalizeCategory(String s) => s
@@ -353,9 +354,16 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (raw != null) {
       final resetTime = DateTime.parse(raw).add(RESET_DURATION);
       if (DateTime.now().isAfter(resetTime)) {
+        // Cancel any pending notification
+        final notificationId = swipeBox.get('notification_id') as String?;
+        if (notificationId != null) {
+          await NotificationService.cancelCooldownNotification(notificationId);
+          await swipeBox.delete('notification_id');
+        }
+        
         await swipeBox.delete('swipe_limit_reached');
-        // Reset swipe count on cooldown end
         await swipeBox.put('swipe_count', 0);
+        
         if (mounted) {
           state = state.copyWith(
             swipeResetTime: null,
@@ -401,15 +409,31 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (newCount >= SWIPE_LIMIT) {
       final now = DateTime.now();
       final resetTime = now.add(RESET_DURATION);
-      swipeBox.put('swipe_limit_reached', now.toIso8601String());
-      swipeBox.put('swipe_count', newCount);
+      
+      // Save to storage
+      await swipeBox.put('swipe_limit_reached', now.toIso8601String());
+      await swipeBox.put('swipe_count', newCount);
+      
+      // Schedule notification for when cooldown ends
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final notificationId = 'cooldown_${user.uid}_${now.millisecondsSinceEpoch}';
+        await NotificationService.scheduleCooldownNotification(
+          id: notificationId,
+          delay: RESET_DURATION,
+        );
+        
+        // Store notification ID to cancel later if needed
+        await swipeBox.put('notification_id', notificationId);
+      }
+      
       state = state.copyWith(
         swipeCount: newCount,
         swipeResetTime: resetTime,
       );
       return;
     } else {
-      swipeBox.put('swipe_count', newCount);
+      await swipeBox.put('swipe_count', newCount);
       state = state.copyWith(swipeCount: newCount);
     }
     
@@ -590,12 +614,41 @@ class CardStateNotifier extends StateNotifier<CardState> {
     }
   }
 
+  // Add method to reset cooldown (e.g., if user pays to skip)
+  Future<void> resetCooldown() async {
+    if (!mounted) return;
+    
+    // Cancel any pending notification
+    final notificationId = swipeBox.get('notification_id') as String?;
+    if (notificationId != null) {
+      await NotificationService.cancelCooldownNotification(notificationId);
+      await swipeBox.delete('notification_id');
+    }
+    
+    // Clear cooldown data
+    await swipeBox.delete('swipe_limit_reached');
+    await swipeBox.put('swipe_count', 0);
+    
+    if (mounted) {
+      state = state.copyWith(
+        swipeResetTime: null,
+        swipeCount: 0,
+      );
+    }
+  }
+
   // Add cleanup method for sign out
   Future<void> clearUserData() async {
     if (!mounted) return;
     
     try {
       _isDisposed = true;
+      
+      // Cancel any pending notifications
+      final notificationId = swipeBox.get('notification_id') as String?;
+      if (notificationId != null) {
+        await NotificationService.cancelCooldownNotification(notificationId);
+      }
       
       await likedBox.clear();
       await swipeBox.clear();

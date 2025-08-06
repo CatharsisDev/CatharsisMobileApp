@@ -61,6 +61,7 @@
         "sqflite",
         "sqflite_common",
         "timeago",
+        "timezone",
         "url_launcher",
         "url_launcher_android",
         "url_launcher_ios",
@@ -208,6 +209,14 @@
       "name": "cupertino_icons",
       "version": "1.0.8",
       "dependencies": []
+    },
+    {
+      "name": "timezone",
+      "version": "0.10.1",
+      "dependencies": [
+        "http",
+        "path"
+      ]
     },
     {
       "name": "flutter_local_notifications",
@@ -1307,14 +1316,6 @@
         "collection",
         "flutter",
         "in_app_purchase_platform_interface"
-      ]
-    },
-    {
-      "name": "timezone",
-      "version": "0.10.1",
-      "dependencies": [
-        "http",
-        "path"
       ]
     },
     {

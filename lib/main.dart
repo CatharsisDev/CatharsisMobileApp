@@ -1,6 +1,7 @@
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
 import 'package:catharsis_cards/provider/user_profile_provider.dart';
+import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'questions_model.dart';
@@ -49,8 +50,13 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
+  
+  // Initialize Notifications
+  await NotificationService.init();
+  
   runApp(ProviderScope(child: MyApp()));
 }
 

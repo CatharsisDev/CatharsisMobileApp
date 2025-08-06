@@ -1,3 +1,4 @@
+import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:profanity_filter/profanity_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,6 +154,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _finishTutorial() async {
+    // Request notification permissions (iOS)
+    await NotificationService.requestPermissions();
     // Save profile data if provided
     if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
       await ref.read(userProfileProvider.notifier).updateProfile(

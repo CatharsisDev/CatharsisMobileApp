@@ -58,5 +58,12 @@
 	<string>We need access to your photo library to upload an avatar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access to take a photo for your avatar.</string>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>We’d like to send you reminders when your swipe cooldown is over.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>fetch</string>
+      <string>remote-notification</string>
+    </array>
 </dict>
 </plist>
