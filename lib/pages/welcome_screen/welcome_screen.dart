@@ -1,4 +1,5 @@
 import 'package:catharsis_cards/services/notification_service.dart';
+import '../auth/email_verification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:profanity_filter/profanity_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,7 +152,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _nextPage() {
-    if (_currentPage < 5) {
+    if (_currentPage < 6) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -188,25 +189,113 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           });
         },
         children: [
+          // Page 0: Email Verification
+          _buildEmailVerificationPage(),
+
           // Page 1: Welcome Message
           _buildWelcomePage(),
-          
+
           // Page 2: How it Works
           _buildHowItWorksPage(),
-          
+
           // Page 3: Categories Introduction
           _buildCategoriesPage(),
-          
+
           // Page 4: Appearance Theme Selection
           _buildAppearancePage(),
-          
+
           // Page 5: Profile Setup
           _buildProfileSetupPage(),
-          
+
           // Page 6: Get Started
           _buildGetStartedPage(),
         ],
       ),
+    );
+  }
+
+  Widget _buildEmailVerificationPage() {
+    // Matches the background and overlay of other slides, but only shows title, description, and a single "Continue" button.
+    return Stack(
+      children: [
+        // Cream gradient background
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFFAF1E1),
+                const Color(0xFFFAF1E1).withOpacity(0.95),
+              ],
+            ),
+          ),
+        ),
+        // Texture overlay at 40% opacity
+        Opacity(
+          opacity: 0.4,
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/background_texture.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+        // Content centered, no navigation or extra buttons
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Verify Your Email',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromRGBO(32, 28, 17, 1),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Please check your inbox for a verification email and click the link to continue.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 18,
+                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                ElevatedButton(
+                  onPressed: _nextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1113,9 +1202,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             color: Colors.grey[100],
           ),
           child: ClipOval(
-            child: imagePath == _customAvatarFile?.path
-                ? Image.file(File(imagePath), fit: BoxFit.cover)
-                : Image.asset(imagePath, fit: BoxFit.cover),
+            child: Builder(
+              builder: (_) {
+                final localPath = imagePath.startsWith('file://')
+                    ? imagePath.replaceFirst('file://', '')
+                    : imagePath;
+                final file = File(localPath);
+                if (file.existsSync()) {
+                  return Image.file(file, fit: BoxFit.cover);
+                } else {
+                  return Image.asset(imagePath, fit: BoxFit.cover);
+                }
+              },
+            ),
           ),
         ),
       ),
@@ -1200,7 +1299,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         // Center - Dots indicator
         Row(
           children: List.generate(
-            6,
+            7,
             (index) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 8,
@@ -1216,9 +1315,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
 
         // Right side - Next button or spacer
-        _currentPage < 5
+        _currentPage < 6
             ? TextButton(
-                onPressed: (_currentPage == 4 && (_usernameController.text.trim().isEmpty || _hasProfanity || _hasInvalidChars))
+                onPressed: (_currentPage == 5 && (_usernameController.text.trim().isEmpty || _hasProfanity || _hasInvalidChars))
                     ? null
                     : _nextPage,
                 child: Text(

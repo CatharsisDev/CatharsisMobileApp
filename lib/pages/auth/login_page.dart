@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../provider/auth_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../provider/tutorial_state_provider.dart';
+import 'email_verification_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   @override
@@ -44,30 +45,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _emailController.text.trim(),
           _passwordController.text,
         );
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       } else {
         // Reset tutorial state BEFORE registering
         print('Resetting tutorial state before registration');
         await ref.read(tutorialProvider.notifier).resetTutorial();
-        
+
         // Force the tutorial provider to reinitialize immediately
         ref.invalidate(tutorialProvider);
-        
+
         // Small delay to ensure state is updated
         await Future.delayed(Duration(milliseconds: 100));
-        
+
         // Now register the user
         await authService.registerWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        
-        print('New user registered - router should redirect to welcome');
+        // Send verification email
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && !user.emailVerified) {
+          await user.sendEmailVerification();
+        }
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const EmailVerificationPage()),
+        );
+        return;
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = _getErrorMessage(e.code);
       });
-    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;

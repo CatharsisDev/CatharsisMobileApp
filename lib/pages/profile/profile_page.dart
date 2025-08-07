@@ -14,6 +14,7 @@ import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -351,12 +352,19 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
               )
             : Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Image.asset(
-                  avatarPath!,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
+                child: avatarPath!.startsWith('assets/')
+                    ? Image.asset(
+                        avatarPath,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      )
+                    : Image.file(
+                        File(avatarPath),
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
               ),
       ),
     );
@@ -781,12 +789,19 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                             ),
                                           ),
                                         )
-                                      : Image.asset(
-                                          selectedAvatar,
-                                          fit: BoxFit.cover,
-                                          width: 120,
-                                          height: 120,
-                                        ),
+                                      : selectedAvatar.startsWith('assets/')
+                                          ? Image.asset(
+                                              selectedAvatar,
+                                              fit: BoxFit.cover,
+                                              width: 120,
+                                              height: 120,
+                                            )
+                                          : Image.file(
+                                              File(selectedAvatar),
+                                              fit: BoxFit.cover,
+                                              width: 120,
+                                              height: 120,
+                                            ),
                                 ),
                               ),
                             ),
