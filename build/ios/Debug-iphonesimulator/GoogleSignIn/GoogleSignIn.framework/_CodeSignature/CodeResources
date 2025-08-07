@@ -6,7 +6,7 @@
 	<dict>
 		<key>GoogleSignIn.bundle/Info.plist</key>
 		<data>
-		dL3s+XSSlBK2zxOa49JjELgkEQE=
+		tPtKuzCkv6X5tOMmOtKva9ZQb9g=
 		</data>
 		<key>GoogleSignIn.bundle/PrivacyInfo.xcprivacy</key>
 		<data>
@@ -388,7 +388,7 @@
 		</data>
 		<key>Headers/GIDSignIn.h</key>
 		<data>
-		2osuOcK2l8amscCfKNE1huibTWs=
+		e8vPN2uGmr5C1/C1aPf5nP2L7Z8=
 		</data>
 		<key>Headers/GIDSignInButton.h</key>
 		<data>
@@ -412,7 +412,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		SMe9wbcdSFgEvYerOeolTxfX5aQ=
+		BSZsQ6yPOe0bUd0FugsR0UfAxqc=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -425,7 +425,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			EnNVa3uhLkeYd0imdzUXIdNqda8nXHH8GQSIIxXTnqI=
+			Y3GWW0NRMmWbfo4iKBW/ccEAXjr9iBccq+78OPU6Nm4=
 			</data>
 		</dict>
 		<key>GoogleSignIn.bundle/PrivacyInfo.xcprivacy</key>
@@ -837,7 +837,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			vqcGqA1pGr6/parFR8I8Z1XaIjPLnlqyvB4Cfh7iWK4=
+			m/COBzwbZ5OyjlFLiuYRxzWY+jep0H2LZ3FG2N6XAp8=
 			</data>
 		</dict>
 		<key>Headers/GIDSignInButton.h</key>

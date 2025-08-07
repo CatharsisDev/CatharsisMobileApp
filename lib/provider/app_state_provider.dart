@@ -8,9 +8,10 @@ import 'auth_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
+import 'dart:async';
 
-const int SWIPE_LIMIT = 30;
-const Duration RESET_DURATION = Duration(minutes: 0, seconds: 20);
+const int SWIPE_LIMIT = 5;
+const Duration RESET_DURATION = Duration(minutes: 0, seconds: 30);
 
 /// Normalize categories so that comparisons always match exactly.
 String _normalizeCategory(String s) => s
@@ -402,31 +403,41 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
+    // Check for expired cooldown and show popup if still in cooldown
+    await _checkReset();
+    if (state.hasReachedSwipeLimit) {
+      ref.read(popUpProvider.notifier).showPopUp(state.swipeResetTime!);
+      return;
+    }
     if (!mounted) return;
-    
+
     // Track swipe count and enforce limit
     final newCount = state.swipeCount + 1;
     if (newCount >= SWIPE_LIMIT) {
       final now = DateTime.now();
       final resetTime = now.add(RESET_DURATION);
-      
-      // Save to storage
+
+      // Persist swipe count and mark limit reached
       await swipeBox.put('swipe_limit_reached', now.toIso8601String());
       await swipeBox.put('swipe_count', newCount);
-      
-      // Schedule notification for when cooldown ends
+
+      // Attempt to schedule the notification, but don't let failures abort
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final notificationId = 'cooldown_${user.uid}_${now.millisecondsSinceEpoch}';
-        await NotificationService.scheduleCooldownNotification(
-          id: notificationId,
-          delay: RESET_DURATION,
-        );
-        
-        // Store notification ID to cancel later if needed
-        await swipeBox.put('notification_id', notificationId);
+        try {
+          await NotificationService.scheduleCooldownNotification(
+            id: notificationId,
+            delay: RESET_DURATION,
+          );
+          await swipeBox.put('notification_id', notificationId);
+        } catch (e) {
+          print('Warning: failed to schedule cooldown notification: $e');
+        }
       }
-      
+
+      // Always show the in-app pop-up and update state
+      ref.read(popUpProvider.notifier).showPopUp(resetTime);
       state = state.copyWith(
         swipeCount: newCount,
         swipeResetTime: resetTime,
@@ -436,19 +447,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
       await swipeBox.put('swipe_count', newCount);
       state = state.copyWith(swipeCount: newCount);
     }
-    
+
     // Get the cached unseen questions from the widget
     final allActive = state.activeQuestions;
-    final unseenQuestions = allActive.where((q) => 
-      !state.seenQuestions.any((seen) => 
+    final unseenQuestions = allActive.where((q) =>
+      !state.seenQuestions.any((seen) =>
         seen.text == q.text && seen.category == q.category)
     ).toList();
-    
+
     final qs = unseenQuestions.isEmpty ? allActive : unseenQuestions;
     if (qs.isEmpty || index >= qs.length) return;
-    
+
     final currentQuestion = qs[index];
-    
+
     // Track asynchronously without blocking
     () async {
       if (_currentQuestionStartTime != null) {
@@ -465,7 +476,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
         swipeVelocity: velocity,
       );
     }();
-    
+
     // Add to seen questions for persistence
     final seen = List<Question>.from(state.seenQuestions);
     if (!seen.any((q) => q.text == currentQuestion.text && q.category == currentQuestion.category)) {
@@ -478,14 +489,14 @@ class CardStateNotifier extends StateNotifier<CardState> {
       if (mounted) {
         state = state.copyWith(seenQuestions: seen);
       }
-      
+
       // Persist to Hive
       await seenBox.put(seenQuestion.text.hashCode.toString(), seenQuestion);
     }
-    
+
     // Set start time for next question
     _currentQuestionStartTime = DateTime.now();
-    
+
     _maybeGenerateMore();
   }
 

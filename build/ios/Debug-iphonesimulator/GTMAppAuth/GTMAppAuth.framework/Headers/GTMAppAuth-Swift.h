@@ -513,12 +513,12 @@ SWIFT_CLASS_NAMED("GTMOAuth2Compatibility")
 SWIFT_CLASS_NAMED("KeychainAttribute")
 @interface GTMKeychainAttribute : NSObject
 /// Creates an instance of <code>KeychainAttribute</code> whose attribute is set to
-/// <code>.useDataProtectionKeychain</code>.
+/// <code>.useFileBasedKeychain</code>.
 ///
 /// returns:
 /// An instance of <code>KeychainAttribute</code>.
-SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, strong) GTMKeychainAttribute * _Nonnull useDataProtectionKeychain SWIFT_AVAILABILITY(watchos,introduced=6.0) SWIFT_AVAILABILITY(tvos,introduced=13.0) SWIFT_AVAILABILITY(ios,introduced=13.0) SWIFT_AVAILABILITY(macos,introduced=10.15);)
-+ (GTMKeychainAttribute * _Nonnull)useDataProtectionKeychain SWIFT_WARN_UNUSED_RESULT;
+SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, strong) GTMKeychainAttribute * _Nonnull useFileBasedKeychain;)
++ (GTMKeychainAttribute * _Nonnull)useFileBasedKeychain SWIFT_WARN_UNUSED_RESULT;
 /// Creates an instance of <code>KeychainAttribute</code> whose attribute is set to <code>.accessGroup</code>.
 /// \param name The <code>String</code> name for the access group.
 ///
@@ -1193,12 +1193,12 @@ SWIFT_CLASS_NAMED("GTMOAuth2Compatibility")
 SWIFT_CLASS_NAMED("KeychainAttribute")
 @interface GTMKeychainAttribute : NSObject
 /// Creates an instance of <code>KeychainAttribute</code> whose attribute is set to
-/// <code>.useDataProtectionKeychain</code>.
+/// <code>.useFileBasedKeychain</code>.
 ///
 /// returns:
 /// An instance of <code>KeychainAttribute</code>.
-SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, strong) GTMKeychainAttribute * _Nonnull useDataProtectionKeychain SWIFT_AVAILABILITY(watchos,introduced=6.0) SWIFT_AVAILABILITY(tvos,introduced=13.0) SWIFT_AVAILABILITY(ios,introduced=13.0) SWIFT_AVAILABILITY(macos,introduced=10.15);)
-+ (GTMKeychainAttribute * _Nonnull)useDataProtectionKeychain SWIFT_WARN_UNUSED_RESULT;
+SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, strong) GTMKeychainAttribute * _Nonnull useFileBasedKeychain;)
++ (GTMKeychainAttribute * _Nonnull)useFileBasedKeychain SWIFT_WARN_UNUSED_RESULT;
 /// Creates an instance of <code>KeychainAttribute</code> whose attribute is set to <code>.accessGroup</code>.
 /// \param name The <code>String</code> name for the access group.
 ///

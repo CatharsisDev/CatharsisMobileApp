@@ -6,35 +6,35 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
+  
+  /// Expose the Firebase auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  Future<User?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+  Future<UserCredential?> signInWithGoogle() async {
+    // trigger the Google sign-in flow
+    final GoogleSignInAccount? googleUser =
+        await GoogleSignIn.instance.authenticate();
+    if (googleUser == null) return null; // user canceled
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+    // obtain the auth details
+    final googleAuth = await googleUser.authentication;
+
+    // these properties do exist on the returned object
+    final idToken    = googleAuth.idToken;
+    if (idToken == null) {
+      throw FirebaseAuthException(
+        code: 'MISSING_GOOGLE_AUTH_TOKEN',
+        message: 'Missing Google ID token.',
       );
-
-      final UserCredential result = await _auth.signInWithCredential(credential);
-      
-      // Check if this is a new user
-      if (result.additionalUserInfo?.isNewUser ?? false) {
-        print('New Google user detected - clearing welcome state');
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('has_seen_welcome');
-      }
-      
-      return result.user;
-    } catch (e) {
-      print('Google Sign In Error: $e');
-      return null;
     }
+
+    // create a new credential
+    final credential = GoogleAuthProvider.credential(
+      idToken: idToken,
+    );
+
+    // once signed in, return the Firebase user credential
+    return _auth.signInWithCredential(credential);
   }
 
   Future<User?> signInWithApple() async {
@@ -156,7 +156,7 @@ class AuthService {
       await _clearUserDataExceptTheme(currentUserId);
     }
     
-    await _googleSignIn.signOut();
+    await GoogleSignIn.instance.signOut();
     await _auth.signOut();
     
     // Clear all Hive boxes for the current user

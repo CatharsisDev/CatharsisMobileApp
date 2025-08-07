@@ -54,7 +54,7 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
         );
         await user.reauthenticateWithCredential(cred);
         // Update & send verification
-        await user.updateEmail(newEmail);
+        await user.verifyBeforeUpdateEmail(newEmail);
         await user.reload();
         final updatedUser = FirebaseAuth.instance.currentUser!;
         await updatedUser.sendEmailVerification();

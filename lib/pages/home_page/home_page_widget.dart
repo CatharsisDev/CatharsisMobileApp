@@ -1,4 +1,7 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
@@ -20,7 +23,9 @@ import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import '../theme_settings/theme_settings_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -39,6 +44,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   List<Question>? _cachedQuestions;
   String? _cacheKey;
   final Set<String> _displayedQuestionIds = {};
+  final GlobalKey _cardBoundaryKey = GlobalKey();
 
   @override
   bool get wantKeepAlive => true;
@@ -77,6 +83,30 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     super.dispose();
   }
 
+  Future<void> _captureAndShareCard() async {
+    try {
+      final boundary = _cardBoundaryKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(
+        pixelRatio: ui.window.devicePixelRatio,
+      );
+      final byteData = await image.toByteData(
+          format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/card_share.png')
+          .writeAsBytes(pngBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Check out this catharsis card!',
+      );
+    } catch (e) {
+      print('Error sharing card image: $e');
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -92,23 +122,33 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => SwipeLimitPopup(
-      resetTime: resetTime,
-      onDismiss: () {
-        Navigator.of(context).pop();
-        ref.read(popUpProvider.notifier).hidePopUp();
-      },
-      onPurchase: () { /* … */ },
-      onTimerEnd: () {
-        Navigator.of(context).pop();
-        ref.read(popUpProvider.notifier).hidePopUp();
-      },
-    ),
-  );
-}
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => SwipeLimitPopup(
+        resetTime: resetTime,
+        onDismiss: () {
+          if (Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(popUpProvider.notifier).hidePopUp();
+          });
+        },
+        onPurchase: () {
+          // ... existing purchase logic ...
+        },
+        onTimerEnd: () {
+          if (Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(popUpProvider.notifier).hidePopUp();
+          });
+        },
+      ),
+    );
+  }
 
   void _openPreferences() {
     final notifier = ref.read(cardStateProvider.notifier);
@@ -462,125 +502,128 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             ),
           ),
           Positioned.fill(
-            child: cardState.isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                        color: customTheme?.categoryChipColor ??
-                            theme.primaryColor))
-                : FlutterFlowSwipeableStack(
-                    controller: _cardController,
-                    itemCount: questions.isEmpty ? 1 : questions.length,
-                    itemBuilder: (ctx, i) {
-                      if (questions.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'No questions available',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              color: theme.textTheme.bodyMedium?.color,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w500,
+            child: RepaintBoundary(
+              key: _cardBoundaryKey,
+              child: cardState.isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                          color: customTheme?.categoryChipColor ??
+                              theme.primaryColor))
+                  : FlutterFlowSwipeableStack(
+                      controller: _cardController,
+                      itemCount: questions.isEmpty ? 1 : questions.length,
+                      itemBuilder: (ctx, i) {
+                        if (questions.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No questions available',
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                color: theme.textTheme.bodyMedium?.color,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        );
-                      }
-                      final idx = i % questions.length;
-                      final q = questions[idx];
-                      return GestureDetector(
-                        onDoubleTap: () {
-                          HapticFeedback.lightImpact();
-                          notifier.toggleLiked(q);
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            width: double.infinity,
-                            height: double.infinity,
-                            decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(16),
-                              image: (customTheme?.showBackgroundTexture ??
-                                          false) &&
-                                      (customTheme?.backgroundImagePath != null)
-                                  ? DecorationImage(
-                                      image: AssetImage(
-                                          customTheme!.backgroundImagePath!),
-                                      fit: BoxFit.cover,
-                                      opacity: 0.4,
-                                    )
-                                  : null,
-                            ),
-                            child: Stack(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(40),
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const SizedBox(height: 100),
-                                      Flexible(
-                                        child: Center(
-                                          child: Text(
-                                            q.text,
-                                            style: TextStyle(
-                                              fontFamily: 'Runtime',
-                                              color: customTheme?.fontColor,
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.bold,
-                                              height: 1.3,
-                                              letterSpacing: 2,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                      Column(
-                                        children: [
-                                          _buildCategoryChip(q.category),
-                                          const SizedBox(height: 230),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
-                      if (cardState.hasReachedSwipeLimit) {
-                        _showExtraPackagePopUp(context, cardState.swipeResetTime);
-                        return false;
-                      }
-                      if (questions.isNotEmpty && currentIndex < questions.length) {
-                        final question = questions[currentIndex];
-                        final activeQuestions = cardState.activeQuestions;
-                        final actualIndex = activeQuestions.indexWhere((q) =>
-                          q.text == question.text && q.category == question.category
-                        );
-                        if (actualIndex != -1) {
-                          notifier.handleCardSwiped(
-                            actualIndex,
-                            direction: direction.name,
-                            velocity: 1.0,
                           );
                         }
-                      }
-                      setState(() => _currentCardIndex += 1);
-                      return true;
-                    },
-                    loop: false,
-                    onEnd: () => notifier.loadMoreQuestions(),
-                    cardDisplayCount: 3,
-                    scale: 1.0,
-                    threshold: 0.4,
-                    maxAngle: 0,
-                    cardPadding: EdgeInsets.zero,
-                    backCardOffset: Offset.zero,
-                  ),
+                        final idx = i % questions.length;
+                        final q = questions[idx];
+                        return GestureDetector(
+                          onDoubleTap: () {
+                            HapticFeedback.lightImpact();
+                            notifier.toggleLiked(q);
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              decoration: BoxDecoration(
+                                color: theme.cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                                image: (customTheme?.showBackgroundTexture ??
+                                            false) &&
+                                        (customTheme?.backgroundImagePath != null)
+                                    ? DecorationImage(
+                                        image: AssetImage(
+                                            customTheme!.backgroundImagePath!),
+                                        fit: BoxFit.cover,
+                                        opacity: 0.4,
+                                      )
+                                    : null,
+                              ),
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const SizedBox(height: 100),
+                                        Flexible(
+                                          child: Center(
+                                            child: Text(
+                                              q.text,
+                                              style: TextStyle(
+                                                fontFamily: 'Runtime',
+                                                color: customTheme?.fontColor,
+                                                fontSize: 32,
+                                                fontWeight: FontWeight.bold,
+                                                height: 1.3,
+                                                letterSpacing: 2,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                        Column(
+                                          children: [
+                                            _buildCategoryChip(q.category),
+                                            const SizedBox(height: 230),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
+                        if (cardState.hasReachedSwipeLimit) {
+                          _showExtraPackagePopUp(context, cardState.swipeResetTime);
+                          return false;
+                        }
+                        if (questions.isNotEmpty && currentIndex < questions.length) {
+                          final question = questions[currentIndex];
+                          final activeQuestions = cardState.activeQuestions;
+                          final actualIndex = activeQuestions.indexWhere((q) =>
+                            q.text == question.text && q.category == question.category
+                          );
+                          if (actualIndex != -1) {
+                            notifier.handleCardSwiped(
+                              actualIndex,
+                              direction: direction.name,
+                              velocity: 1.0,
+                            );
+                          }
+                        }
+                        setState(() => _currentCardIndex += 1);
+                        return true;
+                      },
+                      loop: false,
+                      onEnd: () => notifier.loadMoreQuestions(),
+                      cardDisplayCount: 3,
+                      scale: 1.0,
+                      threshold: 0.4,
+                      maxAngle: 0,
+                      cardPadding: EdgeInsets.zero,
+                      backCardOffset: Offset.zero,
+                    ),
+            ),
           ),
           // Top preferences and action buttons
           Positioned(
@@ -597,16 +640,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       children: [
                         // Share button moved to top left
                         InkWell(
-                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Share feature coming soon!',
-                                style: TextStyle(fontFamily: 'Runtime', color: Colors.white),
-                              ),
-                              backgroundColor: theme.primaryColor,
-                              duration: Duration(seconds: 2),
-                            ),
-                          ),
+                          onTap: () => _captureAndShareCard(),
                           customBorder: const CircleBorder(),
                           child: Container(
                             width: 44,
@@ -806,3 +840,4 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 }
+
