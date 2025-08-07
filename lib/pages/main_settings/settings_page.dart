@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../provider/app_state_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
 
@@ -287,6 +288,19 @@ class SettingsMenuPage extends ConsumerWidget {
                                 );
                               }
                             }
+                          }
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      _buildSettingsItem(
+                        context: context,
+                        theme: theme,
+                        icon: Icons.privacy_tip,
+                        title: 'Privacy Policy',
+                        onTap: () async {
+                          final url = Uri.parse('https://sendn00ts.github.io/CatharsisMobileApp/');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
                           }
                         },
                       ),
