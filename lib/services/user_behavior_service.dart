@@ -39,32 +39,113 @@ class UserBehaviorService {
       'timestamp': FieldValue.serverTimestamp(),
       'duration': viewDuration,
     });
+
+    // Update the total seen cards count
+    await _updateSeenCardsCount();
+  }
+
+  // NEW: Get the total number of cards the user has seen
+  static Future<int> getSeenCardsCount() async {
+    final user = _auth.currentUser;
+    if (user == null) return 0;
+
+    try {
+      // First try to get from user document (faster)
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists && userDoc.data()!.containsKey('seenCardsCount')) {
+        return userDoc.data()!['seenCardsCount'] as int;
+      }
+
+      // Fallback: count from views collection
+      final viewsSnapshot = await _firestore
+          .collection('user_behaviors')
+          .doc(user.uid)
+          .collection('views')
+          .count()
+          .get();
+
+      final count = viewsSnapshot.count ?? 0;
+
+      // Store this count in user document for faster future access
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'seenCardsCount': count,
+        'lastCountUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      return count;
+    } catch (e) {
+      print('Error getting seen cards count: $e');
+      return 0;
+    }
+  }
+
+  // NEW: Update the seen cards counter
+  static Future<void> _updateSeenCardsCount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'seenCardsCount': FieldValue.increment(1),
+        'lastCountUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error updating seen cards count: $e');
+    }
+  }
+
+  // NEW: Reset seen cards count (useful for testing)
+  static Future<void> resetSeenCardsCount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'seenCardsCount': 0,
+        'lastCountUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error resetting seen cards count: $e');
+    }
   }
 
   // Track when a user likes a question
   static Future<void> trackQuestionLike({
-  required Question question,
-  required bool isLiked,
-}) async {
-  final user = _auth.currentUser;
-  if (user == null) return;
+    required Question question,
+    required bool isLiked,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
 
-  // Log to Firebase Analytics
-  await _analytics.logEvent(
-    name: isLiked ? 'question_liked' : 'question_unliked',
-    parameters: {
-      'question_id': question.text.hashCode.toString(),
-      'category': question.category,
-      'user_id': user.uid,
-    },
-  );
+    // Log to Firebase Analytics
+    await _analytics.logEvent(
+      name: isLiked ? 'question_liked' : 'question_unliked',
+      parameters: {
+        'question_id': question.text.hashCode.toString(),
+        'category': question.category,
+        'user_id': user.uid,
+      },
+    );
 
-  // Store in Firestore
-  await storeLikedQuestion(question: question, isLiked: isLiked);
+    // Store in Firestore
+    await storeLikedQuestion(question: question, isLiked: isLiked);
 
-  // Update user preferences
-  await _updateUserPreferences(question.category, isLiked ? 1.0 : -0.5);
-}
+    // Update user preferences
+    await _updateUserPreferences(question.category, isLiked ? 1.0 : -0.5);
+  }
 
   static Future<List<Question>> getLikedQuestions() async {
     final user = _auth.currentUser;
@@ -237,25 +318,24 @@ class UserBehaviorService {
 
   // Track session data
   static Future<void> startSession() async {
- final user = _auth.currentUser;
- if (user == null) return;
+    final user = _auth.currentUser;
+    if (user == null) return;
 
- // Use a custom event name instead of the reserved "session_start"
- await _analytics.logEvent(name: 'app_session_start');
+    // Use a custom event name instead of the reserved "session_start"
+    await _analytics.logEvent(name: 'app_session_start');
 
- await _firestore
-     .collection('user_sessions')
-     .doc(user.uid)
-     .collection('sessions')
-     .add({
-   'userId': user.uid,  // Add this line
-   'startTime': FieldValue.serverTimestamp(),
-   'deviceInfo': {
-     // Add device info if needed
-   },
- });
-}
-
+    await _firestore
+        .collection('user_sessions')
+        .doc(user.uid)
+        .collection('sessions')
+        .add({
+      'userId': user.uid,  // Add this line
+      'startTime': FieldValue.serverTimestamp(),
+      'deviceInfo': {
+        // Add device info if needed
+      },
+    });
+  }
 
   // Get user insights for AI training
   static Future<Map<String, dynamic>> getUserInsights() async {
@@ -289,6 +369,7 @@ class UserBehaviorService {
     insights['categoryPreferences'] = categoryViews;
     insights['averageViewDuration'] = avgDuration;
     insights['totalViews'] = views.docs.length;
+    insights['seenCardsCount'] = await getSeenCardsCount(); // Add this
 
     return insights;
   }

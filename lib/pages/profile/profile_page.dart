@@ -9,6 +9,7 @@ import '../../provider/auth_provider.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../provider/user_profile_provider.dart';
+import '../../provider/seen_cards_provider.dart';
 import '../../services/user_profile_service.dart';
 import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
@@ -619,6 +620,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final authService = ref.read(authServiceProvider);
     final cardState = ref.watch(cardStateProvider);
     final userProfile = ref.watch(userProfileProvider);
+    final seenCardsCount = ref.watch(seenCardsCountProvider);
     final selectedAvatar = userProfile.whenOrNull(data: (profile) => profile?.avatar);
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
@@ -875,7 +877,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                 ),
                                 const SizedBox(width: 16),
                                 _buildStatCard(
-                                  '${cardState.seenQuestions.length}',
+                                  '$seenCardsCount',
                                   'Cards Seen',
                                   Icons.remove_red_eye,
                                   Colors.blue,

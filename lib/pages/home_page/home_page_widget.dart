@@ -15,6 +15,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/pop_up_provider.dart';
 import '../../provider/tutorial_state_provider.dart';
+import '../../provider/seen_cards_provider.dart'; // Add this import
 import '/components/swipe_limit_popup.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -49,7 +50,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
   @override
   bool get wantKeepAlive => true;
-
 
   @override
   void initState() {
@@ -477,6 +477,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final notifier = ref.read(cardStateProvider.notifier);
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
+    final seenCardsCount = ref.watch(seenCardsCountProvider); // Add this line
 
     // Get theme data
     final theme = Theme.of(context);
@@ -634,6 +635,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             q.text == question.text && q.category == question.category
                           );
                           if (actualIndex != -1) {
+                            // Track the question view
+                            UserBehaviorService.trackQuestionView(
+                              question: question,
+                              viewDuration: 3000, // You can calculate actual duration
+                            );
+                            
+                            // Update local counter immediately
+                            ref.read(seenCardsProvider.notifier).incrementSeenCards();
+                            
                             notifier.handleCardSwiped(
                               actualIndex,
                               direction: direction.name,
@@ -804,4 +814,3 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     );
   }
 }
-
