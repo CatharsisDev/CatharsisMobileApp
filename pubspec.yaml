@@ -161,3 +161,4 @@ flutter:
     - assets/images/love_intimacy_icon.png
     - assets/images/light_mode_preference_menu.png
     - assets/images/app_icon_foreground.png
+    - .env

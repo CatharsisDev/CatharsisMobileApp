@@ -28,6 +28,7 @@ import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -143,6 +144,23 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     }
   }
 
+  void _sendNotification() {
+    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    flutterLocalNotificationsPlugin.show(
+      0,
+      'Swipes Refreshed!',
+      'Your swipes have been reset. You can continue swiping.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'swipe_reset_channel',
+          'Swipe Reset',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -165,15 +183,21 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         resetTime: resetTime ?? DateTime.now().add(RESET_DURATION),
         onDismiss: () {
           ref.read(popUpProvider.notifier).hidePopUp();
-          Navigator.of(context).pop();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
         },
         onPurchase: () {
           // Handle purchase
         },
         onTimerEnd: () {
-          // Handle timer end - send notification, reset swipes, etc.
+          _sendNotification();
           ref.read(popUpProvider.notifier).hidePopUp();
-          Navigator.of(context).pop();
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
         },
       ),
     );
@@ -630,15 +654,22 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               resetTime: resetTime, // Pass the reset time directly
                               onDismiss: () {
                                 ref.read(popUpProvider.notifier).hidePopUp();
-                                Navigator.of(context).pop();
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                });
                               },
                               onPurchase: () {
                                 // Handle purchase
                               },
                               onTimerEnd: () {
+                                _sendNotification();
                                 ref.read(popUpProvider.notifier).hidePopUp();
-                                Navigator.of(context).pop();
-                                // Reset swipes, send notification
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                                // Reset swipes or other actions
                               },
                             ),
                           );
