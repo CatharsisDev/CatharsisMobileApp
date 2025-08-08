@@ -26,6 +26,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:catharsis_cards/services/notification_service.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -49,13 +50,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   @override
   bool get wantKeepAlive => true;
 
-  final Map<String, String> _categoryIcons = {
-    'Love and Intimacy': '❤️',
-    'Spirituality': '✨',
-    'Society': '🌍',
-    'Interactions and Relationships': '🤝',
-    'Personal Development': '🌱',
-  };
 
   @override
   void initState() {
@@ -437,7 +431,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
     final categoryColor = customTheme?.categoryChipColor ?? theme.primaryColor;
-    final categoryIcon = _categoryIcons[category] ?? '📌';
     final themeName = ref.watch(themeProvider).themeName;
 
     return Container(
@@ -456,11 +449,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            categoryIcon,
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(width: 6),
           Text(
             category,
             style: TextStyle(
@@ -811,72 +799,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
               ),
             ),
           ),
-          // Tutorial overlay (commented out but keeping for reference)
-          /*
-          if (showTutorial)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.7),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Swipe left and right on cards to navigate!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    SlideTransition(
-                      position: _swipeAnimation,
-                      child: const Icon(
-                        Icons.swipe,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Double tap to like a card and save it for later!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        ref.read(tutorialProvider.notifier).hideInAppTutorial();
-                        ref.read(tutorialProvider.notifier).setTutorialSeen();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Text(
-                        "Got it!",
-                        style: TextStyle(
-                          fontFamily: 'Runtime',
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            */
         ],
       ),
     );

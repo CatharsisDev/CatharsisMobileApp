@@ -99,7 +99,7 @@
     },
     {
       "name": "built_value",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/built_value-8.10.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/built_value-8.11.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -399,7 +399,7 @@
     },
     {
       "name": "flutter_plugin_android_lifecycle",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.28",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.29",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -429,7 +429,7 @@
     },
     {
       "name": "font_awesome_flutter",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.8.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.9.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -453,13 +453,13 @@
     },
     {
       "name": "go_router",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-16.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-16.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_fonts",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_fonts-6.2.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_fonts-6.3.0",
       "packageUri": "lib/",
       "languageVersion": "2.14"
     },
@@ -525,7 +525,7 @@
     },
     {
       "name": "http",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http-1.4.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/http-1.5.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -555,7 +555,7 @@
     },
     {
       "name": "image_picker_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_android-0.8.12+24",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_android-0.8.12+25",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -603,7 +603,7 @@
     },
     {
       "name": "in_app_purchase_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_android-0.4.0+2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_android-0.4.0+3",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -789,31 +789,37 @@
     },
     {
       "name": "permission_handler",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler-10.4.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler-12.0.1",
       "packageUri": "lib/",
-      "languageVersion": "2.15"
+      "languageVersion": "3.5"
     },
     {
       "name": "permission_handler_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_android-10.3.6",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_android-13.0.1",
       "packageUri": "lib/",
-      "languageVersion": "2.15"
+      "languageVersion": "3.5"
     },
     {
       "name": "permission_handler_apple",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_apple-9.1.4",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7",
       "packageUri": "lib/",
-      "languageVersion": "2.15"
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "permission_handler_html",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+5",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
     },
     {
       "name": "permission_handler_platform_interface",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_platform_interface-3.12.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_platform_interface-4.3.0",
       "packageUri": "lib/",
-      "languageVersion": "2.14"
+      "languageVersion": "3.5"
     },
     {
       "name": "permission_handler_windows",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_windows-0.1.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -909,7 +915,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.10",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.11",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -1017,9 +1023,9 @@
     },
     {
       "name": "sqflite_common",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_common-2.5.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_common-2.5.6",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "sqflite_darwin",
@@ -1107,13 +1113,13 @@
     },
     {
       "name": "url_launcher",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher-6.3.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher-6.3.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.6"
     },
     {
       "name": "url_launcher_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_android-6.3.16",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_android-6.3.17",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_provider.dart';
 
 class TutorialStateNotifier extends StateNotifier<TutorialState> {
@@ -12,52 +13,69 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
   String? _currentUserId;
 
   void _init() async {
-    // Get initial user immediately
-    final currentUser = ref.read(authStateProvider).whenOrNull(data: (user) => user);
-    if (currentUser != null) {
-      _currentUserId = currentUser.uid;
-      await checkIfTutorialSeen();
-    }
-    
-    // Then listen for changes
+    // Listen for auth changes from the beginning
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
-      final previousUser = previous?.whenOrNull(data: (user) => user);
-      final nextUser = next.whenOrNull(data: (user) => user);
-      
-      // Only update if user actually changed
-      if (previousUser?.uid != nextUser?.uid) {
-        if (nextUser != null) {
-          _currentUserId = nextUser.uid;
-          checkIfTutorialSeen();
-        } else {
-          // User logged out
-          _currentUserId = null;
-          if (mounted) {
-            state = TutorialState(); // Reset to default state
+      next.when(
+        data: (user) {
+          final previousUser = previous?.whenOrNull(data: (user) => user);
+          
+          // Only update if user actually changed
+          if (previousUser?.uid != user?.uid) {
+            if (user != null) {
+              _currentUserId = user.uid;
+              checkIfTutorialSeen();
+            } else {
+              // User logged out
+              _currentUserId = null;
+              if (mounted) {
+                state = TutorialState(); // Reset to default state
+              }
+            }
           }
-        }
+        },
+        loading: () {
+          // Don't do anything while loading, keep current state
+        },
+        error: (error, stack) {
+          // Handle error case - maybe reset to default state
+          print('Auth error: $error');
+          if (mounted) {
+            state = TutorialState();
+          }
+        },
+      );
+    });
+
+    // Also check current state immediately
+    final currentAuthState = ref.read(authStateProvider);
+    currentAuthState.whenData((user) {
+      if (user != null && _currentUserId != user.uid) {
+        _currentUserId = user.uid;
+        checkIfTutorialSeen();
       }
     });
   }
 
   Future<void> checkIfTutorialSeen() async {
     if (!mounted || _currentUserId == null) return;
-    
+  
     // Set loading state
     state = state.copyWith(isLoading: true);
-    
+  
     try {
+      // Try Firestore first
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUserId)
+          .get();
+
+      final hasSeenTutorial = doc.data()?['hasSeenWelcome'] ?? false;
+
+      // Store in local prefs as cache
       final prefs = await SharedPreferences.getInstance();
-      
-      // Use user-specific key
       final key = 'has_seen_tutorial_$_currentUserId';
-      final hasSeenTutorial = prefs.getBool(key) ?? false;
-      
-      print('Tutorial check for user $_currentUserId: key=$key, value=$hasSeenTutorial');
-      
-      // Add a small delay to ensure state updates properly
-      await Future.delayed(Duration(milliseconds: 50));
-      
+      await prefs.setBool(key, hasSeenTutorial);
+
       if (mounted) {
         state = TutorialState(
           hasSeenWelcome: hasSeenTutorial,
@@ -65,40 +83,55 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
           isInitialized: true,
           isLoading: false,
         );
-        
-        print('Tutorial state updated: hasSeenWelcome=${state.hasSeenWelcome}, initialized=${state.isInitialized}');
       }
     } catch (e) {
-      print('Error checking tutorial state: $e');
-      if (mounted) {
-        state = TutorialState(
-          hasSeenWelcome: false,
-          showInAppTutorial: false,
-          isInitialized: true,
-          isLoading: false,
-        );
+      // If Firestore fails, fall back to local cache
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final key = 'has_seen_tutorial_$_currentUserId';
+        final hasSeenTutorial = prefs.getBool(key) ?? false;
+        if (mounted) {
+          state = TutorialState(
+            hasSeenWelcome: hasSeenTutorial,
+            showInAppTutorial: false,
+            isInitialized: true,
+            isLoading: false,
+          );
+        }
+      } catch (e2) {
+        if (mounted) {
+          state = TutorialState(
+            hasSeenWelcome: false,
+            showInAppTutorial: false,
+            isInitialized: true,
+            isLoading: false,
+          );
+        }
       }
     }
   }
 
   Future<void> setTutorialSeen() async {
     if (!mounted || _currentUserId == null) return;
-    
+
     try {
+      // Set in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUserId)
+          .set({'hasSeenWelcome': true}, SetOptions(merge: true));
+
+      // Also cache locally
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_seen_tutorial_$_currentUserId';
       await prefs.setBool(key, true);
-      
-      print('Setting tutorial as seen: key=$key');
-      
+
       if (mounted) {
         state = state.copyWith(
           hasSeenWelcome: true,
           showInAppTutorial: false,
         );
       }
-      
-      print('Tutorial marked as seen for user $_currentUserId');
     } catch (e) {
       print('Error setting tutorial seen: $e');
     }
@@ -116,20 +149,25 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
 
   Future<void> resetTutorial() async {
     if (!mounted || _currentUserId == null) return;
-    
+
     try {
+      // Reset in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUserId)
+          .set({'hasSeenWelcome': false}, SetOptions(merge: true));
+
+      // Remove from local prefs
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_seen_tutorial_$_currentUserId';
       await prefs.remove(key);
-      
+
       if (mounted) {
         state = state.copyWith(
           hasSeenWelcome: false,
           showInAppTutorial: false,
         );
       }
-      
-      print('Tutorial reset for user $_currentUserId');
     } catch (e) {
       print('Error resetting tutorial: $e');
     }

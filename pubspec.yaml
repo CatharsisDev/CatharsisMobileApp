@@ -92,7 +92,7 @@ dependencies:
   flutter_local_notifications: ^19.4.0
   timezone: ^0.10.1
   share_plus: ^11.0.0
-  permission_handler: ^10.4.1
+  permission_handler: ^12.0.1
   
   # Icons
   cupertino_icons: ^1.0.8

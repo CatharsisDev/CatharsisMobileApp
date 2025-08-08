@@ -114,8 +114,8 @@ class PricingService {
     // Default fallback (USD)
     'DEFAULT': RegionalPricing(
       currencyCode: 'USD',
-      monthlyPrice: 4.99,
-      annualPrice: 49.99,
+      monthlyPrice: 1.99,
+      annualPrice: 19.91,
       countryCode: 'US',
     ),
   };

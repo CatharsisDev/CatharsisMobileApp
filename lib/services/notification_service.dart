@@ -1,28 +1,58 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
 
   static Future init() async {
     tz.initializeTimeZones();
-    const android = AndroidInitializationSettings('@drawable/app_icon');
+    const android = AndroidInitializationSettings('ic_launcher');
     const darwin = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
       requestAlertPermission: true,
     );
-    await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: darwin),
-    );
+    try {
+      await _plugin.initialize(
+        const InitializationSettings(android: android, iOS: darwin),
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'invalid_icon') {
+        // fallback to mipmap launcher icon if drawable not found
+        const androidFallback = AndroidInitializationSettings('@mipmap/ic_launcher');
+        await _plugin.initialize(
+          const InitializationSettings(android: androidFallback, iOS: darwin),
+        );
+      } else {
+        rethrow;
+      }
+    }
     if (Platform.isAndroid) {
       // Request runtime POST_NOTIFICATIONS permission (Android 13+)
       final status = await Permission.notification.status;
       if (!status.isGranted) {
         await Permission.notification.request();
+      }
+      // Ensure our Android channels exist
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+          'cooldown_channel',
+          'Cooldown Reminders',
+          description: 'Alerts when your swipe cooldown ends',
+          importance: Importance.high,
+        ));
+        await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+          'inactivity_channel',
+          'Inactivity Reminders',
+          description: 'Alerts after periods of inactivity',
+          importance: Importance.high,
+        ));
       }
     }
   }
@@ -60,6 +90,23 @@ class NotificationService {
     );
   }
 
+  static Future<void> showTestNotification() async {
+  await _plugin.show(
+    0, // Notification ID
+    'Test Notification',
+    'This is a test notification!',
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        'cooldown_channel',
+        'Cooldown Reminders',
+        channelDescription: 'Alerts when your swipe cooldown ends',
+        importance: Importance.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    ),
+  );
+}
+
   static Future<void> scheduleInactivityNotification({
     required String id,
   }) async {
@@ -84,3 +131,5 @@ class NotificationService {
   static Future<void> cancelCooldownNotification(String id) =>
       _plugin.cancel(id.hashCode);
 }
+
+final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());

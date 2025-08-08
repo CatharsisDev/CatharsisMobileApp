@@ -16,46 +16,26 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
     debugLogDiagnostics: true,
     refreshListenable: appStateNotifier,
     routes: [
+      // Loader page to avoid race conditions
       GoRoute(
         path: '/',
         builder: (context, state) => const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
         redirect: (context, state) async {
-          // Get auth state
           final authState = ref.read(authStateProvider);
           final user = authState.whenOrNull(data: (user) => user);
-          
-          print('Root redirect - User: ${user?.email}, Path: ${state.matchedLocation}');
-          
-          if (user == null) {
-            return '/login';
-          }
-          
-          // User is logged in, check tutorial state
+
+          // Not logged in? Go to login.
+          if (user == null) return '/login';
+
+          // Wait until tutorial state is loaded
           final tutorialState = ref.read(tutorialProvider);
-          print('Tutorial state - hasSeenWelcome: ${tutorialState.hasSeenWelcome}, isInitialized: ${tutorialState.isInitialized}, isLoading: ${tutorialState.isLoading}');
-          
-          // If tutorial state is not ready, wait
           if (!tutorialState.isInitialized || tutorialState.isLoading) {
-            print('Tutorial state not ready, waiting...');
-            
-            // Wait up to 500ms for tutorial state to load
-            for (int i = 0; i < 10; i++) {
-              await Future.delayed(Duration(milliseconds: 50));
-              final updatedState = ref.read(tutorialProvider);
-              if (updatedState.isInitialized && !updatedState.isLoading) {
-                print('Tutorial state loaded after ${(i + 1) * 50}ms');
-                return updatedState.hasSeenWelcome ? '/home' : '/welcome';
-              }
-            }
-            
-            // If still not loaded after 500ms, assume welcome already seen
-            print('Tutorial state not loaded after timeout, assuming welcome already seen');
-            return '/home';
+            return null; // Stay on splash until ready
           }
-          
-          // Tutorial state is ready
+
+          // Go to correct next page
           return tutorialState.hasSeenWelcome ? '/home' : '/welcome';
         },
       ),
@@ -66,36 +46,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
         redirect: (context, state) async {
           final authState = ref.read(authStateProvider);
           final user = authState.whenOrNull(data: (user) => user);
-          
-          print('Login redirect - User: ${user?.email}');
-          
+
+          // Already logged in? Check tutorial state
           if (user != null) {
-            // User is already logged in
             final tutorialState = ref.read(tutorialProvider);
-            
-            // If tutorial state is not ready, wait
             if (!tutorialState.isInitialized || tutorialState.isLoading) {
-              print('Tutorial not initialized on login redirect, waiting...');
-              
-              // Wait up to 500ms for tutorial state to load
-              for (int i = 0; i < 10; i++) {
-                await Future.delayed(Duration(milliseconds: 50));
-                final updatedState = ref.read(tutorialProvider);
-                if (updatedState.isInitialized && !updatedState.isLoading) {
-                  print('Tutorial state loaded after ${(i + 1) * 50}ms');
-                  return updatedState.hasSeenWelcome ? '/home' : '/welcome';
-                }
-              }
-              
-              // If still not loaded after timeout, assume welcome already seen
-              print('Tutorial state not loaded after timeout on login redirect, assuming welcome already seen');
-              return '/home';
+              return null; // Wait for state, stay here
             }
-            
-            print('Login redirect - hasSeenWelcome: ${tutorialState.hasSeenWelcome}');
             return tutorialState.hasSeenWelcome ? '/home' : '/welcome';
           }
-          
+
           return null; // Stay on login page
         },
       ),
@@ -106,33 +66,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
         redirect: (context, state) async {
           final authState = ref.read(authStateProvider);
           final user = authState.whenOrNull(data: (user) => user);
-          
-          print('Welcome redirect - User: ${user?.email}');
-          
-          if (user == null) {
-            return '/login';
-          }
-          
-          // Check if they've already seen welcome
+          if (user == null) return '/login';
+
           final tutorialState = ref.read(tutorialProvider);
-          
-          // Wait for initialization if needed
           if (!tutorialState.isInitialized || tutorialState.isLoading) {
-            print('Tutorial state loading on welcome redirect, waiting...');
-            
-            // Give it a moment to load
-            await Future.delayed(Duration(milliseconds: 200));
-            final updatedState = ref.read(tutorialProvider);
-            
-            if (updatedState.isInitialized && updatedState.hasSeenWelcome) {
-              print('User has already seen welcome after load, redirecting to home');
-              return '/home';
-            }
-          } else if (tutorialState.hasSeenWelcome) {
-            print('Welcome redirect - User has already seen welcome, redirecting to home');
-            return '/home';
+            return null; // Wait for state, stay here
           }
-          
+          if (tutorialState.hasSeenWelcome) return '/home';
           return null; // Stay on welcome screen
         },
       ),
@@ -143,32 +83,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
         redirect: (context, state) async {
           final authState = ref.read(authStateProvider);
           final user = authState.whenOrNull(data: (user) => user);
-          
-          print('Home redirect - User: ${user?.email}');
-          
-          if (user == null) {
-            return '/login';
-          }
-          
-          // Check if user has seen welcome screen
+          if (user == null) return '/login';
+
           final tutorialState = ref.read(tutorialProvider);
-          
-          // Wait for tutorial state to initialize
           if (!tutorialState.isInitialized || tutorialState.isLoading) {
-            print('Tutorial state not ready on home redirect, waiting...');
-            
-            await Future.delayed(Duration(milliseconds: 200));
-            final updatedState = ref.read(tutorialProvider);
-            
-            if (updatedState.isInitialized && !updatedState.hasSeenWelcome) {
-              print('Tutorial check after wait - user needs to see welcome');
-              return '/welcome';
-            }
-          } else if (!tutorialState.hasSeenWelcome) {
-            print('Home redirect - hasSeenWelcome: false, redirecting to welcome');
-            return '/welcome';
+            return null; // Wait for state, stay here
           }
-          
+          if (!tutorialState.hasSeenWelcome) return '/welcome';
           return null; // Stay on home
         },
       ),
@@ -179,26 +100,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
         redirect: (context, state) async {
           final authState = ref.read(authStateProvider);
           final user = authState.whenOrNull(data: (user) => user);
-          
-          if (user == null) {
-            return '/login';
-          }
-          
-          // Also check welcome screen for profile
+          if (user == null) return '/login';
+
           final tutorialState = ref.read(tutorialProvider);
-          
-          // Wait for tutorial state to initialize
           if (!tutorialState.isInitialized || tutorialState.isLoading) {
-            await Future.delayed(Duration(milliseconds: 200));
-            final updatedState = ref.read(tutorialProvider);
-            
-            if (updatedState.isInitialized && !updatedState.hasSeenWelcome) {
-              return '/welcome';
-            }
-          } else if (!tutorialState.hasSeenWelcome) {
-            return '/welcome';
+            return null; // Wait for state, stay here
           }
-          
+          if (!tutorialState.hasSeenWelcome) return '/welcome';
           return null;
         },
       ),
