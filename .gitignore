@@ -7,13 +7,11 @@ yarn-debug.log*
 yarn-error.log*
 firebase-debug.log*
 firebase-debug.*.log*
-
 # Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
-
 # Firebase cache
 .firebase/
 
@@ -21,12 +19,10 @@ pids
 # Coverage directory used by tools like istanbul
 coverage
 .nyc_output
-
 # Dependency directories
 node_modules/
 bower_components/
 .lib-cov
-
 # Flutter / Dart generated
 .dart_tool/
 .packages
@@ -40,12 +36,8 @@ ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/Pods/
 ios/Runner.xcworkspace/
-.env
-/*.env
-
 # Gradle
 android/.gradle/
-
 # Compiled binaries
 build/Release
 *.so
@@ -53,42 +45,42 @@ build/Release
 **/*.apk
 **/*.aar
 
+# ─── Environment Files ───────────────────────────────────────────────────────────
+# All env files anywhere in the project
+**/.env
+**/.env.*
+**/*.env
+.env.local
+.env.production
+.env.development
+# Specifically exclude env from build assets
+**/flutter_assets/.env
+**/flutter_assets/.env.*
+**/App.framework/**/.env
+build/**/.env
+ios/build/**/.env
+
 # ─── IDE / Editor ───────────────────────────────────────────────────────────────
 # Android Studio / IntelliJ
 *.iml
 .idea/
-
 # VS Code
 .vscode/
-
 # macOS
 .DS_Store
-
-# dotenv
-/env
-/.env
-
 # Yarn Integrity file
 .yarn-integrity
-
-# dotenv environment variables file
-/.env
 
 # ─── Miscellaneous ──────────────────────────────────────────────────────────────
 # Flutter specific
 flutter_export_environment.sh
 Generated.xcconfig
-
 # Flutter launcher icons
 flutter_launcher_icons-*.png
-
 # Keystores
 android/app/*.keystore
-
 # Firebase config (if you want teammates to use their own)
 # .firebaserc
 # firebase.json
 
 # End of .gitignore
-.env
-.env

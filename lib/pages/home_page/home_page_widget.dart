@@ -161,26 +161,19 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => SwipeLimitPopup(
-        resetTime: resetTime,
+      builder: (context) => SwipeLimitPopup(
+        resetTime: resetTime ?? DateTime.now().add(RESET_DURATION),
         onDismiss: () {
-          if (Navigator.of(dialogContext).canPop()) {
-            Navigator.of(dialogContext).pop();
-          }
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(popUpProvider.notifier).hidePopUp();
-          });
+          ref.read(popUpProvider.notifier).hidePopUp();
+          Navigator.of(context).pop();
         },
         onPurchase: () {
-          // ... existing purchase logic ...
+          // Handle purchase
         },
         onTimerEnd: () {
-          if (Navigator.of(dialogContext).canPop()) {
-            Navigator.of(dialogContext).pop();
-          }
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(popUpProvider.notifier).hidePopUp();
-          });
+          // Handle timer end - send notification, reset swipes, etc.
+          ref.read(popUpProvider.notifier).hidePopUp();
+          Navigator.of(context).pop();
         },
       ),
     );
@@ -624,8 +617,31 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         );
                       },
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
+                        // When swipe limit is reached
                         if (cardState.hasReachedSwipeLimit) {
-                          _showExtraPackagePopUp(context, cardState.swipeResetTime);
+                          final resetTime = cardState.swipeResetTime ?? DateTime.now().add(RESET_DURATION);
+                          // Save reset time FIRST
+                          ref.read(popUpProvider.notifier).showPopUp(resetTime);
+                          // THEN show the popup with the same reset time
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => SwipeLimitPopup(
+                              resetTime: resetTime, // Pass the reset time directly
+                              onDismiss: () {
+                                ref.read(popUpProvider.notifier).hidePopUp();
+                                Navigator.of(context).pop();
+                              },
+                              onPurchase: () {
+                                // Handle purchase
+                              },
+                              onTimerEnd: () {
+                                ref.read(popUpProvider.notifier).hidePopUp();
+                                Navigator.of(context).pop();
+                                // Reset swipes, send notification
+                              },
+                            ),
+                          );
                           return false;
                         }
                         if (questions.isNotEmpty && currentIndex < questions.length) {

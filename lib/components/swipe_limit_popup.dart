@@ -10,14 +10,14 @@ class SwipeLimitPopup extends ConsumerWidget {
   final DateTime? resetTime;
   final VoidCallback onDismiss;
   final VoidCallback onPurchase;
-  final VoidCallback onTimerEnd; // New callback for handling timer end
+  final VoidCallback onTimerEnd;
 
   const SwipeLimitPopup({
     Key? key,
     required this.resetTime,
     required this.onDismiss,
     required this.onPurchase,
-    required this.onTimerEnd, // Pass the onTimerEnd callback
+    required this.onTimerEnd,
   }) : super(key: key);
 
   @override
@@ -61,15 +61,15 @@ class SwipeLimitPopup extends ConsumerWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
- ref.watch(themeProvider).themeName == 'dark'
-   ? 'assets/images/dark_mode_background.png'
-   : ref.watch(themeProvider).themeName == 'light'
-     ? 'assets/images/light_mode_background.png'  
-     : 'assets/images/default_mode_background.png',
- fit: BoxFit.cover,
- width: 405,
- height: 555,
-),
+                    ref.watch(themeProvider).themeName == 'dark'
+                        ? 'assets/images/dark_mode_background.png'
+                        : ref.watch(themeProvider).themeName == 'light'
+                            ? 'assets/images/light_mode_background.png'
+                            : 'assets/images/default_mode_background.png',
+                    fit: BoxFit.cover,
+                    width: 405,
+                    height: 555,
+                  ),
                 ),
                 // Close button
                 Positioned(
@@ -97,9 +97,9 @@ class SwipeLimitPopup extends ConsumerWidget {
                           fontFamily: 'Runtime',
                           fontSize: 25,
                           fontWeight: FontWeight.bold,
-                          color: customTheme?.fontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor,
+                          color: customTheme?.fontColor ??
+                              theme.textTheme.bodyMedium?.color ??
+                              theme.primaryColor,
                           shadows: [
                             Shadow(
                               color: Colors.black,
@@ -116,9 +116,9 @@ class SwipeLimitPopup extends ConsumerWidget {
                         style: TextStyle(
                           fontFamily: 'Runtime',
                           fontSize: 18,
-                          color: customTheme?.fontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor,
+                          color: customTheme?.fontColor ??
+                              theme.textTheme.bodyMedium?.color ??
+                              theme.primaryColor,
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
@@ -130,16 +130,16 @@ class SwipeLimitPopup extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      if (resetTime != null)
+                      if (resetTime != null && resetTime!.isAfter(DateTime.now()))
                         CountdownTimer(
                           endTime: resetTime!.millisecondsSinceEpoch,
                           textStyle: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: customTheme?.fontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor,
+                            color: customTheme?.fontColor ??
+                                theme.textTheme.bodyMedium?.color ??
+                                theme.primaryColor,
                             shadows: [
                               Shadow(
                                 color: Colors.black,
@@ -148,15 +148,24 @@ class SwipeLimitPopup extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          onEnd: onTimerEnd, // Call onTimerEnd when the timer ends
+                          onEnd: onTimerEnd,
                         )
                       else
                         Text(
-                          'No timer available',
-                          style: const TextStyle(
+                          'Timer expired',
+                          style: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 20,
-                            color: Colors.white,
+                            color: customTheme?.fontColor ??
+                                theme.textTheme.bodyMedium?.color ??
+                                Colors.white,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black,
+                                offset: Offset(1, 1),
+                                blurRadius: 2,
+                              ),
+                            ],
                           ),
                         ),
                       const SizedBox(height: 40),
@@ -186,9 +195,9 @@ class SwipeLimitPopup extends ConsumerWidget {
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 20,
-                            color: customTheme?.buttonFontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor,
+                            color: customTheme?.buttonFontColor ??
+                                theme.textTheme.bodyMedium?.color ??
+                                theme.primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
