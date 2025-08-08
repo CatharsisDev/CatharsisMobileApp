@@ -65,13 +65,14 @@ build/Release
 .DS_Store
 
 # dotenv
-.env
+/env
+/.env
 
 # Yarn Integrity file
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+/.env
 
 # ─── Miscellaneous ──────────────────────────────────────────────────────────────
 # Flutter specific
@@ -89,3 +90,5 @@ android/app/*.keystore
 # firebase.json
 
 # End of .gitignore
+.env
+.env
