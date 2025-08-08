@@ -40,6 +40,8 @@ ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/Pods/
 ios/Runner.xcworkspace/
+.env
+/*.env
 
 # Gradle
 android/.gradle/
