@@ -50,9 +50,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
               }
             }
             
-            // If still not loaded after 500ms, assume new user
-            print('Tutorial state not loaded after timeout, assuming new user');
-            return '/welcome';
+            // If still not loaded after 500ms, assume welcome already seen
+            print('Tutorial state not loaded after timeout, assuming welcome already seen');
+            return '/home';
           }
           
           // Tutorial state is ready
@@ -87,9 +87,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
                 }
               }
               
-              // If still not loaded, assume new user
-              print('Tutorial state not loaded after timeout on login redirect');
-              return '/welcome';
+              // If still not loaded after timeout, assume welcome already seen
+              print('Tutorial state not loaded after timeout on login redirect, assuming welcome already seen');
+              return '/home';
             }
             
             print('Login redirect - hasSeenWelcome: ${tutorialState.hasSeenWelcome}');

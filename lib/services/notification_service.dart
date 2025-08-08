@@ -1,13 +1,15 @@
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
 
   static Future init() async {
     tz.initializeTimeZones();
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('@drawable/app_icon');
     const darwin = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
@@ -16,6 +18,13 @@ class NotificationService {
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: darwin),
     );
+    if (Platform.isAndroid) {
+      // Request runtime POST_NOTIFICATIONS permission (Android 13+)
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
   }
 
   static Future requestPermissions() async {

@@ -92,6 +92,7 @@ dependencies:
   flutter_local_notifications: ^19.4.0
   timezone: ^0.10.1
   share_plus: ^11.0.0
+  permission_handler: ^10.4.1
   
   # Icons
   cupertino_icons: ^1.0.8
@@ -113,7 +114,9 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/images/app_icon.jpeg"
-  remove_alpha_ios: true 
+  remove_alpha_ios: true
+  adaptive_icon_background: "#fae8c2"
+  adaptive_icon_foreground: "assets/images/app_icon_foreground.png"
 
 flutter:
   uses-material-design: true
@@ -157,4 +160,5 @@ flutter:
     - assets/images/personal_development_icon.png
     - assets/images/love_intimacy_icon.png
     - assets/images/light_mode_preference_menu.png
+    - assets/images/app_icon_foreground.png
     - .env

@@ -85,15 +85,57 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
   Future<void> _captureAndShareCard() async {
     try {
+      // capture current card as image
       final boundary = _cardBoundaryKey.currentContext!
           .findRenderObject() as RenderRepaintBoundary;
-      final image = await boundary.toImage(
+      final cardImage = await boundary.toImage(
         pixelRatio: ui.window.devicePixelRatio,
       );
-      final byteData = await image.toByteData(
-          format: ui.ImageByteFormat.png);
+
+      // crop a bit from the top and adjust logo position
+      final double cropTop = cardImage.height * 0.1;
+      final double outputHeight = cardImage.height - cropTop;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(
+        recorder,
+        Rect.fromLTWH(0, 0, cardImage.width.toDouble(), outputHeight.toDouble()),
+      );
+      // shift the card up to crop off the top
+      canvas.translate(0, -cropTop);
+      canvas.drawImage(cardImage, Offset.zero, Paint());
+
+      // load raw logo bytes and decode at full resolution
+      final logoData = await rootBundle.load('assets/images/catharsis_word_only.png');
+      final logoCodec = await ui.instantiateImageCodec(logoData.buffer.asUint8List());
+      final logoFrame = await logoCodec.getNextFrame();
+      final logoImage = logoFrame.image;
+      // compute scaled dimensions preserving aspect ratio
+      final logoWidth = cardImage.width * 0.7;
+      final aspectRatio = logoImage.height / logoImage.width;
+      final logoHeight = logoWidth * aspectRatio;
+      // position logo a bit higher and account for cropped top
+      final dx = (cardImage.width - logoWidth) / 2;
+      final dy = outputHeight - 40 /* bottom padding */ - 200 /* gap below chip */ - logoHeight;
+      final dstRect = Rect.fromLTWH(dx, dy, logoWidth, logoHeight);
+      // draw the scaled logo
+      canvas.drawImageRect(
+        logoImage,
+        Rect.fromLTWH(0, 0, logoImage.width.toDouble(), logoImage.height.toDouble()),
+        dstRect,
+        Paint(),
+      );
+
+      final picture = recorder.endRecording();
+      final combinedImage = await picture.toImage(
+        cardImage.width,
+        outputHeight.toInt(),
+      );
+      final byteData = await combinedImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       final pngBytes = byteData!.buffer.asUint8List();
 
+      // write to temporary file and share
       final tempDir = await getTemporaryDirectory();
       final file = await File('${tempDir.path}/card_share.png')
           .writeAsBytes(pngBytes);
@@ -103,7 +145,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         text: 'Check out this catharsis card!',
       );
     } catch (e) {
-      print('Error sharing card image: $e');
+      print('Error sharing card image with logo: $e');
     }
   }
 
