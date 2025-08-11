@@ -406,7 +406,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     // Check for expired cooldown and show popup if still in cooldown
     await _checkReset();
     if (state.hasReachedSwipeLimit) {
-      ref.read(popUpProvider.notifier).showPopUp(state.swipeResetTime!);
+      // Cooldown is active; UI listener will react to provider/state
       return;
     }
     if (!mounted) return;
@@ -415,11 +415,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
     final newCount = state.swipeCount + 1;
     if (newCount >= SWIPE_LIMIT) {
       final now = DateTime.now();
-      final resetTime = now.add(RESET_DURATION);
+      final resetTime = now.add(RESET_DURATION); // always fresh future time
 
       // Persist swipe count and mark limit reached
       await swipeBox.put('swipe_limit_reached', now.toIso8601String());
       await swipeBox.put('swipe_count', newCount);
+
+      // Update state FIRST so any UI reading it gets the fresh time
+      if (mounted) {
+        state = state.copyWith(
+          swipeCount: newCount,
+          swipeResetTime: resetTime,
+        );
+      }
 
       // Attempt to schedule the notification, but don't let failures abort
       final user = FirebaseAuth.instance.currentUser;
@@ -436,12 +444,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
         }
       }
 
-      // Always show the in-app pop-up and update state
-      ref.read(popUpProvider.notifier).showPopUp(resetTime);
-      state = state.copyWith(
-        swipeCount: newCount,
-        swipeResetTime: resetTime,
-      );
+      // Do not show the popup here; UI will trigger it via listeners
       return;
     } else {
       await swipeBox.put('swipe_count', newCount);

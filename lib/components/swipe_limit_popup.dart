@@ -22,6 +22,11 @@ class SwipeLimitPopup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // DEBUG: Print what we received
+    print('SwipeLimitPopup build - resetTime: $resetTime');
+    print('SwipeLimitPopup build - is resetTime null? ${resetTime == null}');
+    print('SwipeLimitPopup build - is resetTime after now? ${resetTime?.isAfter(DateTime.now())}');
+    
     const double borderRadiusValue = 15;
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
@@ -130,6 +135,11 @@ class SwipeLimitPopup extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 30),
+                      // DEBUG: Show what condition we're hitting
+                      Text(
+                        'DEBUG: resetTime=${resetTime?.toString() ?? "null"}',
+                        style: TextStyle(color: Colors.red, fontSize: 10),
+                      ),
                       if (resetTime != null && resetTime!.isAfter(DateTime.now()))
                         CountdownTimer(
                           endTime: resetTime!.millisecondsSinceEpoch,
@@ -151,22 +161,28 @@ class SwipeLimitPopup extends ConsumerWidget {
                           onEnd: onTimerEnd,
                         )
                       else
-                        Text(
-                          'Timer expired',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 20,
-                            color: customTheme?.fontColor ??
-                                theme.textTheme.bodyMedium?.color ??
-                                Colors.white,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black,
-                                offset: Offset(1, 1),
-                                blurRadius: 2,
+                        Column(
+                          children: [
+                            Text(
+                              resetTime == null 
+                                ? 'No timer available (resetTime is null)'
+                                : 'Timer expired (resetTime in past)',
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontSize: 20,
+                                color: customTheme?.fontColor ??
+                                    theme.textTheme.bodyMedium?.color ??
+                                    Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       const SizedBox(height: 40),
                       ElevatedButton(

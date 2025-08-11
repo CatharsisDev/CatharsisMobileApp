@@ -1,34 +1,26 @@
-import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '/components/gamecard_widget.dart';
 import '/flutter_flow/flutter_flow_swipeable_stack.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/pop_up_provider.dart';
 import '../../provider/tutorial_state_provider.dart';
 import '../../provider/seen_cards_provider.dart'; // Add this import
 import '/components/swipe_limit_popup.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
-import '../theme_settings/theme_settings_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -176,30 +168,74 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
+    print('DEBUG _showExtraPackagePopUp: resetTime passed in = $resetTime');
+    
+    // ALWAYS create a fresh reset time if the passed one is null or in the past
+    final now = DateTime.now();
+    final effectiveResetTime = (resetTime != null && resetTime.isAfter(now))
+        ? resetTime
+        : now.add(RESET_DURATION);
+    
+    print('DEBUG _showExtraPackagePopUp: effectiveResetTime = $effectiveResetTime');
+    
+    // Save to provider
+    ref.read(popUpProvider.notifier).showPopUp(effectiveResetTime);
+    
+    // Schedule ONE notification for when timer ends
+    if (effectiveResetTime.isAfter(DateTime.now())) {
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      // Cancel any existing notification with same ID to prevent duplicates
+      flutterLocalNotificationsPlugin.cancel(999);
+      
+      flutterLocalNotificationsPlugin.zonedSchedule(
+        999, // Unique ID
+        'Swipes Refreshed!',
+        'Your swipes have been reset. You can continue swiping.',
+        tz.TZDateTime.from(effectiveResetTime, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'swipe_reset_channel',
+            'Swipe Reset',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    }
+    
+    // Show popup
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => SwipeLimitPopup(
-        resetTime: resetTime ?? DateTime.now().add(RESET_DURATION),
-        onDismiss: () {
-          ref.read(popUpProvider.notifier).hidePopUp();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          });
-        },
-        onPurchase: () {
-          // Handle purchase
-        },
-        onTimerEnd: () {
-          _sendNotification();
-          ref.read(popUpProvider.notifier).hidePopUp();
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        },
-      ),
+      builder: (BuildContext dialogContext) {
+        return SwipeLimitPopup(
+          resetTime: effectiveResetTime, // Pass the fresh reset time
+          onDismiss: () {
+            ref.read(popUpProvider.notifier).hidePopUp();
+            Navigator.of(dialogContext).pop();
+          },
+          onPurchase: () {
+            Navigator.of(dialogContext).pop();
+          },
+          onTimerEnd: () {
+            // NO notification here - already scheduled above
+            ref.read(popUpProvider.notifier).hidePopUp();
+            
+            // Safe navigation
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (Navigator.of(dialogContext).canPop()) {
+                Navigator.of(dialogContext).pop();
+              }
+            });
+          },
+        );
+      },
     );
   }
 
@@ -535,8 +571,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             q.text == currentQuestion.text &&
             q.category == currentQuestion.category);
 
-    ref.listen<bool>(popUpProvider, (_, next) {
-      if (next) _showExtraPackagePopUp(context, cardState.swipeResetTime);
+    ref.listen<bool>(popUpProvider, (previous, next) {
+      if (next) {
+        _showExtraPackagePopUp(context, ref.read(cardStateProvider).swipeResetTime);
+      }
     });
 
     return Scaffold(
@@ -641,38 +679,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         );
                       },
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
-                        // When swipe limit is reached
                         if (cardState.hasReachedSwipeLimit) {
                           final resetTime = cardState.swipeResetTime ?? DateTime.now().add(RESET_DURATION);
-                          // Save reset time FIRST
-                          ref.read(popUpProvider.notifier).showPopUp(resetTime);
-                          // THEN show the popup with the same reset time
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) => SwipeLimitPopup(
-                              resetTime: resetTime, // Pass the reset time directly
-                              onDismiss: () {
-                                ref.read(popUpProvider.notifier).hidePopUp();
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                });
-                              },
-                              onPurchase: () {
-                                // Handle purchase
-                              },
-                              onTimerEnd: () {
-                                _sendNotification();
-                                ref.read(popUpProvider.notifier).hidePopUp();
-                                if (mounted) {
-                                  Navigator.of(context).pop();
-                                }
-                                // Reset swipes or other actions
-                              },
-                            ),
-                          );
+                          ref.read(popUpProvider.notifier).state = true;  // This triggers the listener
                           return false;
                         }
                         if (questions.isNotEmpty && currentIndex < questions.length) {
@@ -745,7 +754,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         InkWell(
                           onTap: () {
                             if (cardState.hasReachedSwipeLimit) {
-                              ref.read(popUpProvider.notifier).showPopUp(cardState.swipeResetTime);
+                              ref.read(popUpProvider.notifier).state = true;  // This triggers the listener
                             } else if (currentQuestion != null) {
                               HapticFeedback.lightImpact();
                               notifier.toggleLiked(currentQuestion);
