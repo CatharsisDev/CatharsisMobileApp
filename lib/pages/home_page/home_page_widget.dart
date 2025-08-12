@@ -168,7 +168,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
-    print('DEBUG _showExtraPackagePopUp: resetTime passed in = $resetTime');
     
     // ALWAYS create a fresh reset time if the passed one is null or in the past
     final now = DateTime.now();
@@ -176,7 +175,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         ? resetTime
         : now.add(RESET_DURATION);
     
-    print('DEBUG _showExtraPackagePopUp: effectiveResetTime = $effectiveResetTime');
     
     // Save to provider
     ref.read(popUpProvider.notifier).showPopUp(effectiveResetTime);
