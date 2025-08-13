@@ -89,7 +89,6 @@ dependencies:
   flutter_countdown_timer: ^4.1.0
   flutter_dotenv: ^5.2.1
   image_picker: ^1.0.4
-  flutter_local_notifications: ^19.4.0
   timezone: ^0.10.1
   share_plus: ^11.0.0
   permission_handler: ^12.0.1
@@ -101,6 +100,7 @@ dependencies:
   in_app_purchase: ^3.0.8
   in_app_purchase_storekit: ^0.4.3
   profanity_filter: ^2.0.0
+  awesome_notifications: ^0.10.1
 
 dev_dependencies:
   flutter_test:

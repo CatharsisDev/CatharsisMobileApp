@@ -43,6 +43,8 @@ class AppStateNotifier extends ChangeNotifier {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize Notifications (Awesome Notifications)
+  await NotificationService.init();
   await dotenv.load(fileName: ".env");
 
   // Initialize Firebase
@@ -53,9 +55,6 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
-  
-  // Initialize Notifications
-  await NotificationService.init();
   
   runApp(ProviderScope(child: MyApp()));
 }

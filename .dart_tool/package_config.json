@@ -50,6 +50,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "awesome_notifications",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/awesome_notifications-0.10.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.19"
+    },
+    {
       "name": "boolean_selector",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/boolean_selector-2.1.2",
       "packageUri": "lib/",
@@ -212,12 +218,6 @@
       "languageVersion": "3.0"
     },
     {
-      "name": "dbus",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/dbus-0.7.11",
-      "packageUri": "lib/",
-      "languageVersion": "2.17"
-    },
-    {
       "name": "fake_async",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
@@ -366,30 +366,6 @@
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_lints-6.0.0",
       "packageUri": "lib/",
       "languageVersion": "3.8"
-    },
-    {
-      "name": "flutter_local_notifications",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_local_notifications-19.4.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
-      "name": "flutter_local_notifications_linux",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-6.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
-      "name": "flutter_local_notifications_platform_interface",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-9.1.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
-      "name": "flutter_local_notifications_windows",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_local_notifications_windows-1.0.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
     },
     {
       "name": "flutter_localizations",

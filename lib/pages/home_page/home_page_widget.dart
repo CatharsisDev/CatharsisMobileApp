@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/question_categories.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
+import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,7 @@ import '/flutter_flow/flutter_flow_swipeable_stack.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/pop_up_provider.dart';
 import '../../provider/tutorial_state_provider.dart';
-import '../../provider/seen_cards_provider.dart'; // Add this import
+import '../../provider/seen_cards_provider.dart';
 import '/components/swipe_limit_popup.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:catharsis_cards/questions_model.dart';
@@ -19,8 +20,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -136,23 +135,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     }
   }
 
-  void _sendNotification() {
-    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    flutterLocalNotificationsPlugin.show(
-      0,
-      'Swipes Refreshed!',
-      'Your swipes have been reset. You can continue swiping.',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'swipe_reset_channel',
-          'Swipe Reset',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-    );
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -167,43 +149,22 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     ));
   }
 
-  void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) {
-    
+  void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) async {
     // ALWAYS create a fresh reset time if the passed one is null or in the past
     final now = DateTime.now();
     final effectiveResetTime = (resetTime != null && resetTime.isAfter(now))
         ? resetTime
         : now.add(RESET_DURATION);
     
-    
     // Save to provider
     ref.read(popUpProvider.notifier).showPopUp(effectiveResetTime);
     
-    // Schedule ONE notification for when timer ends
+    // Schedule notification using awesome_notifications
     if (effectiveResetTime.isAfter(DateTime.now())) {
-      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-      // Cancel any existing notification with same ID to prevent duplicates
-      flutterLocalNotificationsPlugin.cancel(999);
-      
-      flutterLocalNotificationsPlugin.zonedSchedule(
-        999, // Unique ID
-        'Swipes Refreshed!',
-        'Your swipes have been reset. You can continue swiping.',
-        tz.TZDateTime.from(effectiveResetTime, tz.local),
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'swipe_reset_channel',
-            'Swipe Reset',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      await NotificationService.cancelCooldownNotification('999');
+      await NotificationService.scheduleCooldownNotification(
+        id: '999',
+        delay: effectiveResetTime.difference(DateTime.now()),
       );
     }
     
@@ -213,7 +174,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return SwipeLimitPopup(
-          resetTime: effectiveResetTime, // Pass the fresh reset time
+          resetTime: effectiveResetTime,
           onDismiss: () {
             ref.read(popUpProvider.notifier).hidePopUp();
             Navigator.of(dialogContext).pop();
@@ -222,7 +183,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             Navigator.of(dialogContext).pop();
           },
           onTimerEnd: () {
-            // NO notification here - already scheduled above
             ref.read(popUpProvider.notifier).hidePopUp();
             
             // Safe navigation
@@ -528,7 +488,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final notifier = ref.read(cardStateProvider.notifier);
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
-    final seenCardsCount = ref.watch(seenCardsCountProvider); // Add this line
+    final seenCardsCount = ref.watch(seenCardsCountProvider);
 
     // Get theme data
     final theme = Theme.of(context);
@@ -679,7 +639,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
                         if (cardState.hasReachedSwipeLimit) {
                           final resetTime = cardState.swipeResetTime ?? DateTime.now().add(RESET_DURATION);
-                          ref.read(popUpProvider.notifier).state = true;  // This triggers the listener
+                          ref.read(popUpProvider.notifier).state = true;
                           return false;
                         }
                         if (questions.isNotEmpty && currentIndex < questions.length) {
@@ -692,7 +652,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             // Track the question view
                             UserBehaviorService.trackQuestionView(
                               question: question,
-                              viewDuration: 3000, // You can calculate actual duration
+                              viewDuration: 3000,
                             );
                             
                             // Update local counter immediately
@@ -752,7 +712,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         InkWell(
                           onTap: () {
                             if (cardState.hasReachedSwipeLimit) {
-                              ref.read(popUpProvider.notifier).state = true;  // This triggers the listener
+                              ref.read(popUpProvider.notifier).state = true;
                             } else if (currentQuestion != null) {
                               HapticFeedback.lightImpact();
                               notifier.toggleLiked(currentQuestion);

@@ -1,16 +1,14 @@
 import 'package:catharsis_cards/services/notification_service.dart';
-import '../auth/email_verification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:profanity_filter/profanity_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../provider/tutorial_state_provider.dart';
 import '../../provider/user_profile_provider.dart';
-import '../../index.dart'; 
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -161,8 +159,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _finishTutorial() async {
-    // Request notification permissions (iOS)
-    await NotificationService.requestPermissions();
+    // Request notification permissions
+    await NotificationService.init(); // This already handles permissions
+    
     // Save profile data if provided
     if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
       await ref.read(userProfileProvider.notifier).updateProfile(

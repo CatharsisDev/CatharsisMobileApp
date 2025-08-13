@@ -8,6 +8,7 @@
       "version": "1.0.0+1",
       "dependencies": [
         "auto_size_text",
+        "awesome_notifications",
         "cached_network_image",
         "cached_network_image_platform_interface",
         "cached_network_image_web",
@@ -24,7 +25,6 @@
         "flutter_card_swiper",
         "flutter_countdown_timer",
         "flutter_dotenv",
-        "flutter_local_notifications",
         "flutter_localizations",
         "flutter_riverpod",
         "flutter_web_plugins",
@@ -183,6 +183,16 @@
       ]
     },
     {
+      "name": "awesome_notifications",
+      "version": "0.10.1",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "intl",
+        "plugin_platform_interface"
+      ]
+    },
+    {
       "name": "profanity_filter",
       "version": "2.0.0",
       "dependencies": []
@@ -251,18 +261,6 @@
       "dependencies": [
         "http",
         "path"
-      ]
-    },
-    {
-      "name": "flutter_local_notifications",
-      "version": "19.4.0",
-      "dependencies": [
-        "clock",
-        "flutter",
-        "flutter_local_notifications_linux",
-        "flutter_local_notifications_platform_interface",
-        "flutter_local_notifications_windows",
-        "timezone"
       ]
     },
     {
@@ -1337,6 +1335,13 @@
       ]
     },
     {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
       "name": "in_app_purchase_platform_interface",
       "version": "1.4.0",
       "dependencies": [
@@ -1438,37 +1443,6 @@
       ]
     },
     {
-      "name": "flutter_local_notifications_platform_interface",
-      "version": "9.1.0",
-      "dependencies": [
-        "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_local_notifications_windows",
-      "version": "1.0.2",
-      "dependencies": [
-        "ffi",
-        "flutter",
-        "flutter_local_notifications_platform_interface",
-        "meta",
-        "timezone",
-        "xml"
-      ]
-    },
-    {
-      "name": "flutter_local_notifications_linux",
-      "version": "6.0.0",
-      "dependencies": [
-        "dbus",
-        "ffi",
-        "flutter",
-        "flutter_local_notifications_platform_interface",
-        "path",
-        "xdg_directories"
-      ]
-    },
-    {
       "name": "image_picker_windows",
       "version": "0.2.1+1",
       "dependencies": [
@@ -1559,13 +1533,6 @@
       "version": "0.1.2",
       "dependencies": [
         "petitparser"
-      ]
-    },
-    {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "dependencies": [
-        "meta"
       ]
     },
     {
@@ -1904,16 +1871,6 @@
       "version": "1.4.0",
       "dependencies": [
         "collection"
-      ]
-    },
-    {
-      "name": "dbus",
-      "version": "0.7.11",
-      "dependencies": [
-        "args",
-        "ffi",
-        "meta",
-        "xml"
       ]
     },
     {
