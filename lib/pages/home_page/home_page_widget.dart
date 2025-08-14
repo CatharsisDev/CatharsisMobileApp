@@ -465,7 +465,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             style: TextStyle(
               fontFamily: 'Runtime',
               color: customTheme?.buttonFontColor,
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               shadows: [
                 Shadow(

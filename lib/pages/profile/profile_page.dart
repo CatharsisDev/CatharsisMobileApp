@@ -865,24 +865,27 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                             
                             // Statistics Cards
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                _buildStatCard(
-                                  '${cardState.likedQuestions.length}',
-                                  'Liked Cards',
-                                  Icons.favorite,
-                                  Colors.red,
-                                  theme,
-                                  customTheme,
+                                Expanded(
+                                  child: _buildStatCard(
+                                    '${cardState.likedQuestions.length}',
+                                    'Liked Cards',
+                                    Icons.favorite,
+                                    Colors.red,
+                                    theme,
+                                    customTheme,
+                                  ),
                                 ),
-                                const SizedBox(width: 16),
-                                _buildStatCard(
-                                  '$seenCardsCount',
-                                  'Cards Seen',
-                                  Icons.remove_red_eye,
-                                  Colors.blue,
-                                  theme,
-                                  customTheme,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    '$seenCardsCount',
+                                    'Cards Seen',
+                                    Icons.remove_red_eye,
+                                    Colors.blue,
+                                    theme,
+                                    customTheme,
+                                  ),
                                 ),
                               ],
                             ),
@@ -973,7 +976,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
   Widget _buildStatCard(String value, String title, IconData icon, Color color, 
                        ThemeData theme, CustomThemeExtension? customTheme) {
     return Container(
-      width: 165,
+      width: double.infinity,
       height: 190,
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
