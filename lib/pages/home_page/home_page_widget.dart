@@ -465,7 +465,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             style: TextStyle(
               fontFamily: 'Runtime',
               color: customTheme?.buttonFontColor,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               shadows: [
                 Shadow(
@@ -624,7 +624,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                         Column(
                                           children: [
                                             _buildCategoryChip(q.category),
-                                            const SizedBox(height: 230),
+                                            SizedBox(height: MediaQuery.of(context).padding.bottom + 180),
                                           ],
                                         ),
                                       ],
@@ -760,66 +760,68 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           ),
           // Bottom navigation
           Positioned(
-            bottom: 50,
+            bottom: 0,  // Changed from 50 to 0
             left: 0,
             right: 0,
-            child: Container(
-              padding: const EdgeInsets.only(bottom: 20, top: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  InkWell(
-                    onTap: () {},
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          'assets/images/home_icon.png',
-                          width: 24,
-                          height: 24,
-                          color: theme.textTheme.bodyMedium?.color,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Home",
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
+            child: SafeArea(  // Add SafeArea here
+              child: Container(
+                padding: const EdgeInsets.only(bottom: 20, top: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    InkWell(
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'assets/images/home_icon.png',
+                            width: 24,
+                            height: 24,
                             color: theme.textTheme.bodyMedium?.color,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            "Home",
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: theme.textTheme.bodyMedium?.color,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 80),
-                  InkWell(
-                    onTap: () => context.go('/profile'),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          'assets/images/profile_icon.png',
-                          width: 24,
-                          height: 24,
-                          color: theme.brightness == Brightness.dark
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Profile",
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
+                    const SizedBox(width: 80),
+                    InkWell(
+                      onTap: () => context.go('/profile'),
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'assets/images/profile_icon.png',
+                            width: 24,
+                            height: 24,
                             color: theme.brightness == Brightness.dark
                                 ? Colors.grey[400]
                                 : Colors.grey[600],
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            "Profile",
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: theme.brightness == Brightness.dark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

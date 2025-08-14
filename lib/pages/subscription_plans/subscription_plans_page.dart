@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'dart:async';
 import '../../provider/theme_provider.dart';
@@ -327,7 +328,8 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
               ),
             ),
           ),
-          Padding(
+          SafeArea(
+            child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -387,6 +389,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
               ],
             ),
           ),
+        ),
         ],
       ),
     );
@@ -442,6 +445,7 @@ class _PlanCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       elevation: 4,
       child: Container(
+        width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: theme.cardColor,
@@ -460,6 +464,7 @@ class _PlanCard extends StatelessWidget {
             children: [
               Text(
                 title,
+                textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontFamily: 'Runtime',
                   fontSize: 22,
@@ -470,6 +475,7 @@ class _PlanCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 priceString,
+                textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontFamily: 'Runtime',
                   fontSize: 32,
@@ -479,6 +485,7 @@ class _PlanCard extends StatelessWidget {
               ),
               Text(
                 period,
+                textAlign: TextAlign.center,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontFamily: 'Runtime',
                   fontSize: 18,
@@ -497,6 +504,7 @@ class _PlanCard extends StatelessWidget {
                   ),
                   child: Text(
                     savingsText,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Runtime',
                       fontSize: 14,

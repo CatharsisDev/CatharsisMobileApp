@@ -902,68 +902,75 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              color: customTheme?.profileContentBackgroundColor ?? theme.cardColor,
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: () => context.go('/home'),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/images/home_icon.png',
-                            width: 24,
-                            height: 24,
-                            color: theme.brightness == Brightness.dark 
-                                ? Colors.grey[400] 
-                                : Colors.grey[600],
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                color: customTheme?.profileContentBackgroundColor ?? theme.cardColor,
+                child: SizedBox(
+                  height: kBottomNavigationBarHeight,
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () => context.go('/home'),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/home_icon.png',
+                                width: 24,
+                                height: 24,
+                                color: theme.brightness == Brightness.dark 
+                                    ? Colors.grey[400] 
+                                    : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Home',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  color: theme.brightness == Brightness.dark 
+                                      ? Colors.grey[400] 
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Home',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: theme.brightness == Brightness.dark 
-                                  ? Colors.grey[400] 
-                                  : Colors.grey[600],
-                            ),
+                        ),
+                        const SizedBox(width: 80),
+                        GestureDetector(
+                          onTap: () {},
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/profile_icon.png',
+                                width: 24,
+                                height: 24,
+                                color: theme.textTheme.bodyMedium?.color,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Profile',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/images/profile_icon.png',
-                            width: 24,
-                            height: 24,
-                            color: theme.textTheme.bodyMedium?.color,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Profile',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyMedium?.color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
