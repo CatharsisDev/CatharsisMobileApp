@@ -15,8 +15,8 @@ import 'package:provider/provider.dart';
 class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   ///  State fields for stateful widgets in this page.
 
-  // State field(s) for SwipeableStack widget.
-  late CardSwiperController swipeableStackController;
+  // Keep a single controller instance to preserve swipe state across navigation
+  final CardSwiperController swipeableStackController = CardSwiperController();
   // Model for Gamecard components
   late GamecardModel gamecardModel1;
   late GamecardModel gamecardModel2;
@@ -24,13 +24,12 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   late GamecardModel gamecardModel4;
 
   void resetCards() {
-    // Dispose old controller and create a new one
-    swipeableStackController = CardSwiperController();
+    // Intentionally left as a no-op to avoid recreating the controller,
+    // which would reset swipe state when navigating away and back.
   }
 
   @override
   void initState(BuildContext context) {
-    swipeableStackController = CardSwiperController();
     gamecardModel1 = createModel(context, () => GamecardModel());
     gamecardModel2 = createModel(context, () => GamecardModel());
     gamecardModel3 = createModel(context, () => GamecardModel());

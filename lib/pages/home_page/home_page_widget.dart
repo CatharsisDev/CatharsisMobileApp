@@ -794,7 +794,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                     ),
                     const SizedBox(width: 80),
                     InkWell(
-                      onTap: () => context.go('/profile'),
+                      onTap: () => context.push('/profile'),
                       child: Row(
                         children: [
                           Image.asset(
