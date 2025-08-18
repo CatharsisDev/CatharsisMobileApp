@@ -225,7 +225,7 @@
     },
     {
       "name": "google_mobile_ads",
-      "version": "4.0.0",
+      "version": "5.3.1",
       "dependencies": [
         "flutter",
         "meta",
@@ -1372,7 +1372,7 @@
     },
     {
       "name": "webview_flutter",
-      "version": "4.9.0",
+      "version": "4.13.0",
       "dependencies": [
         "flutter",
         "webview_flutter_android",
@@ -1392,9 +1392,10 @@
     },
     {
       "name": "webview_flutter_android",
-      "version": "3.16.9",
+      "version": "4.10.0",
       "dependencies": [
         "flutter",
+        "meta",
         "webview_flutter_platform_interface"
       ]
     },
