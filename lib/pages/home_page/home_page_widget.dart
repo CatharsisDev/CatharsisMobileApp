@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:catharsis_cards/services/ad_service.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -60,6 +61,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       parent: _handController,
       curve: Curves.easeInOut,
     ));
+    // Preload Android interstitial ads
+    if (Platform.isAndroid) {
+      AdService.preload();
+    }
   }
 
   @override
@@ -664,6 +669,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               velocity: 1.0,
                             );
                           }
+                          // Maybe show an interstitial every N swipes (Android only handled in service)
+                          AdService.onSwipeAndMaybeShow(context);
                         }
                         setState(() => _currentCardIndex += 1);
                         return true;

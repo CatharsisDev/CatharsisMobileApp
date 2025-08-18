@@ -446,6 +446,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "google_mobile_ads",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_mobile_ads-4.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.15"
+    },
+    {
       "name": "google_sign_in",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in-7.1.1",
       "packageUri": "lib/",
@@ -1176,6 +1182,30 @@
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/web_socket_channel-3.0.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "webview_flutter",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/webview_flutter-4.9.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "webview_flutter_android",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/webview_flutter_android-3.16.9",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "webview_flutter_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/webview_flutter_platform_interface-2.14.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "webview_flutter_wkwebview",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.23.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
     },
     {
       "name": "win32",

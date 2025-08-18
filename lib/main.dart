@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
 import 'package:catharsis_cards/provider/user_profile_provider.dart';
@@ -27,6 +28,7 @@ import 'package:go_router/go_router.dart';
 import '/pages/profile/profile_page.dart';
 import '/pages/home_page/home_page_widget.dart';
 import 'app_router.dart' as app_router;
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 
 class AppStateNotifier extends ChangeNotifier {
@@ -39,6 +41,12 @@ class AppStateNotifier extends ChangeNotifier {
       notifyListeners();
     });
   }
+}
+
+
+Future<void> _initAdsAndroid() async {
+  // Initialize the Mobile Ads SDK (Android only)
+  await MobileAds.instance.initialize();
 }
 
 void main() async {
@@ -55,6 +63,10 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
+  
+  if (Platform.isAndroid) {
+    await _initAdsAndroid();
+  }
   
   runApp(ProviderScope(child: MyApp()));
 }

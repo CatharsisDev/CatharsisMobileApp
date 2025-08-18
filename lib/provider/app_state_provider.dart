@@ -10,7 +10,7 @@ import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'dart:async';
 
-const int SWIPE_LIMIT = 100;
+const int SWIPE_LIMIT = 7;
 const Duration RESET_DURATION = Duration(minutes: 0, seconds: 20);
 
 /// Normalize categories so that comparisons always match exactly.
@@ -427,21 +427,6 @@ class CardStateNotifier extends StateNotifier<CardState> {
           swipeCount: newCount,
           swipeResetTime: resetTime,
         );
-      }
-
-      // Attempt to schedule the notification, but don't let failures abort
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final notificationId = 'cooldown_${user.uid}_${now.millisecondsSinceEpoch}';
-        try {
-          await NotificationService.scheduleCooldownNotification(
-            id: notificationId,
-            delay: RESET_DURATION,
-          );
-          await swipeBox.put('notification_id', notificationId);
-        } catch (e) {
-          print('Warning: failed to schedule cooldown notification: $e');
-        }
       }
 
       // Do not show the popup here; UI will trigger it via listeners
