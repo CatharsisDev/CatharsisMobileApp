@@ -208,10 +208,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             Navigator.of(dialogContext).pop();
           },
           onTimerEnd: () {
-            ref.read(popUpProvider.notifier).hidePopUp();
-            
-            // Safe navigation
+            // Delay the state modification to avoid modifying during build
             WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(popUpProvider.notifier).hidePopUp();
+              
               if (Navigator.of(dialogContext).canPop()) {
                 Navigator.of(dialogContext).pop();
               }
@@ -614,7 +614,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               _handleCardTap(details.localPosition, q);
                             },
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(16),       
                               child: Container(
                                 width: double.infinity,
                                 height: double.infinity,
@@ -720,89 +720,84 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           ),
           // Top preferences and action buttons
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            top: MediaQuery.of(context).padding.top + 10, // Fixed position from top
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        // Share button moved to top left
-                        InkWell(
-                          onTap: () => _captureAndShareCard(),
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            child: Image.asset(
-                              'assets/images/share_icon.png',
-                              width: 24,
-                              height: 24,
-                              color: customTheme?.likeAndShareIconColor ?? theme.iconTheme.color,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        // Like button moved to top left
-                        InkWell(
-                          onTap: () {
-                            if (cardState.hasReachedSwipeLimit) {
-                              ref.read(popUpProvider.notifier).state = true;
-                            } else if (currentQuestion != null) {
-                              HapticFeedback.lightImpact();
-                              notifier.toggleLiked(currentQuestion);
-                            }
-                          },
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            child: Image.asset(
-                              'assets/images/heart_icon.png',
-                              width: 28,
-                              height: 28,
-                              color: isCurrentLiked
-                                  ? Colors.red
-                                  : (customTheme?.likeAndShareIconColor ?? theme.iconTheme.color),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Existing preferences button
+                    // Share button
                     InkWell(
-                      onTap: _openPreferences,
+                      onTap: () => _captureAndShareCard(),
                       customBorder: const CircleBorder(),
                       child: Container(
                         width: 44,
                         height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
-                        ),
                         child: Image.asset(
-                          'assets/images/preferences_icon.png',
+                          'assets/images/share_icon.png',
                           width: 24,
                           height: 24,
-                          color: customTheme?.iconColor ?? theme.iconTheme.color,
+                          color: customTheme?.likeAndShareIconColor ?? theme.iconTheme.color,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    // Like button
+                    InkWell(
+                      onTap: () {
+                        if (cardState.hasReachedSwipeLimit) {
+                          ref.read(popUpProvider.notifier).state = true;
+                        } else if (currentQuestion != null) {
+                          HapticFeedback.lightImpact();
+                          notifier.toggleLiked(currentQuestion);
+                        }
+                      },
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        child: Image.asset(
+                          'assets/images/heart_icon.png',
+                          width: 28,
+                          height: 28,
+                          color: isCurrentLiked
+                              ? Colors.red
+                              : (customTheme?.likeAndShareIconColor ?? theme.iconTheme.color),
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                // Preferences button
+                InkWell(
+                  onTap: _openPreferences,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                    ),
+                    child: Image.asset(
+                      'assets/images/preferences_icon.png',
+                      width: 24,
+                      height: 24,
+                      color: customTheme?.iconColor ?? theme.iconTheme.color,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           // Bottom navigation
           Positioned(
-            bottom: 0,  // Changed from 50 to 0
+            bottom: 0,   
             left: 0,
             right: 0,
-            child: SafeArea(  // Add SafeArea here
+            child: SafeArea(   
               child: Container(
                 padding: const EdgeInsets.only(bottom: 20, top: 10),
                 child: Row(
