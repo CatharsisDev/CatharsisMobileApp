@@ -38,6 +38,27 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   int _currentCardIndex = 0;
   List<Question>? _cachedQuestions;
   String? _cacheKey;
+  // Double-tap detection fallback
+  DateTime? _lastTapTime;
+  Offset? _lastTapPos;
+  static const _doubleTapMaxDelay = Duration(milliseconds: 300);
+  static const _doubleTapMaxDistance = 24.0;
+
+  void _handleCardTap(Offset pos, Question q) {
+    final now = DateTime.now();
+    if (_lastTapTime != null &&
+        now.difference(_lastTapTime!) <= _doubleTapMaxDelay &&
+        _lastTapPos != null &&
+        (pos - _lastTapPos!).distance <= _doubleTapMaxDistance) {
+      HapticFeedback.lightImpact();
+      ref.read(cardStateProvider.notifier).toggleLiked(q);
+      _lastTapTime = null;
+      _lastTapPos = null;
+    } else {
+      _lastTapTime = now;
+      _lastTapPos = pos;
+    }
+  }
   final GlobalKey _cardBoundaryKey = GlobalKey();
 
   @override
@@ -388,6 +409,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 _cachedQuestions = null;
                                 _cacheKey = null;
                                 _currentCardIndex = 0;
+                                _lastTapTime = null;
+                                _lastTapPos = null;
                               });
                               notifier
                                   .updateSelectedCategories(tempSelectedKeys);
@@ -502,8 +525,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     // - First time
     // - When categories change (invalidate)
     // - When the cache is empty but the provider just became non-empty
-    final categoriesKey =
-        '${cardState.selectedCategories.join(',')}_${cardState.currentCategory}';
+    final categoriesKey = _generateCacheKey(cardState);
     final categoriesChanged = _cacheKey != categoriesKey;
     final providerList = cardState.activeQuestions;
 
@@ -557,6 +579,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           color: customTheme?.categoryChipColor ??
                               theme.primaryColor))
                   : FlutterFlowSwipeableStack(
+                      key: ValueKey('stack_${_cacheKey ?? 'none'}'),
                       controller: _cardController,
                       itemCount: questions.isEmpty ? 1 : questions.length,
                       itemBuilder: (ctx, i) {
@@ -577,68 +600,78 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         return KeyedSubtree(
                           key: ValueKey('card_${q.category}_${q.text}'),
                           child: GestureDetector(
-                          onDoubleTap: () {
-                            HapticFeedback.lightImpact();
-                            notifier.toggleLiked(q);
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              decoration: BoxDecoration(
-                                color: theme.cardColor,
-                                borderRadius: BorderRadius.circular(16),
-                                image: (customTheme?.showBackgroundTexture ??
-                                            false) &&
-                                        (customTheme?.backgroundImagePath != null)
-                                    ? DecorationImage(
-                                        image: AssetImage(
-                                            customTheme!.backgroundImagePath!),
-                                        fit: BoxFit.cover,
-                                        opacity: 0.4,
-                                      )
-                                    : null,
-                              ),
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(40),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const SizedBox(height: 100),
-                                        Flexible(
-                                          child: Center(
-                                            child: Text(
-                                              q.text,
-                                              style: TextStyle(
-                                                fontFamily: 'Runtime',
-                                                color: customTheme?.fontColor,
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.bold,
-                                                height: 1.3,
-                                                letterSpacing: 2,
+                            behavior: HitTestBehavior.opaque,
+                            onDoubleTap: () {
+                              if (cardState.hasReachedSwipeLimit) {
+                                // Show the same popup used elsewhere when the limit is hit
+                                ref.read(popUpProvider.notifier).state = true;
+                                return;
+                              }
+                              HapticFeedback.lightImpact();
+                              notifier.toggleLiked(q);
+                            },
+                            onTapUp: (details) {
+                              _handleCardTap(details.localPosition, q);
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  image: (customTheme?.showBackgroundTexture ??
+                                              false) &&
+                                          (customTheme?.backgroundImagePath != null)
+                                      ? DecorationImage(
+                                          image: AssetImage(
+                                              customTheme!.backgroundImagePath!),
+                                          fit: BoxFit.cover,
+                                          opacity: 0.4,
+                                        )
+                                      : null,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(40),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const SizedBox(height: 100),
+                                          Flexible(
+                                            child: Center(
+                                              child: Text(
+                                                q.text,
+                                                style: TextStyle(
+                                                  fontFamily: 'Runtime',
+                                                  color: customTheme?.fontColor,
+                                                  fontSize: 32,
+                                                  fontWeight: FontWeight.bold,
+                                                  height: 1.3,
+                                                  letterSpacing: 2,
+                                                ),
+                                                textAlign: TextAlign.center,
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
                                           ),
-                                        ),
-                                        Column(
-                                          children: [
-                                            _buildCategoryChip(q.category),
-                                            SizedBox(height: MediaQuery.of(context).padding.bottom + 180),
-                                          ],
-                                        ),
-                                      ],
+                                          Column(
+                                            children: [
+                                              _buildCategoryChip(q.category),
+                                              SizedBox(height: MediaQuery.of(context).padding.bottom + 180),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ));
+                        );
                       },
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
                         if (cardState.hasReachedSwipeLimit) {
