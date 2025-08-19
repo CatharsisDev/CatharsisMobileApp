@@ -38,7 +38,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   int _currentCardIndex = 0;
   List<Question>? _cachedQuestions;
   String? _cacheKey;
-  final Set<String> _displayedQuestionIds = {};
   final GlobalKey _cardBoundaryKey = GlobalKey();
 
   @override
@@ -440,7 +439,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   String _generateCacheKey(CardState state) {
-    return '${state.selectedCategories.join(',')}_${state.currentCategory}_${state.allQuestions.length}_${state.seenQuestions.length}';
+    return '${state.selectedCategories.join(',')}_${state.currentCategory}';
   }
 
   Widget _buildCategoryChip(String category) {
@@ -499,30 +498,29 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
 
-    final newCacheKey = _generateCacheKey(cardState);
-    final didActiveQuestionsChange = _cacheKey != newCacheKey;
-    if (_cachedQuestions == null || didActiveQuestionsChange) {
-      final allActive = cardState.activeQuestions;
-      final unseenQuestions = allActive.where((q) {
-        final questionId = '${q.text}_${q.category}';
-        return !cardState.seenQuestions.any(
-                (seen) => seen.text == q.text && seen.category == q.category) &&
-            !_displayedQuestionIds.contains(questionId);
-      }).toList();
+    // Seed/refresh the cached deck cautiously:
+    // - First time
+    // - When categories change (invalidate)
+    // - When the cache is empty but the provider just became non-empty
+    final categoriesKey =
+        '${cardState.selectedCategories.join(',')}_${cardState.currentCategory}';
+    final categoriesChanged = _cacheKey != categoriesKey;
+    final providerList = cardState.activeQuestions;
 
-      _cachedQuestions = unseenQuestions.isEmpty ? allActive : unseenQuestions;
-      _cacheKey = newCacheKey;
-
-      if (_currentCardIndex >= _cachedQuestions!.length) {
+    if (_cachedQuestions == null ||
+        categoriesChanged ||
+        (_cachedQuestions!.isEmpty && providerList.isNotEmpty)) {
+      if (providerList.isNotEmpty) {
+        _cachedQuestions = List<Question>.from(providerList);
+        if (_currentCardIndex >= _cachedQuestions!.length) {
+          _currentCardIndex = 0;
+        }
+      } else if (categoriesChanged || _cachedQuestions == null) {
+        // Only reset to empty when categories changed or it's the first build.
+        _cachedQuestions = <Question>[];
         _currentCardIndex = 0;
       }
-    }
-
-    // Track displayed questions
-    if (_cachedQuestions!.isNotEmpty &&
-        _currentCardIndex < _cachedQuestions!.length) {
-      final currentQ = _cachedQuestions![_currentCardIndex];
-      _displayedQuestionIds.add('${currentQ.text}_${currentQ.category}');
+      _cacheKey = categoriesKey;
     }
 
     final questions = _cachedQuestions!;
@@ -575,9 +573,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             ),
                           );
                         }
-                        final idx = i % questions.length;
-                        final q = questions[idx];
-                        return GestureDetector(
+                        final q = questions[i];
+                        return KeyedSubtree(
+                          key: ValueKey('card_${q.category}_${q.text}'),
+                          child: GestureDetector(
                           onDoubleTap: () {
                             HapticFeedback.lightImpact();
                             notifier.toggleLiked(q);
@@ -639,7 +638,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               ),
                             ),
                           ),
-                        );
+                        ));
                       },
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
                         if (cardState.hasReachedSwipeLimit) {
