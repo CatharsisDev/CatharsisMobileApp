@@ -19,6 +19,9 @@ String _normalizeCategory(String s) => s
     .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
 
+String _questionKey(Question q) =>
+    '${_normalizeCategory(q.category)}|${q.text.trim()}';
+
 class CardState {
   final List<Question> allQuestions;
   final List<Question> likedQuestions;
@@ -30,6 +33,7 @@ class CardState {
   final DateTime? swipeResetTime;
   /// How many cards the user has swiped since last reset
   final int swipeCount;
+  final List<Question> sessionQuestions;
 
   CardState({
     required this.allQuestions,
@@ -40,6 +44,7 @@ class CardState {
     required this.currentIndex,
     required this.selectedCategories,
     required this.swipeCount,
+    required this.sessionQuestions,
     this.swipeResetTime,
   });
 
@@ -58,6 +63,7 @@ class CardState {
     Set<String>? selectedCategories,
     DateTime? swipeResetTime,
     int? swipeCount,
+    List<Question>? sessionQuestions,
   }) {
     return CardState(
       allQuestions: allQuestions ?? this.allQuestions,
@@ -69,10 +75,17 @@ class CardState {
       selectedCategories: selectedCategories ?? this.selectedCategories,
       swipeResetTime: swipeResetTime ?? this.swipeResetTime,
       swipeCount: swipeCount ?? this.swipeCount,
+      sessionQuestions: sessionQuestions ?? this.sessionQuestions,
     );
   }
 
+  Set<String> get seenKeys => seenQuestions.map(_questionKey).toSet();
+  Set<String> get likedKeys => likedQuestions.map(_questionKey).toSet();
+
   List<Question> get activeQuestions {
+    // If we have a session snapshot, use it to keep the stack stable while swiping.
+    if (sessionQuestions.isNotEmpty) return sessionQuestions;
+
     var filtered = allQuestions;
 
     if (selectedCategories.isNotEmpty) {
@@ -87,8 +100,6 @@ class CardState {
       }).toList();
     }
 
-    // Don't filter out seen questions - this was causing the card switching issue
-    // Instead, we'll handle seen questions differently
     return filtered;
   }
 
@@ -97,7 +108,8 @@ class CardState {
     final list = activeQuestions;
     if (list.isEmpty) return null;
     // For now, return the first unseen question or the first question
-    final unseenIndex = list.indexWhere((q) => !seenQuestions.contains(q));
+    final sk = seenKeys;
+    final unseenIndex = list.indexWhere((q) => !sk.contains(_questionKey(q)));
     return list[unseenIndex >= 0 ? unseenIndex : 0];
   }
 
@@ -128,6 +140,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
           currentIndex: 0,
           selectedCategories: {},
           swipeCount: 0,
+          sessionQuestions: [],
         )) {
     _initialize();
   }
@@ -222,6 +235,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     await _loadLiked();
     await _loadSeenQuestions();
     await _loadPersonalizedQuestions();
+    _rebuildSessionQuestions();
     await _checkReset();
     _maybeGenerateMore();
 
@@ -284,6 +298,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (cached.isNotEmpty) {
       if (mounted) {
         state = state.copyWith(allQuestions: cached..shuffle());
+        _rebuildSessionQuestions();
       }
     } else {
       final qs = await QuestionsService.loadQuestionsWithAI();
@@ -293,6 +308,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       await cacheBox.addAll(qs);
       if (mounted) {
         state = state.copyWith(allQuestions: qs..shuffle());
+        _rebuildSessionQuestions();
       }
     }
   }
@@ -323,6 +339,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       
       if (mounted) {
         state = state.copyWith(allQuestions: personalizedQuestions);
+        _rebuildSessionQuestions();
       }
     } catch (e) {
       print('Error loading personalized questions: $e');
@@ -388,6 +405,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       selectedCategories: {norm},
       currentIndex: 0,
     );
+    _rebuildSessionQuestions();
   }
 
   void updateSelectedCategories(Set<String> cats) {
@@ -400,6 +418,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       // Don't reset seen questions when changing categories
     );
     // Don't clear seen questions box
+    _rebuildSessionQuestions();
   }
 
   Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
@@ -664,10 +683,49 @@ class CardStateNotifier extends StateNotifier<CardState> {
           currentIndex: 0,
           selectedCategories: {},
           swipeCount: 0,
+          sessionQuestions: [],
         );
       }
     } catch (e) {
       print('Error clearing user data: $e');
+    }
+  }
+
+  void _rebuildSessionQuestions() {
+    // Build a stable snapshot for the current filter, excluding already seen or liked and deduping by text+category.
+
+    // Start from the same category filtering logic as CardState.activeQuestions (pre-session).
+    var filtered = state.allQuestions;
+    if (state.selectedCategories.isNotEmpty) {
+      final normSel = state.selectedCategories.map(_normalizeCategory).toSet();
+      filtered = filtered.where((q) {
+        return normSel.contains(_normalizeCategory(q.category));
+      }).toList();
+    } else if (state.currentCategory != 'all') {
+      final normCat = _normalizeCategory(state.currentCategory);
+      filtered = filtered.where((q) {
+        return _normalizeCategory(q.category) == normCat;
+      }).toList();
+    }
+
+    // Exclude anything already seen or liked, and also de-duplicate by (category|text) key.
+    final exclude = {...state.seenKeys, ...state.likedKeys};
+    final seen = <String>{};
+    final session = <Question>[];
+
+    for (final q in filtered) {
+      final key = _questionKey(q);
+      if (exclude.contains(key)) continue;
+      if (seen.add(key)) {
+        session.add(q);
+      }
+    }
+
+    if (mounted) {
+      state = state.copyWith(
+        sessionQuestions: session,
+        currentIndex: 0,
+      );
     }
   }
   
