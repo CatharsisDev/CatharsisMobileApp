@@ -10,7 +10,7 @@ import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'dart:async';
 
-const int SWIPE_LIMIT = 50;
+const int SWIPE_LIMIT = 25;
 const Duration RESET_DURATION = Duration(minutes: 0, seconds: 20);
 
 /// Normalize categories so that comparisons always match exactly.

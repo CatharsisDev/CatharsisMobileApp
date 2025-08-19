@@ -5,15 +5,15 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 
 class AdService {
   // Show an interstitial every N swipes
-  static const int frequency = 3;
+  static const int frequency = 12;
   static int _swipesSinceAd = 0;
 
   static InterstitialAd? _interstitial;
   static bool _loading = false;
 
   static String get _androidInterstitialUnitId => kReleaseMode
-      ? 'ca-app-pub-2028088731421171/6845706769' // LIVE unit (your AdMob interstitial)
-      : 'ca-app-pub-3940256099942544/1033173712'; // Google TEST unit
+      ? 'ca-app-pub-2028088731421171/6845706769'  
+      : 'ca-app-pub-3940256099942544/1033173712'; // Google TEST interstitial unit ID
 
   static Future<void> preload() async {
     if (!Platform.isAndroid || _interstitial != null || _loading) return;
