@@ -51,13 +51,14 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize adaptive banner with screen width using async helper
-    if (_bannerAd == null) {
+    // Initialize adaptive banner with screen width using async helper (Android only)
+    if (Platform.isAndroid && _bannerAd == null) {
       _initializeBannerAd();
     }
   }
 
   Future<void> _initializeBannerAd() async {
+    if (!Platform.isAndroid) return;
     final int screenWidth = MediaQuery.of(context).size.width.toInt();
     final AdSize? adSize =
         await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(screenWidth);
@@ -1007,8 +1008,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Banner Ad
-                  if (_isBannerAdReady && _bannerAd != null)
+                  // Banner Ad (Android only)
+                  if (Platform.isAndroid && _isBannerAdReady && _bannerAd != null)
                     Container(
                       color: customTheme?.profileContentBackgroundColor ?? theme.cardColor,
                       alignment: Alignment.center,
