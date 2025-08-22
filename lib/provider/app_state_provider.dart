@@ -8,6 +8,8 @@ import 'auth_provider.dart';
 import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
+import 'package:catharsis_cards/services/subscription_service.dart';
+import 'dart:io';
 import 'dart:async';
 
 const int SWIPE_LIMIT = 25;
@@ -99,7 +101,6 @@ class CardState {
         return _normalizeCategory(q.category) == normCat;
       }).toList();
     }
-
     return filtered;
   }
 
@@ -388,6 +389,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
             swipeCount: 0,
           );
         }
+        // Ensure any swipe-limit popup is dismissed
+        ref.read(popUpProvider.notifier).state = false;
       } else {
         if (mounted) {
           state = state.copyWith(swipeResetTime: resetTime);
@@ -422,37 +425,73 @@ class CardStateNotifier extends StateNotifier<CardState> {
   }
 
   Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
-    // Check for expired cooldown and show popup if still in cooldown
-    await _checkReset();
-    if (state.hasReachedSwipeLimit) {
-      // Cooldown is active; UI listener will react to provider/state
-      return;
-    }
-    if (!mounted) return;
+    // Resolve premium with a safe default (non-premium until confirmed)
+    final bool isPremium = ref.read(isPremiumProvider).maybeWhen(
+      data: (v) => v,
+      orElse: () => false,
+    );
 
-    // Track swipe count and enforce limit
-    final newCount = state.swipeCount + 1;
-    if (newCount >= SWIPE_LIMIT) {
-      final now = DateTime.now();
-      final resetTime = now.add(RESET_DURATION); // always fresh future time
-
-      // Persist swipe count and mark limit reached
-      await swipeBox.put('swipe_limit_reached', now.toIso8601String());
-      await swipeBox.put('swipe_count', newCount);
-
-      // Update state FIRST so any UI reading it gets the fresh time
-      if (mounted) {
-        state = state.copyWith(
-          swipeCount: newCount,
-          swipeResetTime: resetTime,
-        );
+    if (!isPremium) {
+      // Check for expired cooldown and show popup if still in cooldown
+      await _checkReset();
+      if (state.hasReachedSwipeLimit) {
+        // Cooldown is active; UI listener will react to provider/state
+        return;
       }
+      if (!mounted) return;
 
-      // Do not show the popup here; UI will trigger it via listeners
-      return;
+      // Track swipe count and enforce limit
+      final newCount = state.swipeCount + 1;
+      if (newCount >= SWIPE_LIMIT) {
+        final now = DateTime.now();
+        final resetTime = now.add(RESET_DURATION); // always fresh future time
+
+        // Persist swipe count and mark limit reached
+        await swipeBox.put('swipe_limit_reached', now.toIso8601String());
+        await swipeBox.put('swipe_count', newCount);
+
+        // Update state FIRST so any UI reading it gets the fresh time
+        if (mounted) {
+          state = state.copyWith(
+            swipeCount: newCount,
+            swipeResetTime: resetTime,
+          );
+        }
+
+        // Schedule notification for cooldown end
+        await NotificationService.scheduleCooldownNotification(
+          id: '999',
+          delay: RESET_DURATION,
+        );
+
+        // iOS-specific: Ensure popup triggers after state propagation
+        if (Platform.isIOS) {
+          Future.delayed(const Duration(milliseconds: 50), () {
+            if (mounted) {
+              ref.read(popUpProvider.notifier).showPopUp(resetTime);
+            }
+          });
+        } else {
+          // Non‑iOS: fall back to simple boolean trigger
+          ref.read(popUpProvider.notifier).state = true;
+        }
+
+        return;
+      } else {
+        await swipeBox.put('swipe_count', newCount);
+        state = state.copyWith(swipeCount: newCount);
+      }
     } else {
-      await swipeBox.put('swipe_count', newCount);
-      state = state.copyWith(swipeCount: newCount);
+      // Premium users: ensure no stale cooldown/limit sticks around
+      if (state.swipeResetTime != null || state.swipeCount != 0) {
+        () async {
+          await swipeBox.delete('swipe_limit_reached');
+          await swipeBox.put('swipe_count', 0);
+        }();
+        if (mounted) {
+          state = state.copyWith(swipeResetTime: null, swipeCount: 0);
+        }
+      }
     }
 
     // Get the cached unseen questions from the widget
@@ -526,6 +565,63 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
   void handleCardSwipedWithQuestion(Question question, {String direction = 'unknown', double velocity = 0.0}) {
     if (!mounted) return;
+
+    // Enforce the same premium/limit logic as handleCardSwiped
+    final bool isPremium = ref.read(isPremiumProvider).maybeWhen(
+      data: (v) => v,
+      orElse: () => false,
+    );
+
+    if (!isPremium) {
+      // Refresh cooldown in the background
+      () async { await _checkReset(); }();
+
+      // If already in cooldown, show popup and stop
+      if (state.hasReachedSwipeLimit) {
+        ref.read(popUpProvider.notifier).state = true;
+        return;
+      }
+
+      final newCount = state.swipeCount + 1;
+      if (newCount >= SWIPE_LIMIT) {
+        final now = DateTime.now();
+        final resetTime = now.add(RESET_DURATION);
+
+        // Persist asynchronously
+        () async {
+          await swipeBox.put('swipe_limit_reached', now.toIso8601String());
+          await swipeBox.put('swipe_count', newCount);
+        }();
+
+        if (mounted) {
+          state = state.copyWith(
+            swipeCount: newCount,
+            swipeResetTime: resetTime,
+          );
+        }
+
+        // Trigger popup for non‑premium users
+        ref.read(popUpProvider.notifier).state = true;
+        return;
+      } else {
+        // Increment swipe count
+        () async { await swipeBox.put('swipe_count', newCount); }();
+        if (mounted) {
+          state = state.copyWith(swipeCount: newCount);
+        }
+      }
+    } else {
+      // Premium users: clear any stale cooldown/limit
+      if (state.swipeResetTime != null || state.swipeCount != 0) {
+        () async {
+          await swipeBox.delete('swipe_limit_reached');
+          await swipeBox.put('swipe_count', 0);
+        }();
+        if (mounted) {
+          state = state.copyWith(swipeResetTime: null, swipeCount: 0);
+        }
+      }
+    }
     
     // Track asynchronously without blocking
     () async {

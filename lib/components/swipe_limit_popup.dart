@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../provider/theme_provider.dart';
 import '../provider/theme_provider.dart' show CustomThemeExtension;
 import '../pages/subscription_plans/subscription_plans_page.dart';
+import 'package:catharsis_cards/services/subscription_service.dart';
 
 class SwipeLimitPopup extends ConsumerWidget {
   final DateTime? resetTime;
@@ -170,15 +171,28 @@ class SwipeLimitPopup extends ConsumerWidget {
                         ),
                       const SizedBox(height: 40),
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (ctx) => SubscriptionPlansPage(
-                                onMonthlyPurchase: onPurchase,
-                                onAnnualPurchase: onPurchase,
+                              builder: (context) => SubscriptionPlansPage(
+                                onMonthlyPurchase: () async {
+                                  final service = ref.read(subscriptionServiceProvider);
+                                  await service.purchase('com.example.catharsiscards.subscription.monthly');
+                                  Navigator.pop(context, true); // indicate success
+                                },
+                                onAnnualPurchase: () async {
+                                  final service = ref.read(subscriptionServiceProvider);
+                                  await service.purchase('com.example.catharsiscards.subscription.annual');
+                                  Navigator.pop(context, true); // indicate success
+                                },
                               ),
                             ),
                           );
+
+                          // If purchase successful, dismiss this popup
+                          if (result == true) {
+                            Navigator.of(context).pop();
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: customTheme?.preferenceButtonColor,

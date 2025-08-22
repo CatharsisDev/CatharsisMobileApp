@@ -21,6 +21,7 @@ import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
+import 'package:catharsis_cards/services/subscription_service.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -175,7 +176,12 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   void _showExtraPackagePopUp(BuildContext context, DateTime? resetTime) async {
-    // ALWAYS create a fresh reset time if the passed one is null or in the past
+    // Check premium status first
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    if (subscriptionService.isPremium.value) {
+      return;
+    }
+    
     final now = DateTime.now();
     final effectiveResetTime = (resetTime != null && resetTime.isAfter(now))
         ? resetTime
@@ -184,7 +190,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     // Save to provider
     ref.read(popUpProvider.notifier).showPopUp(effectiveResetTime);
     
-    // Schedule notification using awesome_notifications
+    // Schedule notification
     if (effectiveResetTime.isAfter(DateTime.now())) {
       await NotificationService.cancelCooldownNotification('999');
       await NotificationService.scheduleCooldownNotification(
@@ -193,7 +199,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       );
     }
     
-    // Show popup
+    // Ensure context is still mounted
+    if (!mounted) return;
+    
+    // Show popup with proper context handling
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -202,24 +211,37 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           resetTime: effectiveResetTime,
           onDismiss: () {
             ref.read(popUpProvider.notifier).hidePopUp();
-            Navigator.of(dialogContext).pop();
+            // Safe pop with context check
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
           },
           onPurchase: () {
-            Navigator.of(dialogContext).pop();
+            // Safe pop
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
           },
           onTimerEnd: () {
-            // Delay the state modification to avoid modifying during build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(popUpProvider.notifier).hidePopUp();
-              
-              if (Navigator.of(dialogContext).canPop()) {
-                Navigator.of(dialogContext).pop();
+            // Use dialogContext, not the outer context
+            ref.read(popUpProvider.notifier).hidePopUp();
+            
+            // Delay to ensure state updates complete
+            Future.delayed(const Duration(milliseconds: 100), () {
+              // Check if dialog is still showing
+              if (Navigator.of(dialogContext, rootNavigator: true).canPop()) {
+                Navigator.of(dialogContext, rootNavigator: true).pop();
               }
             });
           },
         );
       },
-    );
+    ).then((_) {
+      // Cleanup when dialog closes
+      if (mounted) {
+        ref.read(popUpProvider.notifier).hidePopUp();
+      }
+    });
   }
 
   void _openPreferences() {
@@ -511,6 +533,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Add this for AutomaticKeepAliveClientMixin
+    // Listen to subscription changes
+    final subscriptionService = ref.watch(subscriptionServiceProvider);
+    final isPremium = subscriptionService.isPremium.value;
     final cardState = ref.watch(cardStateProvider);
     final notifier = ref.read(cardStateProvider.notifier);
     final tutorialState = ref.watch(tutorialProvider);
@@ -556,8 +581,29 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
     ref.listen<bool>(popUpProvider, (previous, next) {
       if (next) {
-        _showExtraPackagePopUp(context, ref.read(cardStateProvider).swipeResetTime);
+        // iOS-specific delay to ensure UI is ready
+        if (Platform.isIOS) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showExtraPackagePopUp(context, ref.read(cardStateProvider).swipeResetTime);
+            }
+          });
+        } else {
+          _showExtraPackagePopUp(context, ref.read(cardStateProvider).swipeResetTime);
+        }
       }
+    });
+    ref.listen<AsyncValue<bool>>(isPremiumProvider, (previous, next) {
+      next.whenData((isPremium) {
+        if (isPremium) {
+          // User just became premium - dismiss popup if showing
+          Navigator.of(context).popUntil((route) {
+            return route.settings.name != 'SwipeLimitPopup';
+          });
+          // Reset cooldown
+          ref.read(cardStateProvider.notifier).resetCooldown();
+        }
+      });
     });
 
     return Scaffold(
@@ -676,7 +722,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       onSwipe: (int previousIndex, int currentIndex, CardSwiperDirection direction) {
                         if (cardState.hasReachedSwipeLimit) {
                           final resetTime = cardState.swipeResetTime ?? DateTime.now().add(RESET_DURATION);
-                          ref.read(popUpProvider.notifier).state = true;
+                          
+                          // iOS-specific: Use microtask to ensure state updates properly
+                          if (Platform.isIOS) {
+                            Future.microtask(() {
+                              ref.read(popUpProvider.notifier).state = true;
+                            });
+                          } else {
+                            ref.read(popUpProvider.notifier).state = true;
+                          }
                           return false;
                         }
                         if (questions.isNotEmpty && currentIndex < questions.length) {
