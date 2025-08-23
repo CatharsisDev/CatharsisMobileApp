@@ -8,6 +8,7 @@ import '../../provider/app_state_provider.dart';
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl, LaunchMode;
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
+import 'package:catharsis_cards/services/account_deletion_service.dart';
 
 class SettingsMenuPage extends ConsumerWidget {
   const SettingsMenuPage({Key? key}) : super(key: key);
@@ -67,6 +68,20 @@ class SettingsMenuPage extends ConsumerWidget {
                   child: ListView(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     children: [
+                      SizedBox(height: 16),
+                      
+                      // Delete Account
+                      _buildSettingsItem(
+                        context: context,
+                        theme: theme,
+                        icon: Icons.delete_forever,
+                        title: 'Delete account',
+                        isRed: true,
+                        onTap: () async {
+                          // Hand off the whole flow (confirmation + loading + deletion + navigation) to the service
+                          await AccountDeletionService().deleteAccountFlow(context);
+                        },
+                      ),
                       SizedBox(height: 16),
                       
                       // Customize Theme
@@ -129,6 +144,8 @@ class SettingsMenuPage extends ConsumerWidget {
                       SizedBox(height: 40),
                       Divider(color: theme.brightness == Brightness.dark ? Colors.white24 : Colors.grey[300]),
                       SizedBox(height: 20),
+
+                      
                       
                       // Log Out
                       _buildSettingsItem(

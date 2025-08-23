@@ -51,14 +51,17 @@ Future<void> _initAdsAndroid() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize Notifications (Awesome Notifications)
-  await NotificationService.init();
-  await dotenv.load(fileName: ".env");
 
-  // Initialize Firebase
+  // Initialize Firebase BEFORE anything else
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize Notifications (Awesome Notifications)
+  await NotificationService.init();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
   // Initialize Hive
   await Hive.initFlutter();

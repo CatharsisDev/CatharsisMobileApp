@@ -49,5 +49,20 @@
 	<string>ca-app-pub-2028088731421171~6858983356</string>
 	<key>GADIsAdManagerApp</key>
 	<false/>
+	<!-- Google Sign-In configuration -->
+	<key>GIDClientID</key>
+	<string>40399565067-ml9l9ad1e6bopqdmvs9d3qp3hjs427tm.apps.googleusercontent.com</string>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+	  <dict>
+	    <key>CFBundleTypeRole</key>
+	    <string>Editor</string>
+	    <key>CFBundleURLSchemes</key>
+	    <array>
+	      <string>com.googleusercontent.apps.40399565067-ml9l9ad1e6bopqdmvs9d3qp3hjs427tm</string>
+	    </array>
+	  </dict>
+	</array>
 </dict>
 </plist>

@@ -60,6 +60,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '40399565067',
     projectId: 'catharsiscards',
     storageBucket: 'catharsiscards.firebasestorage.app',
+    iosClientId: '40399565067-j4h39bc2ftai8hn3ea2hrmbquafbrm4s.apps.googleusercontent.com',
     iosBundleId: 'com.example.catharsisCards',
   );
 

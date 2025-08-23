@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -11,30 +10,23 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<UserCredential?> signInWithGoogle() async {
-    // trigger the Google sign-in flow
-    final GoogleSignInAccount? googleUser =
-        await GoogleSignIn.instance.authenticate();
-    if (googleUser == null) return null; // user canceled
+    try {
+      final googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
 
-    // obtain the auth details
-    final googleAuth = await googleUser.authentication;
-
-    // these properties do exist on the returned object
-    final idToken    = googleAuth.idToken;
-    if (idToken == null) {
+      final UserCredential result = await _auth.signInWithProvider(googleProvider);
+      return result;
+    } on FirebaseAuthException catch (e) {
+      // Surface Firebase-specific errors to caller
+      rethrow;
+    } catch (e) {
+      // Wrap any other error type into a FirebaseAuthException for consistency
       throw FirebaseAuthException(
-        code: 'MISSING_GOOGLE_AUTH_TOKEN',
-        message: 'Missing Google ID token.',
+        code: 'google-signin-failed',
+        message: 'Google sign-in failed: $e',
       );
     }
-
-    // create a new credential
-    final credential = GoogleAuthProvider.credential(
-      idToken: idToken,
-    );
-
-    // once signed in, return the Firebase user credential
-    return _auth.signInWithCredential(credential);
   }
 
   Future<User?> signInWithApple() async {
@@ -156,7 +148,6 @@ class AuthService {
       await _clearUserDataExceptTheme(currentUserId);
     }
     
-    await GoogleSignIn.instance.signOut();
     await _auth.signOut();
     
     // Clear all Hive boxes for the current user
