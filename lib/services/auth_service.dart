@@ -14,18 +14,16 @@ class AuthService {
       final googleProvider = GoogleAuthProvider();
       googleProvider.addScope('email');
       googleProvider.addScope('profile');
+      
+      // Force account selection
+      googleProvider.setCustomParameters({
+        'prompt': 'select_account',
+      });
 
       final UserCredential result = await _auth.signInWithProvider(googleProvider);
       return result;
-    } on FirebaseAuthException catch (e) {
-      // Surface Firebase-specific errors to caller
-      rethrow;
     } catch (e) {
-      // Wrap any other error type into a FirebaseAuthException for consistency
-      throw FirebaseAuthException(
-        code: 'google-signin-failed',
-        message: 'Google sign-in failed: $e',
-      );
+      rethrow;
     }
   }
 

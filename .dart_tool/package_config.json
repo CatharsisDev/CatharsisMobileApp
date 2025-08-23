@@ -255,9 +255,9 @@
     },
     {
       "name": "file_selector_macos",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/file_selector_macos-0.9.4+3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/file_selector_macos-0.9.4+4",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.7"
     },
     {
       "name": "file_selector_platform_interface",
@@ -417,9 +417,9 @@
     },
     {
       "name": "font_awesome_flutter",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.9.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/font_awesome_flutter-10.10.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.9"
     },
     {
       "name": "from_css_color",
@@ -441,9 +441,9 @@
     },
     {
       "name": "go_router",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-16.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/go_router-16.2.0",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.7"
     },
     {
       "name": "google_fonts",
@@ -543,51 +543,51 @@
     },
     {
       "name": "image_picker",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker-1.1.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker-1.2.0",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_android-0.8.12+25",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_android-0.8.13",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "image_picker_for_web",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_for_web-3.0.6",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_for_web-3.1.0",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_ios",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_ios-0.8.12+2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_ios-0.8.13",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_linux",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_linux-0.2.1+2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_linux-0.2.2",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_macos",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_macos-0.2.1+2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_macos-0.2.2",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_platform_interface",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_platform_interface-2.10.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_platform_interface-2.11.0",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "image_picker_windows",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.1+1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.2",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.6"
     },
     {
       "name": "in_app_purchase",
@@ -609,7 +609,7 @@
     },
     {
       "name": "in_app_purchase_storekit",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_storekit-0.4.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/in_app_purchase_storekit-0.4.4",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -753,9 +753,9 @@
     },
     {
       "name": "path_provider_foundation",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_foundation-2.4.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/path_provider_foundation-2.4.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "path_provider_linux",
@@ -849,7 +849,7 @@
     },
     {
       "name": "provider",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/provider-6.1.5",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/provider-6.1.5+1",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -885,13 +885,13 @@
     },
     {
       "name": "share_plus",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/share_plus-11.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/share_plus-11.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
     {
       "name": "share_plus_platform_interface",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/share_plus_platform_interface-6.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/share_plus_platform_interface-6.1.0",
       "packageUri": "lib/",
       "languageVersion": "2.18"
     },
@@ -1005,9 +1005,9 @@
     },
     {
       "name": "sqflite_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_android-2.4.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+2",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.9"
     },
     {
       "name": "sqflite_common",
@@ -1113,9 +1113,9 @@
     },
     {
       "name": "url_launcher_ios",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_ios-6.3.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_ios-6.3.4",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.7"
     },
     {
       "name": "url_launcher_linux",
@@ -1125,9 +1125,9 @@
     },
     {
       "name": "url_launcher_macos",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_macos-3.2.2",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/url_launcher_macos-3.2.3",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "url_launcher_platform_interface",
@@ -1161,9 +1161,9 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/vm_service-15.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/vm_service-15.0.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.5"
     },
     {
       "name": "watcher",

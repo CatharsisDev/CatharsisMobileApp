@@ -1,8 +1,9 @@
 import 'dart:math';
 import 'dart:io';
+import 'package:catharsis_cards/pages/auth/login_page.dart';
+import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -43,9 +44,6 @@ class AccountDeletionService {
               ),
             ],
           ),
-          actions: [
-            // Keep layout stable; message styled below Text widget
-          ],
           contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         ),
       );
@@ -53,7 +51,7 @@ class AccountDeletionService {
       // Try delete directly first
       await _deleteUserDataAndAuth();
       Navigator.of(context).pop(); // Close loading dialog
-      _showDone(context);
+      await _showDone(context);
       return;
     } on FirebaseAuthException catch (e) {
       Navigator.of(context).pop(); // Close loading dialog
@@ -107,7 +105,7 @@ class AccountDeletionService {
 
       await _deleteUserDataAndAuth();
       Navigator.of(context).pop(); // Close loading dialog
-      _showDone(context);
+      await _showDone(context);
     } on FirebaseAuthException catch (e) {
       // Close loading dialog if open
       if (Navigator.of(context).canPop()) {
@@ -116,8 +114,6 @@ class AccountDeletionService {
 
       // If the user cancelled any re-auth step, do not show an error.
       if (e.code == 'cancelled') {
-        // Optional: you can show a subtle info toast here instead of an error,
-        // or simply do nothing to silently cancel the deletion flow.
         return;
       }
 
@@ -266,7 +262,15 @@ class AccountDeletionService {
       
       // 3. Delete Firebase Auth user (this must be last)
       await user.delete();
-      
+
+      // Clear Google Sign-In cache to force account picker
+      try {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        // Force account selection by signing out completely
+        await _auth.signOut();
+      } catch (_) {}
+
       print('Account deletion completed successfully');
     } catch (e) {
       print('Error during account deletion: $e');
@@ -330,7 +334,7 @@ class AccountDeletionService {
         try {
           final userBoxName = '${prefix}_$userId';
           if (Hive.isBoxOpen(userBoxName)) {
-            final box = Hive.box(userBoxName);
+            final box = Hive.box<Question>(userBoxName);
             await box.clear();
             await box.close();
           }
@@ -522,8 +526,6 @@ class AccountDeletionService {
     return result;
   }
 
-  // If you're having issues with google_sign_in, use this simpler version:
-
   Future<void> _reauthWithGoogle(BuildContext context) async {
     try {
       final proceed = await _showProviderConfirmSheet(context, 'Google');
@@ -553,12 +555,8 @@ class AccountDeletionService {
 
       // Use Firebase Auth's built-in Google provider
       final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-
-      // Add scopes if needed
       googleProvider.addScope('email');
       googleProvider.addScope('profile');
-
-      // Re-authenticate with the provider
       await _auth.currentUser!.reauthenticateWithProvider(googleProvider);
 
       // Close loading dialog
@@ -784,43 +782,41 @@ class AccountDeletionService {
     );
   }
 
-  void _showDone(BuildContext context) {
+  Future<void> _showDone(BuildContext context) async {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
+      const SnackBar(
+        content: Text(
           'Account deleted successfully. Goodbye!',
           style: TextStyle(fontFamily: 'Runtime'),
         ),
         backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
       ),
     );
 
-    // After a short delay, navigate back to the auth/sign-up flow
-    Future.delayed(const Duration(milliseconds: 900), () {
-      // Prefer GoRouter if available
+    // Wait for snackbar to show
+    await Future.delayed(const Duration(milliseconds: 2200));
+
+    // Navigate to login page - use your actual route
+    if (context.mounted) {
       try {
-        // Adjust this primary route to your actual auth route if different
-        context.go('/auth');
-        return;
+        // Try GoRouter first
+        context.go('/login');
       } catch (_) {
-        // Fallbacks for projects not using GoRouter or with different route names
-        final navigator = Navigator.of(context, rootNavigator: true);
-
-        // Try common named routes
-        for (final route in const ['/auth', '/login', '/signup', '/onboarding']) {
-          try {
-            navigator.pushNamedAndRemoveUntil(route, (r) => false);
-            return;
-          } catch (_) {
-            // Try next candidate
-          }
+        try {
+          // Try named route
+          Navigator.of(context, rootNavigator: true)
+              .pushNamedAndRemoveUntil('/login', (route) => false);
+        } catch (_) {
+          // Fallback to replacing with your login widget
+          Navigator.of(context, rootNavigator: true)
+              .pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => LoginPage()),
+            (route) => false,
+          );
         }
-
-        // Last resort: clear to first route (e.g., splash) if no named routes matched
-        navigator.popUntil((r) => r.isFirst);
       }
-    });
+    }
   }
 
   String _randomNonce([int length = 32]) {

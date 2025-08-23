@@ -3,43 +3,39 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // User profiles and all subcollections
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       
-      // Fix: Use underscore to match your code
+      // Liked questions subcollection
       match /liked_questions/{questionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Sessions subcollection
+      match /sessions/{sessionId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
       
       // Catch-all for any other subcollections
       match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // User sessions and all subcollections
-    match /user_sessions/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // User behavior collection
+    match /user_behavior/{userId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       
       match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-    
-    // User behaviors and all subcollections
-    match /user_behaviors/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
     
     // User preferences
     match /user_preferences/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Cards collection
+    // Cards collection (keep existing logic)
     match /cards/{cardId} {
       allow read: if true;
       allow create, update: if request.auth != null;
