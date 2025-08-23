@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>40399565067-35uf43031oo3rp9s8gq8l98nu9t4j2i4.apps.googleusercontent.com</string>
+	<string>40399565067-j4h39bc2ftai8hn3ea2hrmbquafbrm4s.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.40399565067-35uf43031oo3rp9s8gq8l98nu9t4j2i4</string>
+	<string>com.googleusercontent.apps.40399565067-j4h39bc2ftai8hn3ea2hrmbquafbrm4s</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDvjMgWXscMuPNBAmVA7CWn6h40sQ8Ws8o</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.catharsismobileapp</string>
+	<string>com.example.catharsisCards</string>
 	<key>PROJECT_ID</key>
 	<string>catharsiscards</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:40399565067:ios:fd035a779d6e1a8f61720e</string>
+	<string>1:40399565067:ios:997548b9246d604f61720e</string>
 </dict>
 </plist>

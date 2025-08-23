@@ -69,21 +69,7 @@ class SettingsMenuPage extends ConsumerWidget {
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     children: [
                       SizedBox(height: 16),
-                      
-                      // Delete Account
-                      _buildSettingsItem(
-                        context: context,
-                        theme: theme,
-                        icon: Icons.delete_forever,
-                        title: 'Delete account',
-                        isRed: true,
-                        onTap: () async {
-                          // Hand off the whole flow (confirmation + loading + deletion + navigation) to the service
-                          await AccountDeletionService().deleteAccountFlow(context);
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      
+                            
                       // Customize Theme
                       _buildSettingsItem(
                         context: context,
@@ -264,6 +250,7 @@ class SettingsMenuPage extends ConsumerWidget {
                             ),
                           );
                           
+                          
                           if (shouldLogout == true) {
                             try {
                               // Show loading indicator
@@ -308,6 +295,21 @@ class SettingsMenuPage extends ConsumerWidget {
                           }
                         },
                       ),
+
+                       // Delete Account
+                       SizedBox(height: 16),
+                      _buildSettingsItem(
+                        context: context,
+                        theme: theme,
+                        icon: Icons.delete_forever,
+                        title: 'Delete account',
+                        isRed: true,
+                        onTap: () async {
+                          // Hand off the whole flow (confirmation + loading + deletion + navigation) to the service
+                          await AccountDeletionService().deleteAccountFlow(context);
+                        },
+                      ),
+
                       SizedBox(height: 16),
                       _buildSettingsItem(
                         context: context,

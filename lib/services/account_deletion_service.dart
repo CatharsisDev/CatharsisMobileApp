@@ -10,6 +10,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
+import 'package:catharsis_cards/provider/theme_provider.dart';
 
 class AccountDeletionService {
   final _auth = FirebaseAuth.instance;
@@ -31,14 +32,21 @@ class AccountDeletionService {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
-            children: [
+            children: const [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Deleting account...'),
+              Text(
+                'Deleting account...',
+                style: TextStyle(fontFamily: 'Runtime'),
+              ),
             ],
           ),
+          actions: [
+            // Keep layout stable; message styled below Text widget
+          ],
+          contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         ),
       );
 
@@ -83,12 +91,15 @@ class AccountDeletionService {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
-            children: [
+            children: const [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Deleting account...'),
+              Text(
+                'Deleting account...',
+                style: TextStyle(fontFamily: 'Runtime'),
+              ),
             ],
           ),
         ),
@@ -98,9 +109,18 @@ class AccountDeletionService {
       Navigator.of(context).pop(); // Close loading dialog
       _showDone(context);
     } on FirebaseAuthException catch (e) {
+      // Close loading dialog if open
       if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog if open
+        Navigator.of(context).pop();
       }
+
+      // If the user cancelled any re-auth step, do not show an error.
+      if (e.code == 'cancelled') {
+        // Optional: you can show a subtle info toast here instead of an error,
+        // or simply do nothing to silently cancel the deletion flow.
+        return;
+      }
+
       _showSnack(context, 'Delete failed: ${e.message}');
     } catch (e) {
       if (Navigator.of(context).canPop()) {
@@ -111,41 +131,123 @@ class AccountDeletionService {
   }
 
   Future<bool> _showConfirmationDialog(BuildContext context) async {
-    return await showDialog<bool>(
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+
+    return await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This will permanently delete your account and all associated data, including:'),
-            SizedBox(height: 10),
-            Text('• Your liked questions'),
-            Text('• Your progress and preferences'),
-            Text('• All personal data'),
-            SizedBox(height: 15),
-            Text(
-              'This action cannot be undone.',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Account'),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Grab handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey[600]
+                      : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title
+              Text(
+                'Delete account',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textTheme.titleLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Body
+              Text(
+                'Are you sure you want to delete your account?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(sheetCtx, false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.grey[600]!
+                                : Colors.grey[300]!,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(sheetCtx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Delete account',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom + 20),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     ) ?? false;
   }
 
@@ -268,39 +370,7 @@ class AccountDeletionService {
       );
     }
 
-    final controller = TextEditingController();
-    final pwd = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Identity'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Please re-enter your password for $email'),
-            const SizedBox(height: 15),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
+    final pwd = await _showPasswordReauthSheet(context, email);
 
     if (pwd == null || pwd.isEmpty) {
       throw FirebaseAuthException(
@@ -313,70 +383,348 @@ class AccountDeletionService {
     await _auth.currentUser!.reauthenticateWithCredential(cred);
   }
 
-  // If you're having issues with google_sign_in, use this simpler version:
+  Future<String?> _showPasswordReauthSheet(BuildContext context, String email) async {
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+    final controller = TextEditingController();
 
-Future<void> _reauthWithGoogle(BuildContext context) async {
-  try {
-    // Show loading indicator
-    showDialog(
+    final result = await showModalBottomSheet<String?>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 20),
-            Text('Re-authenticating with Google...'),
-          ],
-        ),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Grab handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.grey[600]
+                        : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Title
+                Text(
+                  'Confirm Identity',
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textTheme.titleLarge?.color,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Body
+                Text(
+                  'Please re-enter your password for\n$email',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  obscureText: true,
+                  style: const TextStyle(fontFamily: 'Runtime'),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    labelStyle: const TextStyle(fontFamily: 'Runtime'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(sheetCtx, null),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: theme.brightness == Brightness.dark
+                                  ? Colors.grey[600]!
+                                  : Colors.grey[300]!,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.grey[300]
+                                : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(sheetCtx, controller.text),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom + 20),
+              ],
+            ),
+          ),
+        );
+      },
     );
 
-    // Use Firebase Auth's built-in Google provider
-    final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-    
-    // Add scopes if needed
-    googleProvider.addScope('email');
-    googleProvider.addScope('profile');
-    
-    // Re-authenticate with the provider
-    await _auth.currentUser!.reauthenticateWithProvider(googleProvider);
-    
-    // Close loading dialog
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    
-    print('Google re-authentication successful');
-  } catch (e) {
-    // Close loading dialog if it's still open
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    
-    if (e is FirebaseAuthException) {
-      rethrow;
-    } else {
-      throw FirebaseAuthException(
-        code: 'google-reauth-failed',
-        message: 'Google re-authentication failed: $e',
-      );
-    }
+    return result;
   }
-}
 
-  Future<void> _reauthWithApple(BuildContext context) async {
+  // If you're having issues with google_sign_in, use this simpler version:
+
+  Future<void> _reauthWithGoogle(BuildContext context) async {
     try {
+      final proceed = await _showProviderConfirmSheet(context, 'Google');
+      if (proceed != true) {
+        throw FirebaseAuthException(
+          code: 'cancelled',
+          message: 'Google re-authentication cancelled.',
+        );
+      }
       // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
-            children: [
+            children: const [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Re-authenticating with Apple...'),
+              Text(
+                'Re-authenticating with Google...',
+                style: TextStyle(fontFamily: 'Runtime'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Use Firebase Auth's built-in Google provider
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+
+      // Add scopes if needed
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+
+      // Re-authenticate with the provider
+      await _auth.currentUser!.reauthenticateWithProvider(googleProvider);
+
+      // Close loading dialog
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      print('Google re-authentication successful');
+    } catch (e) {
+      // Close loading dialog if it's still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      if (e is FirebaseAuthException) {
+        rethrow;
+      } else {
+        throw FirebaseAuthException(
+          code: 'google-reauth-failed',
+          message: 'Google re-authentication failed: $e',
+        );
+      }
+    }
+  }
+
+  Future<bool> _showProviderConfirmSheet(BuildContext context, String providerLabel) async {
+    final theme = Theme.of(context);
+    final customTheme = theme.extension<CustomThemeExtension>();
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Grab handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey[600]
+                      : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Continue with $providerLabel',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textTheme.titleLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'To continue deleting your account, re‑authenticate with $providerLabel.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(sheetCtx, false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.grey[600]!
+                                : Colors.grey[300]!,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(sheetCtx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom + 20),
+            ],
+          ),
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _reauthWithApple(BuildContext context) async {
+    try {
+      final proceed = await _showProviderConfirmSheet(context, 'Apple');
+      if (proceed != true) {
+        throw FirebaseAuthException(
+          code: 'cancelled',
+          message: 'Apple re-authentication cancelled.',
+        );
+      }
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text(
+                'Re-authenticating with Apple...',
+                style: TextStyle(fontFamily: 'Runtime'),
+              ),
             ],
           ),
         ),
@@ -410,7 +758,7 @@ Future<void> _reauthWithGoogle(BuildContext context) async {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      
+
       if (e is FirebaseAuthException) {
         rethrow;
       } else {
@@ -426,7 +774,10 @@ Future<void> _reauthWithGoogle(BuildContext context) async {
   void _showSnack(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(
+          msg,
+          style: const TextStyle(fontFamily: 'Runtime'),
+        ),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 4),
       ),
@@ -435,10 +786,13 @@ Future<void> _reauthWithGoogle(BuildContext context) async {
 
   void _showDone(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account deleted successfully. Goodbye!'),
+      SnackBar(
+        content: const Text(
+          'Account deleted successfully. Goodbye!',
+          style: TextStyle(fontFamily: 'Runtime'),
+        ),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
 

@@ -25,10 +25,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
@@ -48,7 +45,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBEEmvlBF3xTdgNNrW7qfy5PbUkjTHrC4o',
-    appId: '1:40399565067:android:01bc2985caff5d9c61720e',
+    appId: '1:40399565067:android:a142ae9f5887edf761720e',
     messagingSenderId: '40399565067',
     projectId: 'catharsiscards',
     storageBucket: 'catharsiscards.firebasestorage.app',
@@ -56,12 +53,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDvjMgWXscMuPNBAmVA7CWn6h40sQ8Ws8o',
-    appId: '1:40399565067:ios:997548b9246d604f61720e',
+    appId: '1:40399565067:ios:fd035a779d6e1a8f61720e',
     messagingSenderId: '40399565067',
     projectId: 'catharsiscards',
     storageBucket: 'catharsiscards.firebasestorage.app',
-    iosClientId: '40399565067-j4h39bc2ftai8hn3ea2hrmbquafbrm4s.apps.googleusercontent.com',
-    iosBundleId: 'com.example.catharsisCards',
+    iosClientId: '40399565067-35uf43031oo3rp9s8gq8l98nu9t4j2i4.apps.googleusercontent.com',
+    iosBundleId: 'com.example.catharsismobileapp',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
@@ -72,6 +69,16 @@ class DefaultFirebaseOptions {
     authDomain: 'catharsiscards.firebaseapp.com',
     storageBucket: 'catharsiscards.firebasestorage.app',
     measurementId: 'G-MN27X06C3N',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDvjMgWXscMuPNBAmVA7CWn6h40sQ8Ws8o',
+    appId: '1:40399565067:ios:997548b9246d604f61720e',
+    messagingSenderId: '40399565067',
+    projectId: 'catharsiscards',
+    storageBucket: 'catharsiscards.firebasestorage.app',
+    iosClientId: '40399565067-j4h39bc2ftai8hn3ea2hrmbquafbrm4s.apps.googleusercontent.com',
+    iosBundleId: 'com.example.catharsisCards',
   );
 
 }
