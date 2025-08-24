@@ -110,6 +110,18 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
           return null;
         },
       ),
+      GoRoute(
+        path: '/auth/callback',
+        builder: (context, state) {
+          // Handle the OAuth callback and redirect to home
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/home');
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
     ],
   );
 }

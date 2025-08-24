@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:io';
-import 'package:catharsis_cards/pages/auth/login_page.dart';
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -50,18 +49,24 @@ class AccountDeletionService {
 
       // Try delete directly first
       await _deleteUserDataAndAuth();
-      Navigator.of(context).pop(); // Close loading dialog
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading dialog
+      }
       await _showDone(context);
       return;
     } on FirebaseAuthException catch (e) {
-      Navigator.of(context).pop(); // Close loading dialog
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading dialog
+      }
       
       if (e.code != 'requires-recent-login') {
         _showSnack(context, 'Delete failed: ${e.message}');
         return;
       }
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading dialog
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading dialog
+      }
       _showSnack(context, 'Delete failed: $e');
       return;
     }
@@ -330,13 +335,19 @@ class AccountDeletionService {
           print('Error clearing box $prefix: $e');
         }
         
-        // Clear user-specific boxes
+        // Clear user-specific boxes with proper typing
         try {
           final userBoxName = '${prefix}_$userId';
           if (Hive.isBoxOpen(userBoxName)) {
-            final box = Hive.box<Question>(userBoxName);
-            await box.clear();
-            await box.close();
+            if (prefix == 'swipeData') {
+              final box = Hive.box(userBoxName); // Use dynamic for swipeData
+              await box.clear();
+              await box.close();
+            } else {
+              final box = Hive.box<Question>(userBoxName);
+              await box.clear();
+              await box.close();
+            }
           }
           await Hive.deleteBoxFromDisk(userBoxName);
         } catch (e) {
@@ -794,27 +805,21 @@ class AccountDeletionService {
       ),
     );
 
-    // Wait for snackbar to show
-    await Future.delayed(const Duration(milliseconds: 2200));
+    // Wait longer and check context validity
+    await Future.delayed(const Duration(milliseconds: 3000));
 
-    // Navigate to login page - use your actual route
+    // Navigate with better error handling
     if (context.mounted) {
       try {
-        // Try GoRouter first
-        context.go('/login');
+        context.go('/auth');
       } catch (_) {
-        try {
-          // Try named route
-          Navigator.of(context, rootNavigator: true)
-              .pushNamedAndRemoveUntil('/login', (route) => false);
-        } catch (_) {
-          // Fallback to replacing with your login widget
-          Navigator.of(context, rootNavigator: true)
-              .pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => LoginPage()),
-            (route) => false,
-          );
-        }
+        // Fallback navigation
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            Navigator.of(context, rootNavigator: true)
+                .pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        });
       }
     }
   }
