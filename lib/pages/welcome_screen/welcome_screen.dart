@@ -563,227 +563,249 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     if (_customAvatarFile != null) {
       avatarList.add(_customAvatarFile!.path);
     }
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFFAF1E1),
-                const Color(0xFFFAF1E1).withOpacity(0.95),
-              ],
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.transparent,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-          ),
-        ),
-        Opacity(
-          opacity: 0.4,
-          child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/background_texture.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ),
-        Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Stack(
                   children: [
-                    Text(
-                      'Personalize Your Profile',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      'Choose your avatar and username',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-                    // Avatar Selection
-                    Text(
-                      'Choose Avatar',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    // Added ShaderMask for edge blur effect
-                    ShaderMask(
-                      shaderCallback: (Rect bounds) {
-                        return LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black,
-                            Colors.black,
-                            Colors.transparent,
-                          ],
-                          stops: [0.0, 0.1, 0.9, 1.0],
-                        ).createShader(bounds);
-                      },
-                      blendMode: BlendMode.dstIn,
-                      child: SizedBox(
-                        height: 100,
-                        child: PageView.builder(
-                          controller: _avatarCarouselController,
-                          itemCount: avatarList.length,
-                          itemBuilder: (context, index) {
-                            final imagePath = avatarList[index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  _avatarCarouselController.animateToPage(
-                                    index,
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  );
-                                },
-                                child: _buildAvatarChoice(imagePath, index),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(avatarList.length, (i) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentAvatarIndex == i
-                                ? const Color.fromRGBO(42, 63, 44, 0.7)
-                                : Colors.grey,
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: _pickCustomAvatar,
-                        icon: const Icon(Icons.upload),
-                        label: const Text('Upload Avatar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const SizedBox(height: 40),
-                    // Username Input
-                    Text(
-                      'Username',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+                    // Background gradient
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.2),
-                          width: 1,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFFFAF1E1),
+                            const Color(0xFFFAF1E1).withOpacity(0.95),
+                          ],
                         ),
-                      ),
-                      child: TextField(
-                        onChanged: (value) {
-                          setState(() {
-                            _hasProfanity = _profanityFilter.hasProfanity(value);
-                            _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
-                          });
-                        },
-                        controller: _usernameController,
-                        cursorColor: const Color.fromRGBO(42, 63, 44, 1),
-                        style: TextStyle(
-                          fontFamily: 'Runtime',
-                          fontSize: 16,
-                          color: const Color.fromRGBO(32, 28, 17, 1),
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Enter your username',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Runtime',
-                            color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.5),
-                          ),
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        maxLength: 20,
-                        buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                       ),
                     ),
-                    if (_hasProfanity)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Username contains inappropriate language',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 14,
-                            color: Colors.red,
+                    // Texture overlay
+                    Opacity(
+                      opacity: 0.4,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage("assets/images/background_texture.png"),
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
-                    if (_hasInvalidChars)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Username can only contain letters, numbers, and underscores',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 14,
-                            color: Colors.red,
+                    ),
+                    // Main content
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Personalize Your Profile',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color.fromRGBO(32, 28, 17, 1),
+                                  ),
+                                ),
+                                const SizedBox(height: 30),
+                                Text(
+                                  'Choose your avatar and username',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
+                                  ),
+                                ),
+                                const SizedBox(height: 50),
+                                // Avatar Selection
+                                Text(
+                                  'Choose Avatar',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color.fromRGBO(32, 28, 17, 1),
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                                // Added ShaderMask for edge blur effect
+                                ShaderMask(
+                                  shaderCallback: (Rect bounds) {
+                                    return LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black,
+                                        Colors.black,
+                                        Colors.transparent,
+                                      ],
+                                      stops: [0.0, 0.1, 0.9, 1.0],
+                                    ).createShader(bounds);
+                                  },
+                                  blendMode: BlendMode.dstIn,
+                                  child: SizedBox(
+                                    height: 100,
+                                    child: PageView.builder(
+                                      controller: _avatarCarouselController,
+                                      itemCount: avatarList.length,
+                                      itemBuilder: (context, index) {
+                                        final imagePath = avatarList[index];
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              _avatarCarouselController.animateToPage(
+                                                index,
+                                                duration: const Duration(milliseconds: 300),
+                                                curve: Curves.easeInOut,
+                                              );
+                                            },
+                                            child: _buildAvatarChoice(imagePath, index),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(avatarList.length, (i) {
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _currentAvatarIndex == i
+                                            ? const Color.fromRGBO(42, 63, 44, 0.7)
+                                            : Colors.grey,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _pickCustomAvatar,
+                                    icon: const Icon(Icons.upload),
+                                    label: const Text('Upload Avatar'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const SizedBox(height: 40),
+                                // Username Input
+                                Text(
+                                  'Username',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color.fromRGBO(32, 28, 17, 1),
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: TextField(
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _hasProfanity = _profanityFilter.hasProfanity(value);
+                                        _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
+                                      });
+                                    },
+                                    controller: _usernameController,
+                                    cursorColor: const Color.fromRGBO(42, 63, 44, 1),
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
+                                      fontSize: 16,
+                                      color: const Color.fromRGBO(32, 28, 17, 1),
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter your username',
+                                      hintStyle: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.5),
+                                      ),
+                                      border: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    maxLength: 20,
+                                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                                  ),
+                                ),
+                                if (_hasProfanity)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Username contains inappropriate language',
+                                      style: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: 14,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                if (_hasInvalidChars)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Username can only contain letters, numbers, and underscores',
+                                      style: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: 14,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+                          child: _buildNavigationButtons(),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-              child: _buildNavigationButtons(),
-            ),
-          ],
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 
