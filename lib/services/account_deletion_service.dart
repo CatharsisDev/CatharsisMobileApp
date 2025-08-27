@@ -18,144 +18,114 @@ class AccountDeletionService {
   final _firestore = FirebaseFirestore.instance;
 
   Future<void> deleteAccountFlow(BuildContext context) async {
+    if (!context.mounted) return;
+    
     final user = _auth.currentUser;
     if (user == null) {
-      if (context != null && context.mounted) {
-        _showSnack(context, 'No user is currently signed in.');
-      }
+      _showSnack(context, 'No user is currently signed in.');
       return;
     }
 
-    // Show confirmation dialog
     final confirmed = await _showConfirmationDialog(context);
-    if (!confirmed) return;
+    if (!confirmed || !context.mounted) return;
 
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Row(
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text(
-                'Deleting account...',
-                style: TextStyle(fontFamily: 'Runtime'),
-              ),
-            ],
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        ),
-      );
-
-      // Try delete directly first
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog
-      }
-      await _deleteUserDataAndAuth();
-      if (context != null && context.mounted) {
-        await _showDone(context);
-      }
+      await _attemptDirectDeletion(context);
       return;
     } on FirebaseAuthException catch (e) {
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog
+      if (e.code == 'requires-recent-login') {
+        await _handleReauthenticationFlow(context, user);
+      } else {
+        _showSnack(context, 'Delete failed: ${e.message}');
       }
+    } catch (e) {
+      _showSnack(context, 'Delete failed: $e');
+    }
+  }
 
-      if (e.code != 'requires-recent-login') {
-        if (context != null && context.mounted) {
-          _showSnack(context, 'Delete failed: ${e.message}');
-        }
+  Future<void> _attemptDirectDeletion(BuildContext context) async {
+    _showLoadingDialog(context, 'Deleting account...');
+    
+    try {
+      await _deleteUserDataAndAuth();
+      _dismissDialog(context);
+      await _showDone(context);
+    } catch (e) {
+      _dismissDialog(context);
+      rethrow;
+    }
+  }
+
+  Future<void> _handleReauthenticationFlow(BuildContext context, User user) async {
+    final providers = user.providerData.map((p) => p.providerId).toList();
+    print('User providers: $providers');
+
+    try {
+      if (providers.contains('password')) {
+        await _reauthWithPassword(context, user.email);
+      } else if (providers.contains('google.com')) {
+        await _reauthWithGoogle(context);
+      } else if (providers.contains('apple.com')) {
+        await _reauthWithApple(context);
+      } else if (providers.contains('anonymous')) {
+        print('Anonymous user - proceeding without reauth');
+      } else {
+        _showSnack(context, 'Please sign in again to delete your account.');
         return;
       }
 
-      // Re-authenticate based on provider
-      final providers = user.providerData.map((p) => p.providerId).toList();
-      print('User providers: $providers');
+      // Retry deletion after successful re-authentication
+      await _attemptDirectDeletion(context);
+      
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'cancelled') {
+        _showSnack(context, 'Delete failed: ${e.message}');
+      }
+    } catch (e) {
+      _showSnack(context, 'Delete failed: $e');
+    }
+  }
 
-      try {
-        if (providers.contains('password')) {
-          await _reauthWithPassword(context, user.email);
-        } else if (providers.contains('google.com')) {
-          await _reauthWithGoogle(context);
-        } else if (providers.contains('apple.com')) {
-          await _reauthWithApple(context);
-        } else if (providers.contains('anonymous')) {
-          print('Anonymous user - proceeding without reauth');
-        } else {
-          if (context != null && context.mounted) {
-            _showSnack(context, 'Please sign in again to delete your account.');
-          }
-          return;
-        }
-
-        // Retry deletion after successful re-authentication
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              content: Row(
-                children: const [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 20),
-                  Text(
-                    'Deleting account...',
-                    style: TextStyle(fontFamily: 'Runtime'),
-                  ),
-                ],
+  void _showLoadingDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontFamily: 'Runtime'),
               ),
             ),
-          );
-        }
+          ],
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      ),
+    );
+  }
 
-        await _deleteUserDataAndAuth();
-
-        if (context.mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(); // Close loading dialog
-        }
-
-        if (context != null && context.mounted) {
-          await _showDone(context);
-        }
-      } on FirebaseAuthException catch (e) {
-        if (context.mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-
-        if (e.code != 'cancelled' && context.mounted) {
-          _showSnack(context, 'Delete failed: ${e.message}');
-        }
-      } catch (e) {
-        if (context.mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-
-        if (context != null && context.mounted) {
-          _showSnack(context, 'Delete failed: $e');
-        }
-      }
-      return;
-    } catch (e) {
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog
-      }
-      if (context != null && context.mounted) {
-        _showSnack(context, 'Delete failed: $e');
-      }
-      return;
+  void _dismissDialog(BuildContext context) {
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
   }
 
   Future<bool> _showConfirmationDialog(BuildContext context) async {
+    if (!context.mounted) return false;
+    
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
 
     return await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
       builder: (sheetCtx) {
         return Container(
           decoration: BoxDecoration(
@@ -194,12 +164,12 @@ class AccountDeletionService {
               const SizedBox(height: 16),
               // Body
               Text(
-                'Are you sure you want to delete your account?',
+                'This will permanently delete your account and all data. This cannot be undone.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Runtime',
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   color: theme.brightness == Brightness.dark
                       ? Colors.grey[400]
                       : Colors.grey[600],
@@ -241,8 +211,7 @@ class AccountDeletionService {
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(sheetCtx, true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                        backgroundColor: Colors.red,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -280,18 +249,15 @@ class AccountDeletionService {
       // 1. Delete Firestore data
       await _deleteFirestoreData(userId);
       
-      // 2. Delete local data
+      // 2. Delete local data  
       await _deleteLocalData(userId);
       
       // 3. Delete Firebase Auth user (this must be last)
       await user.delete();
-
-      // Clear Google Sign-In cache to force account picker
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      googleProvider.addScope('email');
-      // Force account selection by signing out completely
+      
+      // 4. Sign out completely
       await _auth.signOut();
-
+      
       print('Account deletion completed successfully');
     } catch (e) {
       print('Error during account deletion: $e');
@@ -300,54 +266,50 @@ class AccountDeletionService {
   }
 
   Future<void> _deleteFirestoreData(String userId) async {
-    // Fault-tolerant: wrap each Firestore delete in its own try-catch
-    bool userDocDeleted = false;
-    // Delete user document
+    final tasks = <Future>[];
+    
+    // Delete main collections concurrently
+    tasks.add(_safeFirestoreDelete('users', userId));
+    tasks.add(_safeFirestoreDelete('user_behavior', userId));
+    tasks.add(_safeFirestoreDelete('user_preferences', userId));
+    
+    // Delete subcollections
+    tasks.add(_deleteSubcollection('users', userId, 'liked_questions'));
+    tasks.add(_deleteSubcollection('users', userId, 'sessions'));
+    
+    await Future.wait(tasks);
+    print('Firestore data deletion completed for user: $userId');
+  }
+
+  Future<void> _safeFirestoreDelete(String collection, String docId) async {
     try {
-      await _firestore.collection('users').doc(userId).delete();
-      userDocDeleted = true;
+      await _firestore.collection(collection).doc(docId).delete();
+      print('Deleted $collection/$docId');
     } catch (e) {
-      print('Error deleting user document: $e');
+      print('Error deleting $collection/$docId: $e');
     }
-    // Delete user behavior data
+  }
+
+  Future<void> _deleteSubcollection(String parentCollection, String parentDoc, String subcollection) async {
     try {
-      await _firestore.collection('user_behavior').doc(userId).delete();
+      final snapshot = await _firestore
+          .collection(parentCollection)
+          .doc(parentDoc)
+          .collection(subcollection)
+          .get();
+      
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      if (snapshot.docs.isNotEmpty) {
+        await batch.commit();
+        print('Deleted ${snapshot.docs.length} documents from $subcollection');
+      }
     } catch (e) {
-      print('Error deleting user_behavior document: $e');
+      print('Error deleting subcollection $subcollection: $e');
     }
-    // Only try to delete subcollections if user doc still exists (was not deleted above)
-    if (userDocDeleted) {
-      final userRef = _firestore.collection('users').doc(userId);
-      // Delete liked questions subcollection
-      try {
-        final likedSnapshot = await userRef.collection('liked_questions').get();
-        for (final doc in likedSnapshot.docs) {
-          try {
-            await doc.reference.delete();
-          } catch (e) {
-            print('Error deleting liked_questions doc ${doc.id}: $e');
-          }
-        }
-      } catch (e) {
-        print('Error getting liked_questions: $e');
-      }
-      // Delete user sessions subcollection
-      try {
-        final sessionsSnapshot = await userRef.collection('sessions').get();
-        for (final doc in sessionsSnapshot.docs) {
-          try {
-            await doc.reference.delete();
-          } catch (e) {
-            print('Error deleting sessions doc ${doc.id}: $e');
-          }
-        }
-      } catch (e) {
-        print('Error getting sessions: $e');
-      }
-    } else {
-      print('User document already deleted; skipping subcollection deletions.');
-    }
-    print('Firestore data deleted for user: $userId');
   }
 
   Future<void> _deleteLocalData(String userId) async {
@@ -357,60 +319,47 @@ class AccountDeletionService {
       await prefs.clear();
       
       // Clear Hive boxes
-      final boxPrefixes = ['likedQuestions', 'swipeData', 'cachedQuestions', 'seenQuestions'];
-      
-      for (final prefix in boxPrefixes) {
-        // Clear default boxes
-        try {
-          if (Hive.isBoxOpen(prefix)) {
-            final box = Hive.box(prefix);
-            await box.clear();
-            await box.close();
-          }
-          await Hive.deleteBoxFromDisk(prefix);
-        } catch (e) {
-          print('Error clearing box $prefix: $e');
-        }
-        
-        // Clear user-specific boxes with proper typing
-        try {
-          final userBoxName = '${prefix}_$userId';
-          if (Hive.isBoxOpen(userBoxName)) {
-            if (prefix == 'swipeData') {
-              final box = Hive.box(userBoxName); // Use dynamic for swipeData
-              await box.clear();
-              await box.close();
-            } else {
-              final box = Hive.box<Question>(userBoxName);
-              await box.clear();
-              await box.close();
-            }
-          }
-          await Hive.deleteBoxFromDisk(userBoxName);
-        } catch (e) {
-          print('Error clearing user box ${prefix}_$userId: $e');
-        }
-        
-        // Clear default pattern boxes
-        for (final suffix in ['_default', '_temp']) {
-          try {
-            final boxName = '$prefix$suffix';
-            if (Hive.isBoxOpen(boxName)) {
-              final box = Hive.box(boxName);
-              await box.clear();
-              await box.close();
-            }
-            await Hive.deleteBoxFromDisk(boxName);
-          } catch (e) {
-            // Ignore if box doesn't exist
-          }
-        }
-      }
+      await _clearHiveBoxes(userId);
       
       print('Local data deleted successfully');
     } catch (e) {
       print('Error deleting local data: $e');
-      // Don't throw here - we still want to delete the auth account
+    }
+  }
+
+  Future<void> _clearHiveBoxes(String userId) async {
+    final boxPrefixes = ['likedQuestions', 'swipeData', 'cachedQuestions', 'seenQuestions'];
+    
+    for (final prefix in boxPrefixes) {
+      await _clearBoxVariants(prefix, userId);
+    }
+  }
+
+  Future<void> _clearBoxVariants(String prefix, String userId) async {
+    final boxNames = [
+      prefix,                    // Default box
+      '${prefix}_$userId',       // User-specific box
+      '${prefix}_default',       // Default pattern
+      '${prefix}_temp',          // Temp pattern
+    ];
+    
+    for (final boxName in boxNames) {
+      await _clearSingleBox(boxName, prefix);
+    }
+  }
+
+  Future<void> _clearSingleBox(String boxName, String prefix) async {
+    try {
+      if (Hive.isBoxOpen(boxName)) {
+        final box = prefix == 'swipeData' 
+            ? Hive.box(boxName) 
+            : Hive.box<Question>(boxName);
+        await box.clear();
+        await box.close();
+      }
+      await Hive.deleteBoxFromDisk(boxName);
+    } catch (e) {
+      print('Error clearing box $boxName: $e');
     }
   }
 
@@ -423,7 +372,6 @@ class AccountDeletionService {
     }
 
     final pwd = await _showPasswordReauthSheet(context, email);
-
     if (pwd == null || pwd.isEmpty) {
       throw FirebaseAuthException(
         code: 'cancelled',
@@ -436,14 +384,17 @@ class AccountDeletionService {
   }
 
   Future<String?> _showPasswordReauthSheet(BuildContext context, String email) async {
+    if (!context.mounted) return null;
+    
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
     final controller = TextEditingController();
 
-    final result = await showModalBottomSheet<String?>(
+    return await showModalBottomSheet<String?>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      isDismissible: true,
       builder: (sheetCtx) {
         return Padding(
           padding: EdgeInsets.only(
@@ -461,7 +412,7 @@ class AccountDeletionService {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Grab handle
+                // Handle bar
                 Container(
                   width: 40,
                   height: 4,
@@ -473,7 +424,6 @@ class AccountDeletionService {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                // Title
                 Text(
                   'Confirm Identity',
                   style: TextStyle(
@@ -484,14 +434,12 @@ class AccountDeletionService {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Body
                 Text(
-                  'Please re-enter your password for\n$email',
+                  'Enter password for $email',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
                     color: theme.brightness == Brightness.dark
                         ? Colors.grey[400]
                         : Colors.grey[600],
@@ -501,11 +449,12 @@ class AccountDeletionService {
                 TextField(
                   controller: controller,
                   obscureText: true,
+                  autofocus: true,
                   style: const TextStyle(fontFamily: 'Runtime'),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(fontFamily: 'Runtime'),
-                    border: const OutlineInputBorder(),
+                    labelStyle: TextStyle(fontFamily: 'Runtime'),
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -514,27 +463,9 @@ class AccountDeletionService {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(sheetCtx, null),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: theme.brightness == Brightness.dark
-                                  ? Colors.grey[600]!
-                                  : Colors.grey[300]!,
-                            ),
-                          ),
-                        ),
-                        child: Text(
+                        child: const Text(
                           'Cancel',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.brightness == Brightness.dark
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
+                          style: TextStyle(fontFamily: 'Runtime'),
                         ),
                       ),
                     ),
@@ -544,17 +475,11 @@ class AccountDeletionService {
                         onPressed: () => Navigator.pop(sheetCtx, controller.text),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
                         ),
                         child: const Text(
                           'Continue',
                           style: TextStyle(
                             fontFamily: 'Runtime',
-                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -570,83 +495,93 @@ class AccountDeletionService {
         );
       },
     );
-
-    return result;
   }
 
   Future<void> _reauthWithGoogle(BuildContext context) async {
-    try {
-      final proceed = await _showProviderConfirmSheet(context, 'Google');
-      if (proceed != true) {
-        throw FirebaseAuthException(
-          code: 'cancelled',
-          message: 'Google re-authentication cancelled.',
-        );
-      }
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Row(
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text(
-                'Re-authenticating with Google...',
-                style: TextStyle(fontFamily: 'Runtime'),
-              ),
-            ],
-          ),
-        ),
+    final proceed = await _showProviderConfirmSheet(context, 'Google');
+    if (!proceed) {
+      throw FirebaseAuthException(
+        code: 'cancelled',
+        message: 'Google re-authentication cancelled.',
       );
+    }
 
+    _showLoadingDialog(context, 'Re-authenticating with Google...');
+
+    try {
       final googleSignIn = GoogleSignIn(scopes: ['email']);
+      await googleSignIn.signOut(); // Clear any cached session
+      
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         throw FirebaseAuthException(
           code: 'cancelled',
-          message: 'Google sign-in aborted.',
+          message: 'Google sign-in cancelled.',
         );
       }
 
       final googleAuth = await googleUser.authentication;
-
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
       await _auth.currentUser!.reauthenticateWithCredential(credential);
-
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-
+      _dismissDialog(context);
       print('Google re-authentication successful');
     } catch (e) {
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      _dismissDialog(context);
+      rethrow;
+    }
+  }
 
-      if (e is FirebaseAuthException) {
-        rethrow;
-      } else {
-        throw FirebaseAuthException(
-          code: 'google-reauth-failed',
-          message: 'Google re-authentication failed: $e',
-        );
-      }
+  Future<void> _reauthWithApple(BuildContext context) async {
+    final proceed = await _showProviderConfirmSheet(context, 'Apple');
+    if (!proceed) {
+      throw FirebaseAuthException(
+        code: 'cancelled',
+        message: 'Apple re-authentication cancelled.',
+      );
+    }
+
+    _showLoadingDialog(context, 'Re-authenticating with Apple...');
+
+    try {
+      final rawNonce = _randomNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      await _auth.currentUser!.reauthenticateWithCredential(oauthCredential);
+      _dismissDialog(context);
+      print('Apple re-authentication successful');
+    } catch (e) {
+      _dismissDialog(context);
+      rethrow;
     }
   }
 
   Future<bool> _showProviderConfirmSheet(BuildContext context, String providerLabel) async {
+    if (!context.mounted) return false;
+    
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
 
-    final result = await showModalBottomSheet<bool>(
+    return await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
       builder: (sheetCtx) {
         return Container(
           decoration: BoxDecoration(
@@ -660,7 +595,6 @@ class AccountDeletionService {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Grab handle
               Container(
                 width: 40,
                 height: 4,
@@ -683,12 +617,11 @@ class AccountDeletionService {
               ),
               const SizedBox(height: 16),
               Text(
-                'To continue deleting your account, re‑authenticate with $providerLabel.',
+                'To delete your account, please re-authenticate with $providerLabel.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Runtime',
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
                   color: theme.brightness == Brightness.dark
                       ? Colors.grey[400]
                       : Colors.grey[600],
@@ -700,27 +633,9 @@ class AccountDeletionService {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(sheetCtx, false),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: theme.brightness == Brightness.dark
-                                ? Colors.grey[600]!
-                                : Colors.grey[300]!,
-                          ),
-                        ),
-                      ),
-                      child: Text(
+                      child: const Text(
                         'Cancel',
-                        style: TextStyle(
-                          fontFamily: 'Runtime',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.brightness == Brightness.dark
-                              ? Colors.grey[300]
-                              : Colors.grey[700],
-                        ),
+                        style: TextStyle(fontFamily: 'Runtime'),
                       ),
                     ),
                   ),
@@ -730,17 +645,11 @@ class AccountDeletionService {
                       onPressed: () => Navigator.pop(sheetCtx, true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
                       ),
                       child: const Text(
                         'Continue',
                         style: TextStyle(
                           fontFamily: 'Runtime',
-                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -754,80 +663,12 @@ class AccountDeletionService {
           ),
         );
       },
-    );
-
-    return result ?? false;
+    ) ?? false;
   }
 
-  Future<void> _reauthWithApple(BuildContext context) async {
-    try {
-      final proceed = await _showProviderConfirmSheet(context, 'Apple');
-      if (proceed != true) {
-        throw FirebaseAuthException(
-          code: 'cancelled',
-          message: 'Apple re-authentication cancelled.',
-        );
-      }
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Row(
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text(
-                'Re-authenticating with Apple...',
-                style: TextStyle(fontFamily: 'Runtime'),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      final rawNonce = _randomNonce();
-      final nonce = _sha256ofString(rawNonce);
-
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-        nonce: nonce,
-      );
-
-      // Close loading dialog
-      if (context != null && context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
-
-      await _auth.currentUser!.reauthenticateWithCredential(oauthCredential);
-      print('Apple re-authentication successful');
-    } catch (e) {
-      // Close loading dialog if it's still open
-      if (context != null && context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-
-      if (e is FirebaseAuthException) {
-        rethrow;
-      } else {
-        throw FirebaseAuthException(
-          code: 'apple-reauth-failed',
-          message: 'Apple re-authentication failed: $e',
-        );
-      }
-    }
-  }
-
-  // Helper methods
   void _showSnack(BuildContext context, String msg) {
+    if (!context.mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -836,34 +677,35 @@ class AccountDeletionService {
         ),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   Future<void> _showDone(BuildContext context) async {
-    if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Account deleted successfully. Goodbye!',
-            style: TextStyle(fontFamily: 'Runtime'),
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+    if (!context.mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Account deleted successfully. Goodbye!',
+          style: TextStyle(fontFamily: 'Runtime'),
         ),
-      );
-    }
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
-    // Wait longer and check context validity
-    await Future.delayed(const Duration(milliseconds: 3000));
+    await Future.delayed(const Duration(milliseconds: 2500));
 
-    // Navigate with better error handling
-    if (context != null && context.mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context != null && context.mounted) {
-          context.go('/auth');
-        }
-      });
+    if (context.mounted) {
+      try {
+        context.go('/login');
+      } catch (_) {
+        Navigator.of(context, rootNavigator: true)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     }
   }
 
