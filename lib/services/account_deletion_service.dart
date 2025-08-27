@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:io';
 import 'package:catharsis_cards/questions_model.dart';
+import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -246,6 +247,9 @@ class AccountDeletionService {
     final userId = user.uid;
 
     try {
+      // Explicitly reset user counters before deleting Firestore data
+      await _resetUserCounters(userId);
+
       // 1. Delete Firestore data
       await _deleteFirestoreData(userId);
       
@@ -267,18 +271,31 @@ class AccountDeletionService {
 
   Future<void> _deleteFirestoreData(String userId) async {
     final tasks = <Future>[];
-    
-    // Delete main collections concurrently
+
+    // Delete main collections - use correct collection names
     tasks.add(_safeFirestoreDelete('users', userId));
-    tasks.add(_safeFirestoreDelete('user_behavior', userId));
+    tasks.add(_safeFirestoreDelete('user_behaviors', userId)); // plural
+    tasks.add(_safeFirestoreDelete('user_sessions', userId)); // from your service
     tasks.add(_safeFirestoreDelete('user_preferences', userId));
-    
+
     // Delete subcollections
     tasks.add(_deleteSubcollection('users', userId, 'liked_questions'));
-    tasks.add(_deleteSubcollection('users', userId, 'sessions'));
-    
+    tasks.add(_deleteSubcollection('user_behaviors', userId, 'views'));
+    tasks.add(_deleteSubcollection('user_behaviors', userId, 'swipes'));
+    tasks.add(_deleteSubcollection('user_sessions', userId, 'sessions'));
+
     await Future.wait(tasks);
     print('Firestore data deletion completed for user: $userId');
+  }
+
+  Future<void> _resetUserCounters(String userId) async {
+    try {
+      // Explicitly reset the seen cards counter before deletion
+      await UserBehaviorService.resetSeenCardsCount();
+      print('User counters reset for: $userId');
+    } catch (e) {
+      print('Error resetting user counters: $e');
+    }
   }
 
   Future<void> _safeFirestoreDelete(String collection, String docId) async {

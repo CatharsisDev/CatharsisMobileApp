@@ -15,6 +15,20 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
     initialLocation: '/',
     debugLogDiagnostics: true,
     refreshListenable: appStateNotifier,
+    redirect: (context, state) async {
+      final location = state.uri.toString();
+      
+      // Handle Firebase Auth deep links first
+      if (location.contains('firebaseauth') || 
+          location.contains('callback') ||
+          location.contains('com.googleusercontent') ||
+          location.contains('deep_link_id')) {
+        // Let Firebase handle auth, then redirect to root for proper routing
+        return '/';
+      }
+      
+      return null; // Continue to route-specific redirects
+    },
     routes: [
       // Loader page to avoid race conditions
       GoRoute(
@@ -108,18 +122,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
           }
           if (!tutorialState.hasSeenWelcome) return '/welcome';
           return null;
-        },
-      ),
-      GoRoute(
-        path: '/auth/callback',
-        builder: (context, state) {
-          // Handle the OAuth callback and redirect to home
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/home');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
         },
       ),
     ],
