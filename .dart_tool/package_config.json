@@ -465,33 +465,33 @@
     },
     {
       "name": "google_sign_in",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in-7.1.1",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in-6.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_sign_in_android",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_android-7.0.3",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_android-6.2.1",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_sign_in_ios",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_ios-6.1.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_ios-5.9.0",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.4"
     },
     {
       "name": "google_sign_in_platform_interface",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_platform_interface-3.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_platform_interface-2.5.0",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.4"
     },
     {
       "name": "google_sign_in_web",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_web-1.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/google_sign_in_web-0.12.4+4",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.4"
     },
     {
       "name": "graphs",

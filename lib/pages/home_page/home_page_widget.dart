@@ -747,7 +747,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             );
                             
                             // Update local counter immediately
-                            ref.read(seenCardsProvider.notifier).incrementSeenCards();
+                            ref.read(seenCardsCountProvider.notifier).state++;
                             
                             notifier.handleCardSwiped(
                               actualIndex,

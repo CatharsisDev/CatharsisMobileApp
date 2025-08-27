@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,7 +20,9 @@ class AccountDeletionService {
   Future<void> deleteAccountFlow(BuildContext context) async {
     final user = _auth.currentUser;
     if (user == null) {
-      _showSnack(context, 'No user is currently signed in.');
+      if (context != null && context.mounted) {
+        _showSnack(context, 'No user is currently signed in.');
+      }
       return;
     }
 
@@ -48,86 +51,101 @@ class AccountDeletionService {
       );
 
       // Try delete directly first
-      await _deleteUserDataAndAuth();
-      if (Navigator.of(context).canPop()) {
+      if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(); // Close loading dialog
       }
-      await _showDone(context);
+      await _deleteUserDataAndAuth();
+      if (context != null && context.mounted) {
+        await _showDone(context);
+      }
       return;
     } on FirebaseAuthException catch (e) {
-      if (Navigator.of(context).canPop()) {
+      if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(); // Close loading dialog
       }
-      
+
       if (e.code != 'requires-recent-login') {
-        _showSnack(context, 'Delete failed: ${e.message}');
+        if (context != null && context.mounted) {
+          _showSnack(context, 'Delete failed: ${e.message}');
+        }
         return;
       }
+
+      // Re-authenticate based on provider
+      final providers = user.providerData.map((p) => p.providerId).toList();
+      print('User providers: $providers');
+
+      try {
+        if (providers.contains('password')) {
+          await _reauthWithPassword(context, user.email);
+        } else if (providers.contains('google.com')) {
+          await _reauthWithGoogle(context);
+        } else if (providers.contains('apple.com')) {
+          await _reauthWithApple(context);
+        } else if (providers.contains('anonymous')) {
+          print('Anonymous user - proceeding without reauth');
+        } else {
+          if (context != null && context.mounted) {
+            _showSnack(context, 'Please sign in again to delete your account.');
+          }
+          return;
+        }
+
+        // Retry deletion after successful re-authentication
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              content: Row(
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 20),
+                  Text(
+                    'Deleting account...',
+                    style: TextStyle(fontFamily: 'Runtime'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        await _deleteUserDataAndAuth();
+
+        if (context.mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(); // Close loading dialog
+        }
+
+        if (context != null && context.mounted) {
+          await _showDone(context);
+        }
+      } on FirebaseAuthException catch (e) {
+        if (context.mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+
+        if (e.code != 'cancelled' && context.mounted) {
+          _showSnack(context, 'Delete failed: ${e.message}');
+        }
+      } catch (e) {
+        if (context.mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+
+        if (context != null && context.mounted) {
+          _showSnack(context, 'Delete failed: $e');
+        }
+      }
+      return;
     } catch (e) {
-      if (Navigator.of(context).canPop()) {
+      if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(); // Close loading dialog
       }
-      _showSnack(context, 'Delete failed: $e');
+      if (context != null && context.mounted) {
+        _showSnack(context, 'Delete failed: $e');
+      }
       return;
-    }
-
-    // Re-authenticate based on provider
-    final providers = user.providerData.map((p) => p.providerId).toList();
-    print('User providers: $providers');
-
-    try {
-      if (providers.contains('password')) {
-        await _reauthWithPassword(context, user.email);
-      } else if (providers.contains('google.com')) {
-        await _reauthWithGoogle(context);
-      } else if (providers.contains('apple.com')) {
-        await _reauthWithApple(context);
-      } else if (providers.contains('anonymous')) {
-        // Anonymous users typically don't require reauth
-        print('Anonymous user - proceeding without reauth');
-      } else {
-        _showSnack(context, 'Please sign in again to delete your account.');
-        return;
-      }
-
-      // Show loading dialog again
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Row(
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text(
-                'Deleting account...',
-                style: TextStyle(fontFamily: 'Runtime'),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      await _deleteUserDataAndAuth();
-      Navigator.of(context).pop(); // Close loading dialog
-      await _showDone(context);
-    } on FirebaseAuthException catch (e) {
-      // Close loading dialog if open
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-
-      // If the user cancelled any re-auth step, do not show an error.
-      if (e.code == 'cancelled') {
-        return;
-      }
-
-      _showSnack(context, 'Delete failed: ${e.message}');
-    } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog if open
-      }
-      _showSnack(context, 'Delete failed: $e');
     }
   }
 
@@ -269,12 +287,10 @@ class AccountDeletionService {
       await user.delete();
 
       // Clear Google Sign-In cache to force account picker
-      try {
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        googleProvider.addScope('email');
-        // Force account selection by signing out completely
-        await _auth.signOut();
-      } catch (_) {}
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      // Force account selection by signing out completely
+      await _auth.signOut();
 
       print('Account deletion completed successfully');
     } catch (e) {
@@ -284,33 +300,54 @@ class AccountDeletionService {
   }
 
   Future<void> _deleteFirestoreData(String userId) async {
+    // Fault-tolerant: wrap each Firestore delete in its own try-catch
+    bool userDocDeleted = false;
+    // Delete user document
     try {
-      // Delete user document
       await _firestore.collection('users').doc(userId).delete();
-      
-      // Delete user behavior data
-      await _firestore.collection('user_behavior').doc(userId).delete();
-      
-      // Delete any subcollections if they exist
-      final userRef = _firestore.collection('users').doc(userId);
-      
-      // Delete liked questions subcollection
-      final likedSnapshot = await userRef.collection('liked_questions').get();
-      for (final doc in likedSnapshot.docs) {
-        await doc.reference.delete();
-      }
-      
-      // Delete user sessions subcollection
-      final sessionsSnapshot = await userRef.collection('sessions').get();
-      for (final doc in sessionsSnapshot.docs) {
-        await doc.reference.delete();
-      }
-      
-      print('Firestore data deleted for user: $userId');
+      userDocDeleted = true;
     } catch (e) {
-      print('Error deleting Firestore data: $e');
-      // Don't throw here - we still want to delete the auth account
+      print('Error deleting user document: $e');
     }
+    // Delete user behavior data
+    try {
+      await _firestore.collection('user_behavior').doc(userId).delete();
+    } catch (e) {
+      print('Error deleting user_behavior document: $e');
+    }
+    // Only try to delete subcollections if user doc still exists (was not deleted above)
+    if (userDocDeleted) {
+      final userRef = _firestore.collection('users').doc(userId);
+      // Delete liked questions subcollection
+      try {
+        final likedSnapshot = await userRef.collection('liked_questions').get();
+        for (final doc in likedSnapshot.docs) {
+          try {
+            await doc.reference.delete();
+          } catch (e) {
+            print('Error deleting liked_questions doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        print('Error getting liked_questions: $e');
+      }
+      // Delete user sessions subcollection
+      try {
+        final sessionsSnapshot = await userRef.collection('sessions').get();
+        for (final doc in sessionsSnapshot.docs) {
+          try {
+            await doc.reference.delete();
+          } catch (e) {
+            print('Error deleting sessions doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        print('Error getting sessions: $e');
+      }
+    } else {
+      print('User document already deleted; skipping subcollection deletions.');
+    }
+    print('Firestore data deleted for user: $userId');
   }
 
   Future<void> _deleteLocalData(String userId) async {
@@ -546,7 +583,7 @@ class AccountDeletionService {
           message: 'Google re-authentication cancelled.',
         );
       }
-      // Show loading indicator
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -564,21 +601,31 @@ class AccountDeletionService {
         ),
       );
 
-      // Use Firebase Auth's built-in Google provider
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      googleProvider.addScope('email');
-      googleProvider.addScope('profile');
-      await _auth.currentUser!.reauthenticateWithProvider(googleProvider);
+      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        throw FirebaseAuthException(
+          code: 'cancelled',
+          message: 'Google sign-in aborted.',
+        );
+      }
 
-      // Close loading dialog
-      if (Navigator.of(context).canPop()) {
+      final googleAuth = await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await _auth.currentUser!.reauthenticateWithCredential(credential);
+
+      if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
 
       print('Google re-authentication successful');
     } catch (e) {
-      // Close loading dialog if it's still open
-      if (Navigator.of(context).canPop()) {
+      if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
 
@@ -751,7 +798,7 @@ class AccountDeletionService {
       );
 
       // Close loading dialog
-      if (Navigator.of(context).canPop()) {
+      if (context != null && context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
 
@@ -764,7 +811,7 @@ class AccountDeletionService {
       print('Apple re-authentication successful');
     } catch (e) {
       // Close loading dialog if it's still open
-      if (Navigator.of(context).canPop()) {
+      if (context != null && context.mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
 
@@ -794,33 +841,29 @@ class AccountDeletionService {
   }
 
   Future<void> _showDone(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Account deleted successfully. Goodbye!',
-          style: TextStyle(fontFamily: 'Runtime'),
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Account deleted successfully. Goodbye!',
+            style: TextStyle(fontFamily: 'Runtime'),
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+      );
+    }
 
     // Wait longer and check context validity
     await Future.delayed(const Duration(milliseconds: 3000));
 
     // Navigate with better error handling
-    if (context.mounted) {
-      try {
-        context.go('/auth');
-      } catch (_) {
-        // Fallback navigation
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            Navigator.of(context, rootNavigator: true)
-                .pushNamedAndRemoveUntil('/login', (route) => false);
-          }
-        });
-      }
+    if (context != null && context.mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context != null && context.mounted) {
+          context.go('/auth');
+        }
+      });
     }
   }
 

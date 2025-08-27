@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -86,8 +85,8 @@ class UserBehaviorService {
     }
   }
 
-  // NEW: Update the seen cards counter
-  static Future<void> _updateSeenCardsCount() async {
+  // Public: Increment seen cards count in Firestore
+  static Future<void> incrementSeenCardsCount() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
@@ -100,8 +99,13 @@ class UserBehaviorService {
         'lastCountUpdate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      print('Error updating seen cards count: $e');
+      print('Error incrementing seen cards count: $e');
     }
+  }
+
+  // Update the seen cards counter (private)
+  static Future<void> _updateSeenCardsCount() async {
+    await incrementSeenCardsCount();
   }
 
   // NEW: Reset seen cards count (useful for testing)

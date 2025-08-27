@@ -253,7 +253,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (!mounted) return;
     
     // First load from local Hive
-    final localLiked = likedBox.values.toList();
+    final List<Question> localLiked = Hive.isBoxOpen(likedBox.name) ? likedBox.values.toList().cast<Question>() : <Question>[];
     
     if (mounted) {
       state = state.copyWith(likedQuestions: localLiked);
@@ -261,17 +261,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
     
     // Then sync with Firestore
     try {
-      final firestoreLiked = await UserBehaviorService.getLikedQuestions();
+      final List<Question> firestoreLiked = await UserBehaviorService.getLikedQuestions();
       if (!mounted) return;
       
       if (firestoreLiked.isNotEmpty) {
         // Merge with local and update
         final mergedSet = {...localLiked, ...firestoreLiked};
-        final mergedList = mergedSet.toList();
+        final List<Question> mergedList = mergedSet.toList();
         
         // Update local storage
-        await likedBox.clear();
-        await likedBox.addAll(mergedList);
+        if (Hive.isBoxOpen(likedBox.name)) {
+          await likedBox.clear();
+          await likedBox.addAll(mergedList);
+        }
         
         if (mounted) {
           state = state.copyWith(likedQuestions: mergedList);
@@ -285,7 +287,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   Future<void> _loadSeenQuestions() async {
     if (!mounted) return;
     
-    final seenQuestions = seenBox.values.toList();
+    final List<Question> seenQuestions = Hive.isBoxOpen(seenBox.name) ? seenBox.values.toList().cast<Question>() : <Question>[];
     print('Loading seen questions from Hive: ${seenQuestions.length} items');
     if (mounted) {
       state = state.copyWith(seenQuestions: seenQuestions);
@@ -295,18 +297,21 @@ class CardStateNotifier extends StateNotifier<CardState> {
   Future<void> _loadCache() async {
     if (!mounted) return;
     
-    final cached = cacheBox.values.toList();
+    final cached = Hive.isBoxOpen(cacheBox.name) ? cacheBox.values.toList() : [];
     if (cached.isNotEmpty) {
       if (mounted) {
-        state = state.copyWith(allQuestions: cached..shuffle());
+        final List<Question> shuffled = cached.cast<Question>()..shuffle();
+        state = state.copyWith(allQuestions: shuffled);
         _rebuildSessionQuestions();
       }
     } else {
       final qs = await QuestionsService.loadQuestionsWithAI();
       if (!mounted) return;
       
-      await cacheBox.clear();
-      await cacheBox.addAll(qs);
+      if (Hive.isBoxOpen(cacheBox.name)) {
+        await cacheBox.clear();
+        await cacheBox.addAll(qs);
+      }
       if (mounted) {
         state = state.copyWith(allQuestions: qs..shuffle());
         _rebuildSessionQuestions();
@@ -537,7 +542,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
       }
 
       // Persist to Hive
-      await seenBox.put(seenQuestion.text.hashCode.toString(), seenQuestion);
+      if (Hive.isBoxOpen(seenBox.name)) {
+        await seenBox.put(seenQuestion.text.hashCode.toString(), seenQuestion);
+      }
     }
 
     // Set start time for next question
@@ -559,7 +566,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
       if (mounted) {
         state = state.copyWith(seenQuestions: seen);
       }
-      seenBox.add(seenQuestion);
+      if (Hive.isBoxOpen(seenBox.name)) {
+        seenBox.add(seenQuestion);
+      }
     }
   }
 
@@ -654,7 +663,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
       }
       
       // Persist to Hive
-      seenBox.add(seenQuestion);
+      if (Hive.isBoxOpen(seenBox.name)) {
+        seenBox.add(seenQuestion);
+      }
     }
     
     // Set start time for next question
@@ -701,8 +712,10 @@ class CardStateNotifier extends StateNotifier<CardState> {
     () async {
       try {
         // Update local Hive storage
-        await likedBox.clear();
-        await likedBox.addAll(updatedLikes);
+        if (Hive.isBoxOpen(likedBox.name)) {
+          await likedBox.clear();
+          await likedBox.addAll(updatedLikes);
+        }
         
         // Update Firestore
         await UserBehaviorService.trackQuestionLike(
@@ -722,7 +735,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (!mounted) return;
     
     final updatedQuestions = [...state.allQuestions, ...newQs];
-    await cacheBox.addAll(newQs);
+    if (Hive.isBoxOpen(cacheBox.name)) {
+      await cacheBox.addAll(newQs);
+    }
     if (mounted) {
       state = state.copyWith(allQuestions: updatedQuestions);
     }
@@ -764,10 +779,10 @@ class CardStateNotifier extends StateNotifier<CardState> {
         await NotificationService.cancelCooldownNotification(notificationId);
       }
       
-      await likedBox.clear();
-      await swipeBox.clear();
-      await cacheBox.clear();
-      await seenBox.clear();
+      if (Hive.isBoxOpen(likedBox.name)) await likedBox.clear();
+      if (Hive.isBoxOpen(swipeBox.name)) await swipeBox.clear();
+      if (Hive.isBoxOpen(cacheBox.name)) await cacheBox.clear();
+      if (Hive.isBoxOpen(seenBox.name)) await seenBox.clear();
       
       if (mounted) {
         state = CardState(

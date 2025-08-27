@@ -29,6 +29,7 @@ import '/pages/profile/profile_page.dart';
 import '/pages/home_page/home_page_widget.dart';
 import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 
 class AppStateNotifier extends ChangeNotifier {

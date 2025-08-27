@@ -4,43 +4,29 @@ service cloud.firestore {
     // User profiles and all subcollections
     match /users/{userId} {
       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-      
-      // Liked questions subcollection
-      match /liked_questions/{questionId} {
-        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      // Sessions subcollection
-      match /sessions/{sessionId} {
-        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      // Catch-all for any other subcollections
-      match /{document=**} {
+
+      // Catch-all for all subcollections like liked_questions, sessions, etc.
+      match /{subcollection=**} {
         allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
-    
+
     // User behavior collection
     match /user_behavior/{userId} {
       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-      
-      match /{document=**} {
-        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-      }
     }
-    
+
     // User preferences
     match /user_preferences/{userId} {
       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     // Cards collection (keep existing logic)
     match /cards/{cardId} {
       allow read: if true;
       allow create, update: if request.auth != null;
       allow delete: if request.auth != null;
-      
+
       match /likes/{likeId} {
         allow read: if true;
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
@@ -48,7 +34,7 @@ service cloud.firestore {
         allow update: if false;
       }
     }
-    
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

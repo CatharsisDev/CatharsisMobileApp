@@ -71,11 +71,19 @@ class SeenCardsNotifier extends StateNotifier<int> {
   }
 
   // Call this when a user views a new card
-  void incrementSeenCards() {
+void incrementSeenCards() async {
+  if (!mounted || _currentUserId == null) return;
+
+  try {
+    // Update Firestore
+    await UserBehaviorService.incrementSeenCardsCount();
     if (mounted) {
       state = state + 1;
     }
+  } catch (e) {
+    print('Error incrementing seen cards count: $e');
   }
+}
 
   // Call this to manually refresh the count from Firestore
   Future<void> refreshCount() async {
@@ -103,6 +111,4 @@ final seenCardsProvider = StateNotifierProvider<SeenCardsNotifier, int>(
 );
 
 // Convenience provider to just watch the count
-final seenCardsCountProvider = Provider<int>((ref) {
-  return ref.watch(seenCardsProvider);
-});
+final seenCardsCountProvider = StateProvider<int>((ref) => 0);
