@@ -1,17 +1,31 @@
+name: Build Android Release
+
+on:
+  workflow_dispatch:      # Allows manual triggering via GitHub UI
+  push:
+    branches:
+      - main              # Or "master" if that’s your default
+  pull_request:
+    branches:
+      - main
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.x' # or your version
+          flutter-version: "3.19.0"  # Match your Flutter version
 
-      - name: Install dependencies
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+
+      - name: Install Dependencies
         run: |
           cd catharsismobileapp
           flutter pub get
@@ -21,7 +35,13 @@ jobs:
           cd catharsismobileapp
           flutter build appbundle --release
         env:
-          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+          KEYSTORE_PATH: release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.aab
+          path: catharsismobileapp/build/app/outputs/bundle/release/app-release.aab
