@@ -417,10 +417,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
     state = state.copyWith(
       selectedCategories: normSet,
       currentIndex: 0,
-      // Don't reset seen questions when changing categories
+      sessionQuestions: [], // Clear session questions to force rebuild
     );
-    // Don't clear seen questions box
-    _scheduleRebuild();
+    _rebuildSessionQuestions(); // Rebuild immediately
   }
 
   Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
