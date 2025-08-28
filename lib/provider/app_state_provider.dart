@@ -887,6 +887,5 @@ final cardStateProvider = StateNotifierProvider<CardStateNotifier, CardState>((r
       ref.invalidateSelf();
     }
   });
-  
   return CardStateNotifier(ref);
 });
