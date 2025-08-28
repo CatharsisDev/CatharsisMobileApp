@@ -17,17 +17,6 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Log to Firebase Analytics
-    await _analytics.logEvent(
-      name: 'question_viewed',
-      parameters: {
-        'question_id': question.text.hashCode.toString(),
-        'category': question.category,
-        'view_duration': viewDuration,
-        'user_id': user.uid,
-      },
-    );
-
     // Store in Firestore for AI training
     await _firestore
         .collection('user_behaviors')
@@ -38,6 +27,8 @@ class UserBehaviorService {
       'timestamp': FieldValue.serverTimestamp(),
       'duration': viewDuration,
     });
+
+    print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
 
     // Update the total seen cards count
     await _updateSeenCardsCount();
@@ -91,6 +82,7 @@ class UserBehaviorService {
     if (user == null) return;
 
     try {
+      print('[COUNT] Incrementing seen cards for user: ${user.uid}');
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -98,6 +90,7 @@ class UserBehaviorService {
         'seenCardsCount': FieldValue.increment(1),
         'lastCountUpdate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      print('[COUNT] Seen cards count incremented.');
     } catch (e) {
       print('Error incrementing seen cards count: $e');
     }
@@ -105,6 +98,7 @@ class UserBehaviorService {
 
   // Update the seen cards counter (private)
   static Future<void> _updateSeenCardsCount() async {
+    print('[COUNT] Updating seen cards count...');
     await incrementSeenCardsCount();
   }
 
@@ -133,16 +127,6 @@ class UserBehaviorService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) return;
-
-    // Log to Firebase Analytics
-    await _analytics.logEvent(
-      name: isLiked ? 'question_liked' : 'question_unliked',
-      parameters: {
-        'question_id': question.text.hashCode.toString(),
-        'category': question.category,
-        'user_id': user.uid,
-      },
-    );
 
     // Store in Firestore
     await storeLikedQuestion(question: question, isLiked: isLiked);
@@ -205,17 +189,6 @@ class UserBehaviorService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) return;
-
-    await _analytics.logEvent(
-      name: 'question_swiped',
-      parameters: {
-        'question_id': question.text.hashCode.toString(),
-        'category': question.category,
-        'direction': direction,
-        'velocity': swipeVelocity,
-        'user_id': user.uid,
-      },
-    );
 
     // Store detailed swipe data
     await _firestore

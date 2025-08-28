@@ -37,6 +37,10 @@ class CardState {
   final int swipeCount;
   final List<Question> sessionQuestions;
 
+  // Caching for activeQuestions
+  List<Question>? _cachedActiveQuestions;
+  String? _lastCacheKey;
+
   CardState({
     required this.allQuestions,
     required this.likedQuestions,
@@ -87,9 +91,17 @@ class CardState {
   List<Question> get activeQuestions {
     // If we have a session snapshot, use it to keep the stack stable while swiping.
     if (sessionQuestions.isNotEmpty) return sessionQuestions;
+    final cacheKey = '${selectedCategories.join(',')}|$currentCategory';
+    if (_cachedActiveQuestions != null && _lastCacheKey == cacheKey) {
+      return _cachedActiveQuestions!;
+    }
+    _cachedActiveQuestions = _buildActiveQuestions();
+    _lastCacheKey = cacheKey;
+    return _cachedActiveQuestions!;
+  }
 
+  List<Question> _buildActiveQuestions() {
     var filtered = allQuestions;
-
     if (selectedCategories.isNotEmpty) {
       final normSel = selectedCategories.map(_normalizeCategory).toSet();
       filtered = filtered.where((q) {
@@ -117,14 +129,12 @@ class CardState {
   int get startingIndex {
     final active = activeQuestions;
     if (active.isEmpty) return 0;
-    
     // Find the first unseen question
     for (int i = 0; i < active.length; i++) {
       if (!seenQuestions.contains(active[i])) {
         return i;
       }
     }
-    
     // If all are seen, start from the beginning
     return 0;
   }
@@ -153,6 +163,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box<Question> seenBox;
   DateTime? _currentQuestionStartTime;
   bool _isDisposed = false;
+  Timer? _rebuildTimer;
 
   Future<void> _initialize() async {
     print('INITIALIZE CALLED - isDisposed: $_isDisposed, mounted: $mounted');
@@ -252,36 +263,13 @@ class CardStateNotifier extends StateNotifier<CardState> {
   Future<void> _loadLiked() async {
     if (!mounted) return;
     
-    // First load from local Hive
     final List<Question> localLiked = Hive.isBoxOpen(likedBox.name) ? likedBox.values.toList().cast<Question>() : <Question>[];
     
     if (mounted) {
       state = state.copyWith(likedQuestions: localLiked);
     }
-    
-    // Then sync with Firestore
-    try {
-      final List<Question> firestoreLiked = await UserBehaviorService.getLikedQuestions();
-      if (!mounted) return;
-      
-      if (firestoreLiked.isNotEmpty) {
-        // Merge with local and update
-        final mergedSet = {...localLiked, ...firestoreLiked};
-        final List<Question> mergedList = mergedSet.toList();
-        
-        // Update local storage
-        if (Hive.isBoxOpen(likedBox.name)) {
-          await likedBox.clear();
-          await likedBox.addAll(mergedList);
-        }
-        
-        if (mounted) {
-          state = state.copyWith(likedQuestions: mergedList);
-        }
-      }
-    } catch (e) {
-      print('Error syncing liked questions with Firestore: $e');
-    }
+
+    // Skip Firestore sync — load it when user explicitly opens the likes
   }
 
   Future<void> _loadSeenQuestions() async {
@@ -404,6 +392,11 @@ class CardStateNotifier extends StateNotifier<CardState> {
     }
   }
 
+  void _scheduleRebuild() {
+    _rebuildTimer?.cancel();
+    _rebuildTimer = Timer(Duration(milliseconds: 100), _rebuildSessionQuestions);
+  }
+
   void updateCategory(String cat) {
     if (!mounted) return;
     
@@ -413,7 +406,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       selectedCategories: {norm},
       currentIndex: 0,
     );
-    _rebuildSessionQuestions();
+    _scheduleRebuild();
   }
 
   void updateSelectedCategories(Set<String> cats) {
@@ -426,7 +419,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       // Don't reset seen questions when changing categories
     );
     // Don't clear seen questions box
-    _rebuildSessionQuestions();
+    _scheduleRebuild();
   }
 
   Future<void> handleCardSwiped(int index, {String direction = 'unknown', double velocity = 0.0}) async {
@@ -451,9 +444,13 @@ class CardStateNotifier extends StateNotifier<CardState> {
         final now = DateTime.now();
         final resetTime = now.add(RESET_DURATION); // always fresh future time
 
-        // Persist swipe count and mark limit reached
-        await swipeBox.put('swipe_limit_reached', now.toIso8601String());
-        await swipeBox.put('swipe_count', newCount);
+        // Batch persist swipe count, limit reached, and last_swipe
+        final batch = <String, dynamic>{
+          'swipe_limit_reached': now.toIso8601String(),
+          'swipe_count': newCount,
+          'last_swipe': DateTime.now().toIso8601String(),
+        };
+        await swipeBox.putAll(batch);
 
         // Update state FIRST so any UI reading it gets the fresh time
         if (mounted) {
@@ -483,7 +480,12 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
         return;
       } else {
-        await swipeBox.put('swipe_count', newCount);
+        // Batch persist swipe count and last_swipe
+        final batch = <String, dynamic>{
+          'swipe_count': newCount,
+          'last_swipe': DateTime.now().toIso8601String(),
+        };
+        await swipeBox.putAll(batch);
         state = state.copyWith(swipeCount: newCount);
       }
     } else {
@@ -596,10 +598,14 @@ class CardStateNotifier extends StateNotifier<CardState> {
         final now = DateTime.now();
         final resetTime = now.add(RESET_DURATION);
 
-        // Persist asynchronously
+        // Batch persist swipe count, limit reached, and last_swipe asynchronously
         () async {
-          await swipeBox.put('swipe_limit_reached', now.toIso8601String());
-          await swipeBox.put('swipe_count', newCount);
+          final batch = <String, dynamic>{
+            'swipe_limit_reached': now.toIso8601String(),
+            'swipe_count': newCount,
+            'last_swipe': DateTime.now().toIso8601String(),
+          };
+          await swipeBox.putAll(batch);
         }();
 
         if (mounted) {
@@ -613,8 +619,14 @@ class CardStateNotifier extends StateNotifier<CardState> {
         ref.read(popUpProvider.notifier).state = true;
         return;
       } else {
-        // Increment swipe count
-        () async { await swipeBox.put('swipe_count', newCount); }();
+        // Batch increment swipe count and last_swipe asynchronously
+        () async {
+          final batch = <String, dynamic>{
+            'swipe_count': newCount,
+            'last_swipe': DateTime.now().toIso8601String(),
+          };
+          await swipeBox.putAll(batch);
+        }();
         if (mounted) {
           state = state.copyWith(swipeCount: newCount);
         }
@@ -843,6 +855,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   @override
   void dispose() {
     _isDisposed = true;
+    _rebuildTimer?.cancel();
     super.dispose();
   }
 }
