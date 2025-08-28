@@ -28,7 +28,7 @@ jobs:
          flutter --version
          dart --version
      - name: Decode Keystore
-       run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.jks
+       run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
      - name: Repair pub cache
        run: flutter pub cache repair
      - name: Install dependencies
