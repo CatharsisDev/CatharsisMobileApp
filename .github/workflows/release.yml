@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'latest'
+          flutter-version: '3.27.0'
           channel: 'stable'
       - name: Verify versions
         run: |
