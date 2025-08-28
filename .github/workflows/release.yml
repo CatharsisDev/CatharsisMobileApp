@@ -26,14 +26,10 @@ jobs:
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
 
       - name: Install Dependencies
-        run: |
-          cd catharsismobileapp
-          flutter pub get
+        run: flutter pub get
 
       - name: Build AAB
-        run: |
-          cd catharsismobileapp
-          flutter build appbundle --release
+        run: flutter build appbundle --release
         env:
           KEYSTORE_PATH: release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -44,4 +40,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release.aab
-          path: catharsismobileapp/build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/app-release.aab
