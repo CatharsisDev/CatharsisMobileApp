@@ -36,11 +36,10 @@ jobs:
      - name: Build AAB (Release)
        run: flutter build appbundle --release
        env:
-         KEYSTORE_PATH: android/release.jks
+         KEYSTORE_PATH: ${{ github.workspace }}/android/app/release.jks
          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-     - name: Upload AAB artifact
+         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}     - name: Upload AAB artifact
        uses: actions/upload-artifact@v4
        with:
          name: app-release.aab
