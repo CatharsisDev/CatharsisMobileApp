@@ -1,42 +1,45 @@
 name: Build Android Release
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+ workflow_dispatch:
+ push:
+   branches:
+     - main
+ pull_request:
+   branches:
+     - main
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
-      - name: Verify versions
-        run: |
-          flutter --version
-          dart --version
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.jks
-      - name: Repair pub cache (optional but helps)
-        run: flutter pub cache repair
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Build AAB (Release)
-        run: flutter build appbundle --release
-        env:
-          KEYSTORE_PATH: android/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.aab
-          path: build/app/outputs/bundle/release/app-release.aab
+ build:
+   runs-on: ubuntu-latest
+   steps:
+     - name: Checkout repository
+       uses: actions/checkout@v3
+     - name: Setup Flutter SDK
+       uses: subosito/flutter-action@v2
+       with:
+         flutter-version: '3.27.1'
+         channel: 'stable'
+         cache: true
+     - name: Force Flutter upgrade
+       run: flutter upgrade --force
+     - name: Verify versions
+       run: |
+         flutter --version
+         dart --version
+     - name: Decode Keystore
+       run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.jks
+     - name: Repair pub cache
+       run: flutter pub cache repair
+     - name: Install dependencies
+       run: flutter pub get
+     - name: Build AAB (Release)
+       run: flutter build appbundle --release
+       env:
+         KEYSTORE_PATH: android/release.jks
+         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+     - name: Upload AAB artifact
+       uses: actions/upload-artifact@v4
+       with:
+         name: app-release.aab
+         path: build/app/outputs/bundle/release/app-release.aab
