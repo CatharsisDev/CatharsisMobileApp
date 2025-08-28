@@ -1,7 +1,7 @@
 name: Build Android Release
 
 on:
-  workflow_dispatch:      # Allows manual triggering via GitHub UI
+  workflow_dispatch:      # Manual trigger via GitHub UI
   push:
     branches:
       - main              # Or "master" if that’s your default
@@ -14,32 +14,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.1"  # Match your Flutter version
+          flutter-version: "3.22.1"  # Make sure this matches your Flutter SDK
 
-      - name: Check Dart version
-  run: dart --version    
+      - name: Verify Dart version
+        run: dart --version
 
       - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.jks
 
-      - name: Install Dependencies
+      - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Build AAB
+      - name: Build AAB (Android App Bundle)
         run: flutter build appbundle --release
         env:
-          KEYSTORE_PATH: release.jks
+          KEYSTORE_PATH: android/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Artifact
+      - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release.aab
