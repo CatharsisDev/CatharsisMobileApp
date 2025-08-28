@@ -13,7 +13,7 @@ import 'dart:io';
 import 'dart:async';
 
 const int SWIPE_LIMIT = 25;
-const Duration RESET_DURATION = Duration(minutes: 0, seconds: 20);
+const Duration RESET_DURATION = Duration(minutes: 60, seconds: 0);
 
 /// Normalize categories so that comparisons always match exactly.
 String _normalizeCategory(String s) => s
