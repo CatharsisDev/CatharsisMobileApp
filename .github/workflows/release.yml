@@ -13,6 +13,8 @@ jobs:
    steps:
      - name: Checkout repository
        uses: actions/checkout@v3
+     - name: Create .env file
+       run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
      - name: Setup Flutter SDK
        uses: subosito/flutter-action@v2
        with:
