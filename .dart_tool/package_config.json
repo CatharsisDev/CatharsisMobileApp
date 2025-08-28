@@ -1241,7 +1241,7 @@
       "name": "catharsis_cards",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.7"
     }
   ],
   "generator": "pub",
