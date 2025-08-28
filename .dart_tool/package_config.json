@@ -375,9 +375,9 @@
     },
     {
       "name": "flutter_lints",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_lints-6.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.1"
     },
     {
       "name": "flutter_localizations",
@@ -669,9 +669,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/lints-6.0.0",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/lints-3.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.0"
     },
     {
       "name": "logging",
