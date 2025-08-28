@@ -245,6 +245,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     if (!mounted) return;
     
     await _loadLiked();
+    await _loadLikedFromFirestore();
     await _loadSeenQuestions();
     await _loadPersonalizedQuestions();
     _rebuildSessionQuestions();
@@ -690,54 +691,68 @@ class CardStateNotifier extends StateNotifier<CardState> {
   void toggleLiked(Question q) async {
     if (!mounted) return;
     
-    // Create normalized comparison for checking existence
     final normCat = _normalizeCategory(q.category);
     final currentLikes = state.likedQuestions;
     
-    // Check if already liked
     final existingIndex = currentLikes.indexWhere((liked) =>
         liked.text == q.text && 
         _normalizeCategory(liked.category) == normCat);
     
     final isCurrentlyLiked = existingIndex != -1;
     
-    // Create new list of likes
     List<Question> updatedLikes;
     if (isCurrentlyLiked) {
-      // Remove from likes
-      updatedLikes = List<Question>.from(currentLikes)
-        ..removeAt(existingIndex);
+      updatedLikes = List<Question>.from(currentLikes)..removeAt(existingIndex);
     } else {
-      // Add to likes (create new instance to avoid Hive issues)
-      updatedLikes = [
-        ...currentLikes,
-        Question(text: q.text, category: q.category)
-      ];
+      updatedLikes = [...currentLikes, Question(text: q.text, category: q.category)];
     }
     
-    // Update state immediately for UI
+    // Update state immediately
     if (mounted) {
       state = state.copyWith(likedQuestions: updatedLikes);
     }
     
-    // Update storage and Firestore asynchronously
-    () async {
-      try {
-        // Update local Hive storage
-        if (Hive.isBoxOpen(likedBox.name)) {
-          await likedBox.clear();
-          await likedBox.addAll(updatedLikes);
-        }
-        
-        // Update Firestore
-        await UserBehaviorService.trackQuestionLike(
-          question: q,
-          isLiked: !isCurrentlyLiked,
-        );
-      } catch (e) {
-        print('Error updating likes: $e');
+    try {
+      // Update Firestore first (source of truth)
+      await UserBehaviorService.trackQuestionLike(
+        question: q,
+        isLiked: !isCurrentlyLiked,
+      );
+      
+      // Then update local Hive storage
+      if (Hive.isBoxOpen(likedBox.name)) {
+        await likedBox.clear();
+        await likedBox.addAll(updatedLikes);
       }
-    }();
+    } catch (e) {
+      print('Error updating likes: $e');
+      // Revert state on error
+      if (mounted) {
+        state = state.copyWith(likedQuestions: currentLikes);
+      }
+    }
+  }
+
+  Future<void> _loadLikedFromFirestore() async {
+    if (!mounted) return;
+    
+    try {
+      final firestoreLiked = await UserBehaviorService.getLikedQuestions();
+      print('Loading liked questions from Firestore: ${firestoreLiked.length} items');
+      
+      // Merge with local Hive data (Firestore is source of truth)
+      if (Hive.isBoxOpen(likedBox.name)) {
+        await likedBox.clear();
+        await likedBox.addAll(firestoreLiked);
+      }
+      
+      if (mounted) {
+        state = state.copyWith(likedQuestions: firestoreLiked);
+      }
+    } catch (e) {
+      print('Error loading liked questions from Firestore: $e');
+      // Keep local Hive data as fallback
+    }
   }
 
   Future<void> loadMoreQuestions() async {

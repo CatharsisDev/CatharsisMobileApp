@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:profanity_filter/profanity_filter.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../provider/tutorial_state_provider.dart';
 import '../../provider/user_profile_provider.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -36,23 +39,36 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Avatar carousel controller - increased viewportFraction for wider view
   late final PageController _avatarCarouselController;
   int _currentAvatarIndex = 0;
+
+  // Avatar image picker state
+  String? _avatarPath;
+  static const String defaultAvatarPath = 'assets/images/avatar1.jpg';
   // Image picker for custom avatar
-  final ImagePicker _imagePicker = ImagePicker();
-  XFile? _customAvatarFile;
-  Future<void> _pickCustomAvatar() async {
-    final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _customAvatarFile = picked;
-        _selectedAvatar = picked.path;
-      });
-      // After adding the custom avatar, jump the carousel to focus it
-      final newIndex = _avatars.length;
-      _avatarCarouselController.animateToPage(
-        newIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      try {
+        final directory = await getApplicationDocumentsDirectory();
+        final fileName = 'custom_avatar.jpg';
+        final newImage = await File(pickedFile.path).copy('${directory.path}/$fileName');
+
+        // Optional: Delete old image if any
+        if (_avatarPath != null && _avatarPath != defaultAvatarPath) {
+          final oldFile = File(_avatarPath!);
+          if (await oldFile.exists()) {
+            await oldFile.delete();
+          }
+        }
+
+        setState(() {
+          _avatarPath = newImage.path;
+          _selectedAvatar = newImage.path;
+        });
+      } catch (e) {
+        print('Error copying image: $e');
+      }
     }
   }
 
@@ -63,6 +79,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Animation controller
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
+  // Debounce timer for profanity/invalid char check
+  Timer? _debounceTimer;
   
   // Catharsis translations list (add this if you're using it)
   final List<String> _catharsisTranslations = [
@@ -77,10 +95,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 17),
+      duration: const Duration(seconds: 3),
       vsync: this,
     );
-    
+    _animationController.forward();
+
     // Create staggered animations for each translation
     _fadeAnimations = List.generate(
       _catharsisTranslations.length,
@@ -98,15 +117,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
       ),
     );
-    
-    // Start the animation and make it repeat
-    _animationController.forward();
-    _animationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _animationController.reset();
-        _animationController.forward();
-      }
-    });
+
     _profanityFilter = ProfanityFilter.filterAdditionally(['nazi', 'hitler']);
     _usernameController.addListener(() {
       setState(() {});
@@ -119,14 +130,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           setState(() {
             _currentAvatarIndex = page;
             final avatarList = List<String>.from(_avatars);
-            if (_customAvatarFile != null) {
-              avatarList.add(_customAvatarFile!.path);
+            if (_avatarPath != null) {
+              avatarList.add(_avatarPath!);
             }
             _selectedAvatar = avatarList[page];
           });
         }
       });
     _selectedAvatar = _avatars[0];
+    _avatarPath = null;
     // Appearance carousel setup
     _appearanceController = PageController(viewportFraction: 0.8)
       ..addListener(() {
@@ -560,8 +572,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Widget _buildProfileSetupPage() {
     final avatarList = List<String>.from(_avatars);
-    if (_customAvatarFile != null) {
-      avatarList.add(_customAvatarFile!.path);
+    if (_avatarPath != null) {
+      avatarList.add(_avatarPath!);
     }
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -703,7 +715,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                 const SizedBox(height: 16),
                                 Center(
                                   child: ElevatedButton.icon(
-                                    onPressed: _pickCustomAvatar,
+                                    onPressed: _pickImage,
                                     icon: const Icon(Icons.upload),
                                     label: const Text('Upload Avatar'),
                                     style: ElevatedButton.styleFrom(
@@ -735,18 +747,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                     ),
                                   ),
                                   child: TextField(
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _hasProfanity = _profanityFilter.hasProfanity(value);
-                                        _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
-                                      });
-                                    },
+                                    onChanged: _checkText,
                                     controller: _usernameController,
                                     cursorColor: const Color.fromRGBO(42, 63, 44, 1),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontFamily: 'Runtime',
                                       fontSize: 16,
-                                      color: const Color.fromRGBO(32, 28, 17, 1),
+                                      color: Color.fromRGBO(32, 28, 17, 1),
                                     ),
                                     decoration: InputDecoration(
                                       hintText: 'Enter your username',
@@ -766,8 +773,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   ),
                                 ),
                                 if (_hasProfanity)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 8),
                                     child: Text(
                                       'Username contains inappropriate language',
                                       style: TextStyle(
@@ -778,8 +785,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                     ),
                                   ),
                                 if (_hasInvalidChars)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 8),
                                     child: Text(
                                       'Username can only contain letters, numbers, and underscores',
                                       style: TextStyle(
@@ -1223,23 +1230,33 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             color: Colors.grey[100],
           ),
           child: ClipOval(
-            child: Builder(
-              builder: (_) {
-                final localPath = imagePath.startsWith('file://')
-                    ? imagePath.replaceFirst('file://', '')
-                    : imagePath;
-                final file = File(localPath);
-                if (file.existsSync()) {
-                  return Image.file(file, fit: BoxFit.cover);
-                } else {
-                  return Image.asset(imagePath, fit: BoxFit.cover);
-                }
-              },
-            ),
+            child: _buildAvatar(imagePath), // Pass the imagePath
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildAvatar(String imagePath) {
+    if (_avatarPath != null && imagePath == _avatarPath) {
+      // Custom uploaded image
+      return CircleAvatar(
+        radius: 48,
+        backgroundImage: FileImage(File(_avatarPath!)),
+      );
+    } else if (imagePath.startsWith('assets/')) {
+      // Asset image
+      return CircleAvatar(
+        radius: 48,
+        backgroundImage: AssetImage(imagePath),
+      );
+    } else {
+      // Fallback
+      return const CircleAvatar(
+        radius: 48,
+        backgroundImage: AssetImage('assets/images/default_avatar.jpeg'),
+      );
+    }
   }
 
   Widget _buildFeatureItem({
@@ -1248,49 +1265,54 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     required String description,
     required int delay,
   }) {
-    return Row(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.2),
+    // Remove flutter_animate effect, replace with AnimatedOpacity for simple transition
+    return AnimatedOpacity(
+      opacity: 1.0,
+      duration: const Duration(milliseconds: 300),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF4A4A4A),
+              size: 30,
+            ),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFF4A4A4A),
-            size: 30,
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromRGBO(32, 28, 17, 1),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromRGBO(32, 28, 17, 1),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  fontSize: 14,
-                  color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 14,
+                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    ).animate().fadeIn(delay: Duration(milliseconds: delay)).slideX(begin: 0.1);
+        ],
+      ),
+    );
   }
 
   Widget _buildNavigationButtons() {
@@ -1358,40 +1380,55 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   /// Builds a single category introduction item for the tutorial.
   Widget _buildCategoryItem(Map<String, String> entry) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Image.asset(
-              entry['icon']!,
-              width: 48,
-              height: 48,
-              color: const Color(0xFF4A4A4A),
-            ),
-            const SizedBox(width: 16),
-            Flexible( 
-              child: Text(
-                entry['name']!,
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: const Color.fromRGBO(32, 28, 17, 1),
-                ),
-                softWrap: true,
-                maxLines: 2,
-                overflow: TextOverflow.visible,
+    return AnimatedOpacity(
+      opacity: 1.0,
+      duration: const Duration(milliseconds: 300),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                entry['icon']!,
+                width: 48,
+                height: 48,
+                color: const Color(0xFF4A4A4A),
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+              Flexible(
+                child: Text(
+                  entry['name']!,
+                  style: const TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color.fromRGBO(32, 28, 17, 1),
+                  ),
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  // Debounced profanity and invalid character check for username
+  void _checkText(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _hasProfanity = _profanityFilter.hasProfanity(value);
+        _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
+      });
+    });
   }
 }

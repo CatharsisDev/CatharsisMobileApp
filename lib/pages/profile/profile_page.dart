@@ -17,6 +17,7 @@ import '../main_settings/settings_page.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -636,7 +637,21 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final XFile? file = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (file != null) {
       final path = file.path;
-      await ref.read(userProfileProvider.notifier).updateProfile(avatar: path);
+      // Clean up previous custom avatar if exists and not an asset
+      final existingAvatarPath = ref.read(userProfileProvider).maybeWhen(
+        data: (profile) => profile?.avatar,
+        orElse: () => null,
+      );
+      if (existingAvatarPath != null && !existingAvatarPath.startsWith('assets/')) {
+        final existingFile = File(existingAvatarPath);
+        if (await existingFile.exists()) {
+          await existingFile.delete();
+        }
+      }
+      final appDir = await getApplicationDocumentsDirectory();
+      final newFile = await File(path).copy('${appDir.path}/custom_avatar.jpg');
+      final savedPath = newFile.path;
+      await ref.read(userProfileProvider.notifier).updateProfile(avatar: savedPath);
       const presetAssets = [
         'assets/images/avatar1.png',
         'assets/images/avatar2.png',
@@ -722,7 +737,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final authService = ref.read(authServiceProvider);
     final cardState = ref.watch(cardStateProvider);
     final userProfile = ref.watch(userProfileProvider);
-    final seenCardsCount = ref.watch(seenCardsCountProvider);
+    final seenCardsCount = ref.watch(seenCardsProvider);
     final selectedAvatar = userProfile.whenOrNull(data: (profile) => profile?.avatar);
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();

@@ -17,24 +17,28 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Store in Firestore for AI training
-    await _firestore
-        .collection('user_behaviors')
-        .doc(user.uid)
-        .collection('views')
-        .add({
-      'question': question.toJson(),
-      'timestamp': FieldValue.serverTimestamp(),
-      'duration': viewDuration,
-    });
+    try {
+      // Store in Firestore for AI training
+      await _firestore
+          .collection('user_behaviors')
+          .doc(user.uid)
+          .collection('views')
+          .add({
+        'question': question.toJson(),
+        'timestamp': FieldValue.serverTimestamp(),
+        'duration': viewDuration,
+      });
 
-    print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
+      print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
 
-    // Update the total seen cards count
-    await _updateSeenCardsCount();
+      // Update the total seen cards count
+      await _updateSeenCardsCount();
+    } catch (e) {
+      print('Error tracking question view: $e');
+    }
   }
 
-  // NEW: Get the total number of cards the user has seen
+  // Get the total number of cards the user has seen
   static Future<int> getSeenCardsCount() async {
     final user = _auth.currentUser;
     if (user == null) return 0;
@@ -46,8 +50,9 @@ class UserBehaviorService {
           .doc(user.uid)
           .get();
 
-      if (userDoc.exists && userDoc.data()!.containsKey('seenCardsCount')) {
-        return userDoc.data()!['seenCardsCount'] as int;
+      if (userDoc.exists && userDoc.data() != null && userDoc.data()!.containsKey('seenCardsCount')) {
+        final count = userDoc.data()!['seenCardsCount'];
+        return count is int ? count : 0;
       }
 
       // Fallback: count from views collection
@@ -76,20 +81,33 @@ class UserBehaviorService {
     }
   }
 
-  // Public: Increment seen cards count in Firestore
+  // Increment seen cards count in Firestore
   static Future<void> incrementSeenCardsCount() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
       print('[COUNT] Incrementing seen cards for user: ${user.uid}');
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set({
-        'seenCardsCount': FieldValue.increment(1),
-        'lastCountUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      
+      // Use transaction to ensure atomic increment
+      await _firestore.runTransaction((transaction) async {
+        final userDocRef = _firestore.collection('users').doc(user.uid);
+        final userDoc = await transaction.get(userDocRef);
+        
+        int currentCount = 0;
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          if (data.containsKey('seenCardsCount')) {
+            currentCount = data['seenCardsCount'] is int ? data['seenCardsCount'] : 0;
+          }
+        }
+        
+        transaction.set(userDocRef, {
+          'seenCardsCount': currentCount + 1,
+          'lastCountUpdate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      });
+      
       print('[COUNT] Seen cards count incremented.');
     } catch (e) {
       print('Error incrementing seen cards count: $e');
@@ -102,7 +120,7 @@ class UserBehaviorService {
     await incrementSeenCardsCount();
   }
 
-  // NEW: Reset seen cards count (useful for testing)
+  // Reset seen cards count (useful for testing)
   static Future<void> resetSeenCardsCount() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -115,6 +133,7 @@ class UserBehaviorService {
         'seenCardsCount': 0,
         'lastCountUpdate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      print('[COUNT] Seen cards count reset to 0');
     } catch (e) {
       print('Error resetting seen cards count: $e');
     }
@@ -128,11 +147,15 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Store in Firestore
-    await storeLikedQuestion(question: question, isLiked: isLiked);
+    try {
+      // Store in Firestore
+      await storeLikedQuestion(question: question, isLiked: isLiked);
 
-    // Update user preferences
-    await _updateUserPreferences(question.category, isLiked ? 1.0 : -0.5);
+      // Update user preferences
+      await _updateUserPreferences(question.category, isLiked ? 1.0 : -0.5);
+    } catch (e) {
+      print('Error tracking question like: $e');
+    }
   }
 
   static Future<List<Question>> getLikedQuestions() async {
@@ -147,9 +170,21 @@ class UserBehaviorService {
           .orderBy('likedAt', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => Question.fromJson(doc.data()['question']))
-          .toList();
+      List<Question> likedQuestions = [];
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          if (data.containsKey('question') && data['question'] != null) {
+            final question = Question.fromJson(Map<String, dynamic>.from(data['question']));
+            likedQuestions.add(question);
+          }
+        } catch (e) {
+          print('Error parsing liked question: $e');
+          // Skip malformed documents
+        }
+      }
+      
+      return likedQuestions;
     } catch (e) {
       print('Error getting liked questions: $e');
       return [];
@@ -163,21 +198,51 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final likedRef = _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('liked_questions')
-        .doc(question.text.hashCode.toString());
+    try {
+      // Use a more reliable document ID
+      final docId = '${question.category}_${question.text.hashCode.abs()}';
+      final likedRef = _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('liked_questions')
+          .doc(docId);
 
-    if (isLiked) {
-      // Add to liked questions
-      await likedRef.set({
-        'question': question.toJson(),
-        'likedAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Remove from liked questions
-      await likedRef.delete();
+      if (isLiked) {
+        // Add to liked questions
+        await likedRef.set({
+          'question': question.toJson(),
+          'likedAt': FieldValue.serverTimestamp(),
+          'questionId': docId, // Add for easier querying
+        });
+        print('[LIKE] Question liked and stored: ${question.text}');
+      } else {
+        // Remove from liked questions
+        await likedRef.delete();
+        print('[LIKE] Question unliked and removed: ${question.text}');
+      }
+    } catch (e) {
+      print('Error storing liked question: $e');
+    }
+  }
+
+  // Check if a question is liked
+  static Future<bool> isQuestionLiked(Question question) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final docId = '${question.category}_${question.text.hashCode.abs()}';
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('liked_questions')
+          .doc(docId)
+          .get();
+
+      return doc.exists;
+    } catch (e) {
+      print('Error checking if question is liked: $e');
+      return false;
     }
   }
 
@@ -190,23 +255,27 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Store detailed swipe data
-    await _firestore
-        .collection('user_behaviors')
-        .doc(user.uid)
-        .collection('swipes')
-        .add({
-      'question': question.toJson(),
-      'direction': direction,
-      'velocity': swipeVelocity,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    try {
+      // Store detailed swipe data
+      await _firestore
+          .collection('user_behaviors')
+          .doc(user.uid)
+          .collection('swipes')
+          .add({
+        'question': question.toJson(),
+        'direction': direction,
+        'velocity': swipeVelocity,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    // Update preferences based on swipe
-    if (direction == 'right') {
-      await _updateUserPreferences(question.category, 0.5);
-    } else if (direction == 'left') {
-      await _updateUserPreferences(question.category, -0.3);
+      // Update preferences based on swipe
+      if (direction == 'right') {
+        await _updateUserPreferences(question.category, 0.5);
+      } else if (direction == 'left') {
+        await _updateUserPreferences(question.category, -0.3);
+      }
+    } catch (e) {
+      print('Error tracking swipe behavior: $e');
     }
   }
 
@@ -218,27 +287,33 @@ class UserBehaviorService {
 
     final userDoc = _firestore.collection('users').doc(user.uid);
 
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(userDoc);
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userDoc);
 
-      Map<String, dynamic> preferences = {};
-      if (snapshot.exists && snapshot.data()!.containsKey('preferences')) {
-        preferences =
-            Map<String, dynamic>.from(snapshot.data()!['preferences']);
-      }
+        Map<String, dynamic> preferences = {};
+        if (snapshot.exists && snapshot.data() != null && snapshot.data()!.containsKey('preferences')) {
+          preferences = Map<String, dynamic>.from(snapshot.data()!['preferences']);
+        }
 
-      // Update category score
-      double currentScore = preferences[category]?.toDouble() ?? 0.0;
-      preferences[category] = (currentScore + scoreChange).clamp(-1.0, 1.0);
+        // Update category score
+        double currentScore = 0.0;
+        if (preferences.containsKey(category) && preferences[category] != null) {
+          currentScore = preferences[category] is num ? preferences[category].toDouble() : 0.0;
+        }
+        preferences[category] = (currentScore + scoreChange).clamp(-1.0, 1.0);
 
-      transaction.set(
-          userDoc,
-          {
-            'preferences': preferences,
-            'lastUpdated': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true));
-    });
+        transaction.set(
+            userDoc,
+            {
+              'preferences': preferences,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true));
+      });
+    } catch (e) {
+      print('Error updating user preferences: $e');
+    }
   }
 
   // Get personalized questions based on user behavior
@@ -252,13 +327,21 @@ class UserBehaviorService {
     try {
       // Get user preferences
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      if (!userDoc.exists || !userDoc.data()!.containsKey('preferences')) {
+      if (!userDoc.exists || userDoc.data() == null || !userDoc.data()!.containsKey('preferences')) {
         return allQuestions..shuffle();
       }
 
-      final preferences = Map<String, double>.from(userDoc
-          .data()!['preferences']
-          .map((k, v) => MapEntry(k, v.toDouble())));
+      final preferencesData = userDoc.data()!['preferences'];
+      if (preferencesData == null) {
+        return allQuestions..shuffle();
+      }
+
+      final preferences = <String, double>{};
+      (preferencesData as Map<String, dynamic>).forEach((key, value) {
+        if (value is num) {
+          preferences[key] = value.toDouble();
+        }
+      });
 
       // Score and sort questions
       final scoredQuestions = allQuestions.map((q) {
@@ -276,7 +359,7 @@ class UserBehaviorService {
       // Mix preferred and random questions
       final preferred = scoredQuestions
           .where((e) => e.value > 0)
-          .take(count * 0.6 ~/ 1)
+          .take((count * 0.6).floor())
           .map((e) => e.key)
           .toList();
 
@@ -298,20 +381,24 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Use a custom event name instead of the reserved "session_start"
-    await _analytics.logEvent(name: 'app_session_start');
+    try {
+      // Use a custom event name instead of the reserved "session_start"
+      await _analytics.logEvent(name: 'app_session_start');
 
-    await _firestore
-        .collection('user_sessions')
-        .doc(user.uid)
-        .collection('sessions')
-        .add({
-      'userId': user.uid,  // Add this line
-      'startTime': FieldValue.serverTimestamp(),
-      'deviceInfo': {
-        // Add device info if needed
-      },
-    });
+      await _firestore
+          .collection('user_sessions')
+          .doc(user.uid)
+          .collection('sessions')
+          .add({
+        'userId': user.uid,
+        'startTime': FieldValue.serverTimestamp(),
+        'deviceInfo': {
+          // Add device info if needed
+        },
+      });
+    } catch (e) {
+      print('Error starting session: $e');
+    }
   }
 
   // Get user insights for AI training
@@ -319,36 +406,52 @@ class UserBehaviorService {
     final user = _auth.currentUser;
     if (user == null) return {};
 
-    final insights = <String, dynamic>{};
+    try {
+      final insights = <String, dynamic>{};
 
-    // Get viewing patterns
-    final views = await _firestore
-        .collection('user_behaviors')
-        .doc(user.uid)
-        .collection('views')
-        .orderBy('timestamp', descending: true)
-        .limit(100)
-        .get();
+      // Get viewing patterns
+      final views = await _firestore
+          .collection('user_behaviors')
+          .doc(user.uid)
+          .collection('views')
+          .orderBy('timestamp', descending: true)
+          .limit(100)
+          .get();
 
-    // Analyze patterns
-    final categoryViews = <String, int>{};
-    final avgDuration = <String, double>{};
+      // Analyze patterns
+      final categoryViews = <String, int>{};
+      final avgDuration = <String, double>{};
 
-    for (final doc in views.docs) {
-      final data = doc.data();
-      final category = data['question']['category'] as String;
-      final duration = data['duration'] as int;
+      for (final doc in views.docs) {
+        try {
+          final data = doc.data();
+          if (data.containsKey('question') && data['question'] != null && 
+              data.containsKey('duration') && data['duration'] != null) {
+            final questionData = data['question'];
+            if (questionData is Map && questionData.containsKey('category')) {
+              final category = questionData['category'] as String;
+              final duration = data['duration'] is int ? data['duration'] as int : 0;
 
-      categoryViews[category] = (categoryViews[category] ?? 0) + 1;
-      avgDuration[category] = ((avgDuration[category] ?? 0.0) + duration) / 2;
+              categoryViews[category] = (categoryViews[category] ?? 0) + 1;
+              avgDuration[category] = ((avgDuration[category] ?? 0.0) + duration) / 2;
+            }
+          }
+        } catch (e) {
+          print('Error processing view data: $e');
+          // Skip malformed documents
+        }
+      }
+
+      insights['categoryPreferences'] = categoryViews;
+      insights['averageViewDuration'] = avgDuration;
+      insights['totalViews'] = views.docs.length;
+      insights['seenCardsCount'] = await getSeenCardsCount();
+
+      return insights;
+    } catch (e) {
+      print('Error getting user insights: $e');
+      return {};
     }
-
-    insights['categoryPreferences'] = categoryViews;
-    insights['averageViewDuration'] = avgDuration;
-    insights['totalViews'] = views.docs.length;
-    insights['seenCardsCount'] = await getSeenCardsCount(); // Add this
-
-    return insights;
   }
 
   static final _random = Random();
@@ -356,5 +459,5 @@ class UserBehaviorService {
 
 // Extension to make tracking easier
 extension QuestionTrackingExtension on Question {
-  String get trackingId => '${category}_${text.hashCode}';
+  String get trackingId => '${category}_${text.hashCode.abs()}';
 }

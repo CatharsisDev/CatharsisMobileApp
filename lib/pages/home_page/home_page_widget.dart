@@ -540,7 +540,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final notifier = ref.read(cardStateProvider.notifier);
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
-    final seenCardsCount = ref.watch(seenCardsCountProvider);
+    final seenCardsCount = ref.watch(seenCardsProvider);
 
     // Get theme data
     final theme = Theme.of(context);
@@ -747,7 +747,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             );
                             
                             // Update local counter immediately
-                            ref.read(seenCardsCountProvider.notifier).state++;
+                            ref.read(seenCardsProvider.notifier).incrementSeenCards();
                             
                             notifier.handleCardSwiped(
                               actualIndex,

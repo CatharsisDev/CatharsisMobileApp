@@ -145,6 +145,7 @@ flutter:
     - assets/images/avatar4.png
     - assets/images/avatar5.png
     - assets/images/avatar6.png
+    - assets/images/default_avatar.jpeg
     - assets/images/catharsis_word_only.png
     - assets/images/dark_mode_background.png
     - assets/images/light_mode_background.png
