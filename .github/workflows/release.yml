@@ -30,31 +30,21 @@ jobs:
       - name: Force Flutter upgrade
         run: flutter upgrade --force
 
-      - name: Verify versions
+      - name: Verify Flutter and Dart versions
         run: |
           flutter --version
           dart --version
 
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+      - name: Decode Keystore to correct location
+        working-directory: android/app
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
 
-      - name: Verify keystore decode
+      - name: Debug keystore config
+        working-directory: android/app
         run: |
-          ls -la android/app/release.jks
-          file android/app/release.jks
-          keytool -list -keystore android/app/release.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}"
-
-      - name: Debug signing config
-        run: |
-          echo "Keystore exists: $(test -f android/app/release.jks && echo 'YES' || echo 'NO')"
-          echo "Store password length: ${#KEYSTORE_PASSWORD}"
-          echo "Key password length: ${#KEY_PASSWORD}"
-          echo "Alias: $KEY_ALIAS"
-        env:
-          KEYSTORE_PATH: release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ls -l release.jks
+          file release.jks
+          keytool -list -v -keystore release.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Repair pub cache
         run: flutter pub cache repair
@@ -65,7 +55,7 @@ jobs:
       - name: Build AAB (Release)
         run: flutter build appbundle --release
         env:
-          KEYSTORE_PATH: android/app/release.jks
+          KEYSTORE_PATH: release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
