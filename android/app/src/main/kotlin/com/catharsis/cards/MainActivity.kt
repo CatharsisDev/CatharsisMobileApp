@@ -1,4 +1,4 @@
-package com.example.catharsismobileapp
+package com.catharsis.cards
 
 import io.flutter.embedding.android.FlutterActivity
 
