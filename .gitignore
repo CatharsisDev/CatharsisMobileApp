@@ -83,4 +83,4 @@ android/app/*.keystore
 # .firebaserc
 # firebase.json
 
-# End of .gitignore
+# End of .gitignoreandroid/app/google-services.json
