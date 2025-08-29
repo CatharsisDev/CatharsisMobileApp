@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+    package="com.catharsis.cards">
+
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Network & notifications permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
