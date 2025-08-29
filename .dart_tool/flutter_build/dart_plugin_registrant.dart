@@ -3,7 +3,7 @@
 // This file is generated from template in file `flutter_tools/lib/src/flutter_plugins.dart`.
 //
 
-// @dart = 3.5
+// @dart = 3.7
 
 import 'dart:io'; // flutter_ignore: dart_io_import.
 import 'package:google_sign_in_android/google_sign_in_android.dart';
