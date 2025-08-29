@@ -22,46 +22,10 @@
           }
         },
         {
-          "client_id": "40399565067-on8lj92k6b38a2ffsiefkcb9pufb97rl.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBEEmvlBF3xTdgNNrW7qfy5PbUkjTHrC4o"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "40399565067-on8lj92k6b38a2ffsiefkcb9pufb97rl.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "40399565067-35uf43031oo3rp9s8gq8l98nu9t4j2i4.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.catharsismobileapp"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:40399565067:android:a142ae9f5887edf761720e",
-        "android_client_info": {
-          "package_name": "com.example.catharsismobileapp"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "40399565067-1fqa2afn6k76vg28f5mg6ce0cfanu321.apps.googleusercontent.com",
+          "client_id": "40399565067-vpfqlb1h1o6mp5328kopcqtlnqj9jiak.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.catharsismobileapp",
+            "package_name": "com.catharsis.cards",
             "certificate_hash": "5be3d8aa1cdeb34d30ac196751a0f7ce9fd12436"
           }
         },
