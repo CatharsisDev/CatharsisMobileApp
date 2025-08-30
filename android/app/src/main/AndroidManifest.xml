@@ -12,10 +12,6 @@
    <uses-permission android:name="android.permission.WAKE_LOCK"/>
    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
    
-   <!-- Optional: for exact alarms in dev/testing only. If you don't truly need exact alarms,
-        consider omitting this to comply with Play policies. -->
-   <!-- <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/> -->
-   
    <application
        android:label="Catharsis Cards"
        android:name="${applicationName}"
