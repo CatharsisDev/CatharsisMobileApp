@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "40399565067-7ceca8g11escbdreikd8onem9s7rfrfb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.catharsis.cards",
+            "certificate_hash": "dcde6ed83538cace8aa6b787a68d87328a21a938"
+          }
+        },
+        {
           "client_id": "40399565067-lg101jnu164ggm71g21paku8r8kd9ts7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
