@@ -1,7 +1,8 @@
 import 'dart:io' show Platform;
+import 'package:catharsis_cards/services/subscription_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode; // Add this import
 
 class AdService {
   // Show an interstitial every N swipes
@@ -55,6 +56,9 @@ class AdService {
 
   static Future<void> onSwipeAndMaybeShow(BuildContext context) async {
     if (!Platform.isAndroid) return;
+
+    final isSubscribed = await SubscriptionService().isUserSubscribed(); // Assume async check
+    if (isSubscribed) return;
 
     _swipesSinceAd++;
     // Not time yet → keep preloading

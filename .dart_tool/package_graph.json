@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "catharsis_cards",
-      "version": "1.0.1+2",
+      "version": "1.0.2+3",
       "dependencies": [
         "auto_size_text",
         "awesome_notifications",
@@ -760,7 +760,7 @@
     },
     {
       "name": "font_awesome_flutter",
-      "version": "10.10.0",
+      "version": "10.9.1",
       "dependencies": [
         "flutter"
       ]
@@ -1733,7 +1733,7 @@
     },
     {
       "name": "sqflite_android",
-      "version": "2.4.2+2",
+      "version": "2.4.1",
       "dependencies": [
         "flutter",
         "path",
@@ -1994,7 +1994,7 @@
     },
     {
       "name": "vm_service",
-      "version": "15.0.2",
+      "version": "15.0.0",
       "dependencies": []
     }
   ],

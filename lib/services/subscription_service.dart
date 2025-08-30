@@ -5,10 +5,20 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SubscriptionService {
-  static const _productIds = <String>{
-    'com.example.catharsiscards.subscription.monthly',
-    'com.example.catharsiscards.subscription.annual',
-  };
+  Set<String> get _productIds {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return {
+        'monthly_subscription',
+        'annual_subscription',
+      };
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return {
+        'com.example.catharsiscards.subscription.monthly',
+        'com.example.catharsiscards.subscription.annual',
+      };
+    }
+    return {};
+  }
 
   static const _kPremiumKey = 'is_premium';
   static const _kSubscriptionExpiryKey = 'subscription_expiry';
@@ -126,6 +136,15 @@ class SubscriptionService {
     if (product == null) throw Exception('Product $id not found');
     final param = PurchaseParam(productDetails: product);
     await InAppPurchase.instance.buyNonConsumable(purchaseParam: param);
+  }
+
+  bool isUserSubscribed() {
+    final expiryTimestamp = _prefs?.getInt(_kSubscriptionExpiryKey);
+    if (expiryTimestamp != null) {
+      final expiryDate = DateTime.fromMillisecondsSinceEpoch(expiryTimestamp);
+      return DateTime.now().isBefore(expiryDate);
+    }
+    return _prefs?.getBool(_kPremiumKey) ?? false;
   }
 
   void dispose() {
