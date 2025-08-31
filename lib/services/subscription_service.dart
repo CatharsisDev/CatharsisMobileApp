@@ -147,6 +147,15 @@ class SubscriptionService {
     return _prefs?.getBool(_kPremiumKey) ?? false;
   }
 
+  Future<bool> isUserSubscribedAsync() async {
+    final expiryTimestamp = _prefs?.getInt(_kSubscriptionExpiryKey);
+    if (expiryTimestamp != null) {
+      final expiryDate = DateTime.fromMillisecondsSinceEpoch(expiryTimestamp);
+      return DateTime.now().isBefore(expiryDate);
+    }
+    return _prefs?.getBool(_kPremiumKey) ?? false;
+  }
+
   void dispose() {
     _subscription?.cancel();
     _premiumStatusController.close();
