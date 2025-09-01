@@ -1,1 +1,53 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"catharsiscards","appId":"1:40399565067:android:a142ae9f5887edf761720e","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"catharsiscards","appId":"1:40399565067:ios:fd035a779d6e1a8f61720e","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"catharsiscards","configurations":{"android":"1:40399565067:android:a142ae9f5887edf761720e","ios":"1:40399565067:ios:fd035a779d6e1a8f61720e","macos":"1:40399565067:ios:997548b9246d604f61720e"}}},"macos":{"default":{"projectId":"catharsiscards","appId":"1:40399565067:ios:997548b9246d604f61720e","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}}}},"firestore":{"database":"(default)","location":"eur3","rules":"firestore.rules","indexes":"firestore.indexes.json"}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "catharsiscards",
+          "appId": "1:40399565067:android:a142ae9f5887edf761720e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "catharsiscards",
+          "appId": "1:40399565067:ios:fd035a779d6e1a8f61720e",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "catharsiscards",
+          "configurations": {
+            "android": "1:40399565067:android:a142ae9f5887edf761720e",
+            "ios": "1:40399565067:ios:fd035a779d6e1a8f61720e",
+            "macos": "1:40399565067:ios:997548b9246d604f61720e"
+          }
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "catharsiscards",
+          "appId": "1:40399565067:ios:997548b9246d604f61720e",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "eur3",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

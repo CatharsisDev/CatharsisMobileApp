@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.catharsis.cards",
+      "sha256_cert_fingerprints": [
+        "BE:8A:CF:61:B4:3E:25:1E:D3:BF:7A:5F:18:73:09:71:36:0A:C8:26:68:FD:93:95:05:D7:41:BC:D6:98:61:E4"
+      ]
+    }
+  }
+]

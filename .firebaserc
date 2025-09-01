@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "catharsiscards"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }
