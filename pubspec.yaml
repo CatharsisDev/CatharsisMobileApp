@@ -2,7 +2,7 @@ name: catharsis_cards
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.5+5
+version: 1.0.6+6
 
 environment:
   sdk: ">=3.7.0<4.0.0"
@@ -51,8 +51,10 @@ dependencies:
   firebase_core: any # or latest 2.x
   firebase_auth: any
   firebase_analytics: any
+  firebase_dynamic_links: ^5.0.14
   cloud_firestore: any
-  cloud_functions: ^5.0.3
+  cloud_functions: ^4.7.6
+  
 
   # Authentication
   google_sign_in: ^6.1.4

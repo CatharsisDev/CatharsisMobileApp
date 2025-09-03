@@ -22,14 +22,6 @@
           }
         },
         {
-          "client_id": "40399565067-lg101jnu164ggm71g21paku8r8kd9ts7.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.catharsis.cards",
-            "certificate_hash": "b361ba612bda38b875c49f040db2a5a610f58d00"
-          }
-        },
-        {
           "client_id": "40399565067-vpfqlb1h1o6mp5328kopcqtlnqj9jiak.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
