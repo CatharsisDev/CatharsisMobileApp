@@ -1,28 +1,52 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   
   /// Expose the Firebase auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      final googleProvider = GoogleAuthProvider();
-      googleProvider.addScope('email');
-      googleProvider.addScope('profile');
+      // Trigger the Google Sign-In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
-      // Force account selection
-      googleProvider.setCustomParameters({
-        'prompt': 'select_account',
-      });
+      // If user cancels sign-in
+      if (googleUser == null) {
+        print('Google Sign-In cancelled by user');
+        return null;
+      }
 
-      final UserCredential result = await _auth.signInWithProvider(googleProvider);
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the credential
+      final UserCredential result = await _auth.signInWithCredential(credential);
+      
+      print('Google Sign-In successful: ${result.user?.email}');
+      
+      // Check if this is a new user
+      if (result.additionalUserInfo?.isNewUser ?? false) {
+        print('New Google user detected - clearing welcome state');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('has_seen_welcome');
+      }
+      
       return result;
     } catch (e) {
+      print('Google Sign-In Error: $e');
+      print('Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -146,6 +170,14 @@ class AuthService {
       await _clearUserDataExceptTheme(currentUserId);
     }
     
+    // Sign out from Google if signed in
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      print('Error signing out from Google: $e');
+    }
+    
+    // Sign out from Firebase
     await _auth.signOut();
     
     // Clear all Hive boxes for the current user

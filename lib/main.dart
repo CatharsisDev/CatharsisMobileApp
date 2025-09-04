@@ -30,8 +30,6 @@ import '/pages/home_page/home_page_widget.dart';
 import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
-
 
 class AppStateNotifier extends ChangeNotifier {
   static final AppStateNotifier _instance = AppStateNotifier._internal();
@@ -72,23 +70,6 @@ void main() async {
   if (Platform.isAndroid) {
     await _initAdsAndroid();
   }
-
-  // Handle Firebase Dynamic Links
-  final PendingDynamicLinkData? initialLink =
-      await FirebaseDynamicLinks.instance.getInitialLink();
-
-  if (initialLink != null) {
-    final Uri deepLink = initialLink.link;
-    print("Initial deep link: $deepLink");
-    // Handle deep link if necessary
-  }
-
-  FirebaseDynamicLinks.instance.onLink.listen((dynamicLinkData) {
-    print("Dynamic link received: ${dynamicLinkData.link}");
-    // Handle link when app is open
-  }).onError((error) {
-    print('Error receiving dynamic link: $error');
-  });
 
   runApp(ProviderScope(child: MyApp()));
 }
