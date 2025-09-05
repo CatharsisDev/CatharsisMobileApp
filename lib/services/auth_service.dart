@@ -13,7 +13,8 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // Trigger the Google Sign-In flow
+      await _googleSignIn.signOut();
+      // Now trigger the Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       // If user cancels sign-in
@@ -172,9 +173,15 @@ class AuthService {
     
     // Sign out from Google if signed in
     try {
-      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect(); // Use disconnect() instead of signOut() for complete removal
     } catch (e) {
-      print('Error signing out from Google: $e');
+      print('Error disconnecting from Google: $e');
+      // Try signOut if disconnect fails
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        print('Error signing out from Google: $e');
+      }
     }
     
     // Sign out from Firebase
