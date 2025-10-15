@@ -1,8 +1,6 @@
 source 'https://cdn.cocoapods.org/'
-# Uncomment this line to define a global platform for your project
 platform :ios, '15.0'
 
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -29,9 +27,11 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  use_frameworks! :linkage => :static
+  use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -41,8 +41,14 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
-      # Avoid Swift .swiftinterface generation that conflicts with bridging headers
       config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      config.build_settings['ENABLE_BITCODE'] = 'NO'
+      
+      # Disable module interface generation for sign_in_with_apple
+      if target.name == 'sign_in_with_apple'
+        config.build_settings['SWIFT_EMIT_MODULE_INTERFACE'] = 'NO'
+      end
     end
   end
 end
