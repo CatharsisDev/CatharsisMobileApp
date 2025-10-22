@@ -317,7 +317,7 @@ class SettingsMenuPage extends ConsumerWidget {
                         icon: Icons.privacy_tip,
                         title: 'Privacy Policy',
                         onTap: () async {
-                          final Uri url = Uri.parse('https://sendn00ts.github.io/CatharsisMobileApp/');
+                          final Uri url = Uri.parse('https://catharsisdev.github.io/CatharsisMobileApp/');
                           if (await canLaunchUrl(url)) {
                             await launchUrl(
                               url,

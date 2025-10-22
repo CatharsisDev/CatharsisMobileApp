@@ -9,144 +9,143 @@ import 'dart:io';
 // Define price tiers for different regions
 class RegionalPricing {
   final String currencyCode;
-  final double monthlyPrice;
-  final double annualPrice;
+  final double? monthlyPrice; // Only used for the USD base
+  final double? annualPrice;  // Only used for the USD base
   final String countryCode;
 
   const RegionalPricing({
     required this.currencyCode,
-    required this.monthlyPrice,
-    required this.annualPrice,
+    this.monthlyPrice,
+    this.annualPrice,
     required this.countryCode,
   });
 }
 
 class PricingService {
-  // Define regional pricing tiers
+  // Rates used to calculate non‑USD prices from the USD base price.
+  // Edit these multipliers if you want to tune regional pricing.
+  static const Map<String, double> _usdToCurrencyRate = {
+    'USD': 1.0,
+    'EUR': 1.0,    // keep EUR roughly at parity with USD for UI display
+    'GBP': 0.7526,
+    'CAD': 1.3769,
+    'AUD': 1.529,
+    'JPY': 146.05,
+    'INR': 82.80,
+    'BRL': 5.17,
+    'MXN': 17.35,
+    'KRW': 1309.17,
+  };
+
+  // Round amounts to a sensible number of decimals for each currency.
+  static double _roundForCurrency(String currencyCode, double amount) {
+    switch (currencyCode) {
+      case 'JPY':
+      case 'KRW':
+        return amount.roundToDouble(); // zero‑decimal currencies
+      default:
+        return double.parse(amount.toStringAsFixed(2));
+    }
+  }
+  
+  static RegionalPricing _pricesFromUSD(String countryCode, String currencyCode) {
+    final baseMonthlyUSD = _regionalPricing['US']?.monthlyPrice
+        ?? _regionalPricing['DEFAULT']?.monthlyPrice
+        ?? 1.99;
+    final baseAnnualUSD  = _regionalPricing['US']?.annualPrice
+        ?? _regionalPricing['DEFAULT']?.annualPrice
+        ?? 14.90;
+
+    final rate = _usdToCurrencyRate[currencyCode] ?? 1.0;
+    final monthly = _roundForCurrency(currencyCode, baseMonthlyUSD * rate);
+    final annual  = _roundForCurrency(currencyCode, baseAnnualUSD  * rate);
+
+    return RegionalPricing(
+      currencyCode: currencyCode,
+      monthlyPrice: monthly,
+      annualPrice: annual,
+      countryCode: countryCode,
+    );
+  }
+  // Define regional currency mapping. Prices for non‑US regions are computed
+  // at runtime from the USD base; only the US/DEFAULT entries carry base USD prices.
   static const Map<String, RegionalPricing> _regionalPricing = {
-    // United States
+    // United States (source of truth for base USD prices)
     'US': RegionalPricing(
       currencyCode: 'USD',
       monthlyPrice: 1.99,
-      annualPrice: 19.10,
+      annualPrice: 14.99,
       countryCode: 'US',
     ),
+
     // European Union (Euro)
-    'DE': RegionalPricing(
-      currencyCode: 'EUR',
-      monthlyPrice: 1.99,
-      annualPrice: 19.10,
-      countryCode: 'DE',
-    ),
-    'FR': RegionalPricing(
-      currencyCode: 'EUR',
-      monthlyPrice: 1.99,
-      annualPrice: 19.10,
-      countryCode: 'FR',
-    ),
-    'IT': RegionalPricing(
-      currencyCode: 'EUR',
-      monthlyPrice: 1.99,
-      annualPrice: 19.10,
-      countryCode: 'IT',
-    ),
-    'ES': RegionalPricing(
-      currencyCode: 'EUR',
-      monthlyPrice: 1.99,
-      annualPrice: 19.10,
-      countryCode: 'ES',
-    ),
+    'DE': RegionalPricing(currencyCode: 'EUR', countryCode: 'DE'),
+    'FR': RegionalPricing(currencyCode: 'EUR', countryCode: 'FR'),
+    'IT': RegionalPricing(currencyCode: 'EUR', countryCode: 'IT'),
+    'ES': RegionalPricing(currencyCode: 'EUR', countryCode: 'ES'),
+
     // United Kingdom
-    'GB': RegionalPricing(
-      currencyCode: 'GBP',
-      monthlyPrice: 1.50, // 1.99 * 0.7526
-      annualPrice: 14.98, // 19.91 * 0.7526
-      countryCode: 'GB',
-    ),
+    'GB': RegionalPricing(currencyCode: 'GBP', countryCode: 'GB'),
+
     // Canada
-    'CA': RegionalPricing(
-      currencyCode: 'CAD',
-      monthlyPrice: 2.74, // 1.99 * 1.3769
-      annualPrice: 27.42, // 19.91 * 1.3769
-      countryCode: 'CA',
-    ),
+    'CA': RegionalPricing(currencyCode: 'CAD', countryCode: 'CA'),
+
     // Australia
-    'AU': RegionalPricing(
-      currencyCode: 'AUD',
-      monthlyPrice: 3.04, // 1.99 * 1.529
-      annualPrice: 30.43, // 19.91 * 1.529
-      countryCode: 'AU',
-    ),
+    'AU': RegionalPricing(currencyCode: 'AUD', countryCode: 'AU'),
+
     // Japan
-    'JP': RegionalPricing(
-      currencyCode: 'JPY',
-      monthlyPrice: 290.60, // 1.99 * 146.05
-      annualPrice: 2905.30, // 19.91 * 146.05
-      countryCode: 'JP',
-    ),
+    'JP': RegionalPricing(currencyCode: 'JPY', countryCode: 'JP'),
+
     // India
-    'IN': RegionalPricing(
-      currencyCode: 'INR',
-      monthlyPrice: 164.65, // 1.99 * 82.80
-      annualPrice: 1648.60, // 19.91 * 82.80
-      countryCode: 'IN',
-    ),
+    'IN': RegionalPricing(currencyCode: 'INR', countryCode: 'IN'),
+
     // Brazil
-    'BR': RegionalPricing(
-      currencyCode: 'BRL',
-      monthlyPrice: 10.29, // 1.99 * 5.17
-      annualPrice: 102.92, // 19.91 * 5.17
-      countryCode: 'BR',
-    ),
+    'BR': RegionalPricing(currencyCode: 'BRL', countryCode: 'BR'),
+
     // Mexico
-    'MX': RegionalPricing(
-      currencyCode: 'MXN',
-      monthlyPrice: 34.52, // 1.99 * 17.35
-      annualPrice: 345.57, // 19.91 * 17.35
-      countryCode: 'MX',
-    ),
+    'MX': RegionalPricing(currencyCode: 'MXN', countryCode: 'MX'),
+
     // South Korea
-    'KR': RegionalPricing(
-      currencyCode: 'KRW',
-      monthlyPrice: 2605.25, // 1.99 * 1309.17
-      annualPrice: 26076.80, // 19.91 * 1309.17
-      countryCode: 'KR',
-    ),
-    // Default fallback (USD)
+    'KR': RegionalPricing(currencyCode: 'KRW', countryCode: 'KR'),
+
+    // Default fallback (also USD base to match US)
     'DEFAULT': RegionalPricing(
       currencyCode: 'USD',
       monthlyPrice: 1.99,
-      annualPrice: 19.91,
+      annualPrice: 14.90,
       countryCode: 'US',
     ),
   };
 
   static RegionalPricing getPricingForLocale(BuildContext context) {
     try {
-      // Get the device locale
+      // 1) Determine a country code preference
       final locale = Localizations.localeOf(context);
-      final countryCode = locale.countryCode ?? '';
-      
-      // Try to get regional pricing for the country
-      final pricing = _regionalPricing[countryCode];
-      if (pricing != null) {
-        return pricing;
+      String? countryCode = locale.countryCode;
+
+      // 2) If not available from Flutter locale, fallback to platform locale
+      if (countryCode == null || !_regionalPricing.containsKey(countryCode)) {
+        final platformLocale = Platform.localeName; // e.g. en_US
+        final parts = platformLocale.split('_');
+        final platformCountry = parts.isNotEmpty ? parts.last : null;
+        if (platformCountry != null && _regionalPricing.containsKey(platformCountry)) {
+          countryCode = platformCountry;
+        }
       }
-      
-      // If country not found, try to get by currency from platform
-      final platformLocale = Platform.localeName;
-      final platformCountry = platformLocale.split('_').last;
-      
-      final platformPricing = _regionalPricing[platformCountry];
-      if (platformPricing != null) {
-        return platformPricing;
-      }
-      
-      // Default to USD pricing
-      return _regionalPricing['DEFAULT']!;
+
+      // 3) Default to US if we still couldn't resolve
+      countryCode ??= 'US';
+
+      // Use the existing regional map only to resolve currency & normalized country
+      final region = _regionalPricing[countryCode] ?? _regionalPricing['DEFAULT']!;
+      final currencyCode = region.currencyCode;
+      final normalizedCountry = region.countryCode;
+
+      // 4) Compute prices from USD base every time
+      return _pricesFromUSD(normalizedCountry, currencyCode);
     } catch (e) {
-      print('Error getting regional pricing: $e');
-      return _regionalPricing['DEFAULT']!;
+      // On any failure, fall back to USD computed prices
+      return _pricesFromUSD('US', 'USD');
     }
   }
 
@@ -353,7 +352,7 @@ final _kAnnualId = Platform.isAndroid
                     children: [
                       _PlanCard(
                         title: 'Monthly Subscription',
-                        price: _pricing.monthlyPrice,
+                        price: _pricing.monthlyPrice!,
                         currencyCode: _pricing.currencyCode,
                         period: 'per month',
                         onPressed: () => _buy(_kMonthlyId),
@@ -361,7 +360,7 @@ final _kAnnualId = Platform.isAndroid
                       ),
                       _PlanCard(
                         title: 'Annual Subscription',
-                        price: _pricing.annualPrice,
+                        price: _pricing.annualPrice!,
                         currencyCode: _pricing.currencyCode,
                         period: 'per year',
                         onPressed: () => _buy(_kAnnualId),
