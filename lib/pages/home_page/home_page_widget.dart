@@ -61,6 +61,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     }
   }
   final GlobalKey _cardBoundaryKey = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
 
   @override
   bool get wantKeepAlive => true;
@@ -152,9 +153,32 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       final file = await File('${tempDir.path}/card_share.png')
           .writeAsBytes(pngBytes);
 
+      // Determine a popover anchor rect for iPad (required) and harmless on iPhone.
+      Rect originRect;
+      final RenderBox? buttonBox =
+          _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (buttonBox != null && buttonBox.hasSize) {
+        final Offset topLeft = buttonBox.localToGlobal(Offset.zero);
+        originRect = Rect.fromLTWH(
+          topLeft.dx,
+          topLeft.dy,
+          buttonBox.size.width,
+          buttonBox.size.height,
+        );
+      } else {
+        // Fallback: tiny rect at screen center so it's within the screen bounds.
+        final Size screenSize = MediaQuery.of(context).size;
+        originRect = Rect.fromCenter(
+          center: Offset(screenSize.width / 2, screenSize.height / 2),
+          width: 1,
+          height: 1,
+        );
+      }
+
       await Share.shareXFiles(
         [XFile(file.path)],
         text: 'Check out this catharsis card!',
+        sharePositionOrigin: originRect,
       );
     } catch (e) {
       print('Error sharing card image with logo: $e');
@@ -784,6 +808,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                   children: [
                     // Share button
                     InkWell(
+                      key: _shareButtonKey,
                       onTap: () => _captureAndShareCard(),
                       customBorder: const CircleBorder(),
                       child: Container(
