@@ -20,7 +20,7 @@ class UserBehaviorService {
     try {
       // Store in Firestore for AI training
       await _firestore
-          .collection('user_behaviors')
+          .collection('users')
           .doc(user.uid)
           .collection('views')
           .add({
@@ -57,7 +57,7 @@ class UserBehaviorService {
 
       // Fallback: count from views collection
       final viewsSnapshot = await _firestore
-          .collection('user_behaviors')
+          .collection('users')
           .doc(user.uid)
           .collection('views')
           .count()
@@ -258,7 +258,7 @@ class UserBehaviorService {
     try {
       // Store detailed swipe data
       await _firestore
-          .collection('user_behaviors')
+          .collection('users')
           .doc(user.uid)
           .collection('swipes')
           .add({
@@ -386,7 +386,7 @@ class UserBehaviorService {
       await _analytics.logEvent(name: 'app_session_start');
 
       await _firestore
-          .collection('user_sessions')
+          .collection('users')
           .doc(user.uid)
           .collection('sessions')
           .add({
@@ -411,7 +411,7 @@ class UserBehaviorService {
 
       // Get viewing patterns
       final views = await _firestore
-          .collection('user_behaviors')
+          .collection('users')
           .doc(user.uid)
           .collection('views')
           .orderBy('timestamp', descending: true)
