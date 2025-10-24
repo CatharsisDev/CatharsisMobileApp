@@ -392,18 +392,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     backgroundColor: Colors.white,
                     textColor: Colors.black87,
                   ),
-                  SizedBox(height: 16),
-                  _SignInButton(
-                    onPressed: () async {
-                      await authService.signInWithApple();
-                      // Router will handle redirecting new users to welcome screen
-                    },
-                    icon: FontAwesomeIcons.apple,
-                    text: 'Sign in with Apple',
-                    backgroundColor: Colors.black,
-                    textColor: Colors.white,
-                  ),
-                ],
+               SizedBox(height: 16),
+_SignInButton(
+  onPressed: () async {
+    try {
+      final user = await authService.signInWithApple();
+      if (user == null) {
+        // Show error - sign in failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple Sign In failed or was cancelled')),
+        );
+      }
+      // If user != null, router will redirect automatically
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  },
+  icon: FontAwesomeIcons.apple,
+  text: 'Sign in with Apple',
+  backgroundColor: Colors.black,
+  textColor: Colors.white,
+),               ],
               ),
             ),  // end SafeArea
           ],    // end Stack children

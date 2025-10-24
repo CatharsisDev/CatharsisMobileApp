@@ -13,31 +13,26 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
   String? _currentUserId;
 
   void _init() async {
-    // Listen for auth changes from the beginning
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
         data: (user) {
           final previousUser = previous?.whenOrNull(data: (user) => user);
           
-          // Only update if user actually changed
           if (previousUser?.uid != user?.uid) {
             if (user != null) {
               _currentUserId = user.uid;
+              print('TutorialState: User changed to ${user.uid}');
               checkIfTutorialSeen();
             } else {
-              // User logged out
               _currentUserId = null;
               if (mounted) {
-                state = TutorialState(); // Reset to default state
+                state = TutorialState();
               }
             }
           }
         },
-        loading: () {
-          // Don't do anything while loading, keep current state
-        },
+        loading: () {},
         error: (error, stack) {
-          // Handle error case - maybe reset to default state
           print('Auth error: $error');
           if (mounted) {
             state = TutorialState();
@@ -46,32 +41,47 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
       );
     });
 
-    // Also check current state immediately
     final currentAuthState = ref.read(authStateProvider);
     currentAuthState.whenData((user) {
       if (user != null && _currentUserId != user.uid) {
         _currentUserId = user.uid;
+        print('TutorialState: Initial user ${user.uid}');
         checkIfTutorialSeen();
       }
     });
   }
 
   Future<void> checkIfTutorialSeen() async {
-    if (!mounted || _currentUserId == null) return;
+    if (!mounted || _currentUserId == null) {
+      print('TutorialState: Cannot check - mounted: $mounted, userId: $_currentUserId');
+      return;
+    }
   
-    // Set loading state
+    print('TutorialState: Checking tutorial state for $_currentUserId');
     state = state.copyWith(isLoading: true);
   
     try {
-      // Try Firestore first
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(_currentUserId)
           .get();
 
-      final hasSeenTutorial = doc.data()?['hasSeenWelcome'] ?? false;
+      if (!doc.exists) {
+        print('TutorialState: New user - no Firestore doc yet');
+        if (mounted) {
+          state = TutorialState(
+            hasSeenWelcome: false,
+            showInAppTutorial: false,
+            isInitialized: true,
+            isLoading: false,
+          );
+        }
+        return;
+      }
 
-      // Store in local prefs as cache
+      final hasSeenTutorial = doc.data()?['hasSeenWelcome'] ?? false;
+      print('TutorialState: Firestore hasSeenWelcome = $hasSeenTutorial');
+
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_seen_tutorial_$_currentUserId';
       await prefs.setBool(key, hasSeenTutorial);
@@ -83,13 +93,15 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
           isInitialized: true,
           isLoading: false,
         );
+        print('TutorialState: State updated - hasSeenWelcome: $hasSeenTutorial');
       }
     } catch (e) {
-      // If Firestore fails, fall back to local cache
+      print('TutorialState: Firestore error: $e');
       try {
         final prefs = await SharedPreferences.getInstance();
         final key = 'has_seen_tutorial_$_currentUserId';
         final hasSeenTutorial = prefs.getBool(key) ?? false;
+        print('TutorialState: Using cached value: $hasSeenTutorial');
         if (mounted) {
           state = TutorialState(
             hasSeenWelcome: hasSeenTutorial,
@@ -99,6 +111,7 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
           );
         }
       } catch (e2) {
+        print('TutorialState: Cache error: $e2');
         if (mounted) {
           state = TutorialState(
             hasSeenWelcome: false,
@@ -114,14 +127,14 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
   Future<void> setTutorialSeen() async {
     if (!mounted || _currentUserId == null) return;
 
+    print('TutorialState: Setting tutorial seen for $_currentUserId');
+    
     try {
-      // Set in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_currentUserId)
           .set({'hasSeenWelcome': true}, SetOptions(merge: true));
 
-      // Also cache locally
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_seen_tutorial_$_currentUserId';
       await prefs.setBool(key, true);
@@ -131,9 +144,10 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
           hasSeenWelcome: true,
           showInAppTutorial: false,
         );
+        print('TutorialState: Tutorial marked as seen');
       }
     } catch (e) {
-      print('Error setting tutorial seen: $e');
+      print('TutorialState: Error setting tutorial seen: $e');
     }
   }
 
@@ -151,13 +165,11 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
     if (!mounted || _currentUserId == null) return;
 
     try {
-      // Reset in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_currentUserId)
           .set({'hasSeenWelcome': false}, SetOptions(merge: true));
 
-      // Remove from local prefs
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_seen_tutorial_$_currentUserId';
       await prefs.remove(key);
@@ -169,7 +181,7 @@ class TutorialStateNotifier extends StateNotifier<TutorialState> {
         );
       }
     } catch (e) {
-      print('Error resetting tutorial: $e');
+      print('TutorialState: Error resetting tutorial: $e');
     }
   }
 }
@@ -206,7 +218,6 @@ final tutorialProvider = StateNotifierProvider<TutorialStateNotifier, TutorialSt
   (ref) => TutorialStateNotifier(ref),
 );
 
-// For backward compatibility with existing code
 final tutorialVisibilityProvider = Provider<bool>((ref) {
   return ref.watch(tutorialProvider).showInAppTutorial;
 });

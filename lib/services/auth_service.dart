@@ -52,35 +52,41 @@ class AuthService {
     }
   }
 
-  Future<User?> signInWithApple() async {
-    try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
+Future<User?> signInWithApple() async {
+  try {
+    print('Starting Apple Sign In...');
+    final credential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+    
+    print('Apple credential received: ${credential.identityToken != null}');
 
-      final oauthCredential = OAuthProvider("apple.com").credential(
-        idToken: credential.identityToken,
-        accessToken: credential.authorizationCode,
-      );
-
-      final UserCredential result = await _auth.signInWithCredential(oauthCredential);
-      
-      // Check if this is a new user
-      if (result.additionalUserInfo?.isNewUser ?? false) {
-        print('New Apple user detected - clearing welcome state');
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('has_seen_welcome');
-      }
-      
-      return result.user;
-    } catch (e) {
-      print('Apple Sign In Error: $e');
-      return null;
+    final oauthCredential = OAuthProvider("apple.com").credential(
+      idToken: credential.identityToken,
+      accessToken: credential.authorizationCode,
+    );
+    
+    print('Creating Firebase credential...');
+    final UserCredential result = await _auth.signInWithCredential(oauthCredential);
+    
+    print('Firebase sign-in successful: ${result.user?.uid}');
+    
+    if (result.additionalUserInfo?.isNewUser ?? false) {
+      print('New Apple user detected - clearing welcome state');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('has_seen_welcome');
     }
+    
+    return result.user;
+  } catch (e) {
+    print('Apple Sign In Error: $e');
+    print('Error type: ${e.runtimeType}');
+    rethrow; // Changed from return null
   }
+}
 
   Future<User?> signInWithEmail(String email, String password) async {
     try {

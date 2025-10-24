@@ -185,17 +185,18 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   int _currentPage = 0;
   late RegionalPricing _pricing;
 
-  final _iap = InAppPurchase.instance;
-  List<ProductDetails> _products = [];
-  // Use the exact IDs from your StoreKit configuration
-  final _kMonthlyId = Platform.isAndroid
-    ? 'monthly_subscription'
-    : 'com.example.catharsiscards.subscription.monthly';
+final _iap = InAppPurchase.instance;
+List<ProductDetails> _products = [];
+
+final _kMonthlyId = Platform.isAndroid
+  ? 'monthly_subscription'
+  : 'monthly_subscription';
 
 final _kAnnualId = Platform.isAndroid
-    ? 'annual_subscription'
-    : 'com.example.catharsiscards.subscription.annual';
-  late final StreamSubscription<List<PurchaseDetails>> _subscription;
+  ? 'annual_subscription'
+  : 'annual_subscription1';
+
+late final StreamSubscription<List<PurchaseDetails>> _subscription;
 
   @override
   void initState() {
