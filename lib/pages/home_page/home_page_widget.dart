@@ -234,12 +234,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         return SwipeLimitPopup(
           resetTime: effectiveResetTime,
           onDismiss: () {
-            ref.read(popUpProvider.notifier).hidePopUp();
-            // Safe pop with context check
-            if (Navigator.of(dialogContext).canPop()) {
-              Navigator.of(dialogContext).pop();
-            }
-          },
+  ref.read(popUpProvider.notifier).hidePopUp();
+  Navigator.of(dialogContext).pop();
+},
           onPurchase: () {
             // Safe pop
             if (Navigator.of(dialogContext).canPop()) {
@@ -247,10 +244,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             }
           },
           onTimerEnd: () {
-            // Use dialogContext, not the outer context
             ref.read(popUpProvider.notifier).hidePopUp();
-            
-            // Delay to ensure state updates complete
             Future.delayed(const Duration(milliseconds: 100), () {
               // Check if dialog is still showing
               if (Navigator.of(dialogContext, rootNavigator: true).canPop()) {
@@ -764,15 +758,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             q.text == question.text && q.category == question.category
                           );
                           if (actualIndex != -1) {
-                            // Track the question view
+                            // Track the question view (this handles the seen cards count internally)
                             UserBehaviorService.trackQuestionView(
                               question: question,
                               viewDuration: 3000,
                             );
-                            
-                            // Update local counter immediately
+
                             ref.read(seenCardsProvider.notifier).incrementSeenCards();
                             
+                            // Handle the card swipe
                             notifier.handleCardSwiped(
                               actualIndex,
                               direction: direction.name,

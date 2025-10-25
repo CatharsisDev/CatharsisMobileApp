@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../questions_model.dart';
 import 'pop_up_provider.dart';
 import 'auth_provider.dart';
@@ -244,6 +245,9 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
     if (!mounted) return;
     
+    // Sync with Firestore as source of truth
+    await _syncSwipeLimitFromFirestore();
+    
     await _loadLiked();
     await _loadLikedFromFirestore();
     await _loadSeenQuestions();
@@ -258,6 +262,83 @@ class CardStateNotifier extends StateNotifier<CardState> {
 
     if (mounted) {
       state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> _syncSwipeLimitFromFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+    
+    // Check if user is premium - premium users skip limit checks
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    if (subscriptionService.isPremium.value) {
+      print('[SYNC] User is premium - clearing any existing swipe limits');
+      // Clear any existing limits
+      if (state.swipeResetTime != null || state.swipeCount != 0) {
+        await swipeBox.delete('swipe_limit_reached');
+        await swipeBox.put('swipe_count', 0);
+        
+        // Clear from Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'swipeCount': 0,
+          'swipeResetTime': FieldValue.delete(),
+        }, SetOptions(merge: true));
+        
+        if (mounted) {
+          state = state.copyWith(
+            swipeCount: 0,
+            swipeResetTime: null,
+          );
+        }
+      }
+      return;
+    }
+    
+    try {
+      // Load from Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (!mounted) return;
+      
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final firestoreCount = data['swipeCount'] as int? ?? 0;
+        final firestoreReset = data['swipeResetTime'] as String?;
+        
+        // Use Firestore as source of truth
+        final localCount = state.swipeCount;
+        final useFirestoreData = firestoreCount > localCount || 
+                                 (firestoreReset != null && state.swipeResetTime == null);
+        
+        if (useFirestoreData) {
+          // Update local Hive storage
+          await swipeBox.put('swipe_count', firestoreCount);
+          if (firestoreReset != null) {
+            await swipeBox.put('swipe_limit_reached', firestoreReset);
+          }
+          
+          final loadedReset = firestoreReset != null
+              ? DateTime.parse(firestoreReset).add(RESET_DURATION)
+              : null;
+              
+          if (mounted) {
+            state = state.copyWith(
+              swipeCount: firestoreCount,
+              swipeResetTime: loadedReset,
+            );
+          }
+          
+          print('[SYNC] Swipe limit synced from Firestore: count=$firestoreCount, reset=$loadedReset');
+        }
+      }
+    } catch (e) {
+      print('Error syncing swipe limit from Firestore: $e');
     }
   }
 
@@ -363,6 +444,37 @@ class CardStateNotifier extends StateNotifier<CardState> {
   Future<void> _checkReset() async {
     if (!mounted) return;
     
+    // Premium users never have swipe limits
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    if (subscriptionService.isPremium.value) {
+      // Clear any existing limits for premium users
+      if (state.swipeResetTime != null || state.swipeCount != 0) {
+        print('[CHECK_RESET] Premium user - clearing any stale cooldown');
+        await swipeBox.delete('swipe_limit_reached');
+        await swipeBox.put('swipe_count', 0);
+        
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'swipeCount': 0,
+            'swipeResetTime': FieldValue.delete(),
+            'lastSwipe': FieldValue.delete(),
+          }, SetOptions(merge: true));
+        }
+        
+        if (mounted) {
+          state = state.copyWith(
+            swipeResetTime: null,
+            swipeCount: 0,
+          );
+        }
+      }
+      return;
+    }
+    
     final raw = swipeBox.get('swipe_limit_reached') as String?;
     if (raw != null) {
       final resetTime = DateTime.parse(raw).add(RESET_DURATION);
@@ -376,6 +488,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
         
         await swipeBox.delete('swipe_limit_reached');
         await swipeBox.put('swipe_count', 0);
+        
+        // Also clear from Firestore
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'swipeCount': 0,
+            'swipeResetTime': FieldValue.delete(),
+            'lastSwipe': FieldValue.delete(),
+          }, SetOptions(merge: true));
+        }
         
         if (mounted) {
           state = state.copyWith(
@@ -429,6 +554,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       orElse: () => false,
     );
 
+    final user = FirebaseAuth.instance.currentUser;
+
     if (!isPremium) {
       // Check for expired cooldown and show popup if still in cooldown
       await _checkReset();
@@ -451,6 +578,18 @@ class CardStateNotifier extends StateNotifier<CardState> {
           'last_swipe': DateTime.now().toIso8601String(),
         };
         await swipeBox.putAll(batch);
+
+        // Persist to Firestore
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'swipeCount': newCount,
+            'swipeResetTime': now.toIso8601String(),
+            'lastSwipe': DateTime.now().toIso8601String(),
+          }, SetOptions(merge: true));
+        }
 
         // Update state FIRST so any UI reading it gets the fresh time
         if (mounted) {
@@ -486,6 +625,18 @@ class CardStateNotifier extends StateNotifier<CardState> {
           'last_swipe': DateTime.now().toIso8601String(),
         };
         await swipeBox.putAll(batch);
+        
+        // Persist to Firestore
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'swipeCount': newCount,
+            'lastSwipe': DateTime.now().toIso8601String(),
+          }, SetOptions(merge: true));
+        }
+        
         state = state.copyWith(swipeCount: newCount);
       }
     } else {
@@ -494,6 +645,17 @@ class CardStateNotifier extends StateNotifier<CardState> {
         () async {
           await swipeBox.delete('swipe_limit_reached');
           await swipeBox.put('swipe_count', 0);
+          
+          // Clear from Firestore
+          if (user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'swipeCount': 0,
+              'swipeResetTime': FieldValue.delete(),
+            }, SetOptions(merge: true));
+          }
         }();
         if (mounted) {
           state = state.copyWith(swipeResetTime: null, swipeCount: 0);
@@ -583,6 +745,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       orElse: () => false,
     );
 
+    final user = FirebaseAuth.instance.currentUser;
+
     if (!isPremium) {
       // Refresh cooldown in the background
       () async { await _checkReset(); }();
@@ -606,6 +770,18 @@ class CardStateNotifier extends StateNotifier<CardState> {
             'last_swipe': DateTime.now().toIso8601String(),
           };
           await swipeBox.putAll(batch);
+          
+          // Persist to Firestore
+          if (user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'swipeCount': newCount,
+              'swipeResetTime': now.toIso8601String(),
+              'lastSwipe': DateTime.now().toIso8601String(),
+            }, SetOptions(merge: true));
+          }
         }();
 
         if (mounted) {
@@ -626,6 +802,17 @@ class CardStateNotifier extends StateNotifier<CardState> {
             'last_swipe': DateTime.now().toIso8601String(),
           };
           await swipeBox.putAll(batch);
+          
+          // Persist to Firestore
+          if (user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'swipeCount': newCount,
+              'lastSwipe': DateTime.now().toIso8601String(),
+            }, SetOptions(merge: true));
+          }
         }();
         if (mounted) {
           state = state.copyWith(swipeCount: newCount);
@@ -637,6 +824,17 @@ class CardStateNotifier extends StateNotifier<CardState> {
         () async {
           await swipeBox.delete('swipe_limit_reached');
           await swipeBox.put('swipe_count', 0);
+          
+          // Clear from Firestore
+          if (user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'swipeCount': 0,
+              'swipeResetTime': FieldValue.delete(),
+            }, SetOptions(merge: true));
+          }
         }();
         if (mounted) {
           state = state.copyWith(swipeResetTime: null, swipeCount: 0);
@@ -783,6 +981,19 @@ class CardStateNotifier extends StateNotifier<CardState> {
     // Clear cooldown data
     await swipeBox.delete('swipe_limit_reached');
     await swipeBox.put('swipe_count', 0);
+    
+    // Clear from Firestore
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'swipeCount': 0,
+        'swipeResetTime': FieldValue.delete(),
+        'lastSwipe': FieldValue.delete(),
+      }, SetOptions(merge: true));
+    }
     
     if (mounted) {
       state = state.copyWith(
