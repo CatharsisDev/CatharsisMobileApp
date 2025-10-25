@@ -500,28 +500,34 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                     const SizedBox(height: 20),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Stack(
                         children: [
-                          Text(
-                            'Filter Categories',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textTheme.titleLarge?.color,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => setState(() => tempSelected.clear()),
+                          Align(
+                            alignment: Alignment.center,
                             child: Text(
-                              'Clear All',
+                              'Filter Categories',
                               style: TextStyle(
                                 fontFamily: 'Runtime',
-                                color: theme.brightness == Brightness.dark 
-                                    ? Colors.grey[400] 
-                                    : Colors.grey[600],
-                                fontSize: 14,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: theme.textTheme.titleLarge?.color,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => setState(() => tempSelected.clear()),
+                              child: Text(
+                                'Clear All',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  color: theme.brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ),
@@ -568,22 +574,19 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                       width: 1
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          display,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontFamily: 'Runtime',
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: theme.textTheme.bodyMedium?.color,
-                                          ),
-                                        ),
+                                  child: Center(
+                                    child: Text(
+                                      display,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.textTheme.bodyMedium?.color,
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
