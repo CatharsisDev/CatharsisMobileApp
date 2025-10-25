@@ -30,9 +30,7 @@ class UserBehaviorService {
       });
 
       print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
-
-      // Update the total seen cards count
-      await _updateSeenCardsCount();
+      
     } catch (e) {
       print('Error tracking question view: $e');
     }

@@ -265,82 +265,86 @@ class CardStateNotifier extends StateNotifier<CardState> {
     }
   }
 
-  Future<void> _syncSwipeLimitFromFirestore() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || !mounted) return;
-    
-    // Check if user is premium - premium users skip limit checks
-    final subscriptionService = ref.read(subscriptionServiceProvider);
-    if (subscriptionService.isPremium.value) {
-      print('[SYNC] User is premium - clearing any existing swipe limits');
-      // Clear any existing limits
-      if (state.swipeResetTime != null || state.swipeCount != 0) {
-        await swipeBox.delete('swipe_limit_reached');
-        await swipeBox.put('swipe_count', 0);
-        
-        // Clear from Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
-          'swipeCount': 0,
-          'swipeResetTime': FieldValue.delete(),
-        }, SetOptions(merge: true));
-        
-        if (mounted) {
-          state = state.copyWith(
-            swipeCount: 0,
-            swipeResetTime: null,
-          );
-        }
-      }
-      return;
-    }
-    
-    try {
-      // Load from Firestore
-      final doc = await FirebaseFirestore.instance
+Future<void> _syncSwipeLimitFromFirestore() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null || !mounted) return;
+  
+  // Check if user is premium
+  final subscriptionService = ref.read(subscriptionServiceProvider);
+  if (subscriptionService.isPremium.value) {
+    print('[SYNC] User is premium - clearing any existing swipe limits');
+    if (state.swipeResetTime != null || state.swipeCount != 0) {
+      await swipeBox.delete('swipe_limit_reached');
+      await swipeBox.put('swipe_count', 0);
+      
+      await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .get();
+          .set({
+        'swipeCount': 0,
+        'swipeResetTime': FieldValue.delete(),
+      }, SetOptions(merge: true));
       
-      if (!mounted) return;
+      if (mounted) {
+        state = state.copyWith(swipeCount: 0, swipeResetTime: null);
+      }
+    }
+    return;
+  }
+  
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    
+    if (!mounted) return;
+    
+    if (doc.exists && doc.data() != null) {
+      final data = doc.data()!;
+      int firestoreCount = data['swipeCount'] as int? ?? 0;
+      final firestoreResetStr = data['swipeResetTime'] as String?;
       
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        final firestoreCount = data['swipeCount'] as int? ?? 0;
-        final firestoreReset = data['swipeResetTime'] as String?;
+      DateTime? firestoreResetTime;
+      if (firestoreResetStr != null) {
+        firestoreResetTime = DateTime.parse(firestoreResetStr).add(RESET_DURATION);
         
-        // Use Firestore as source of truth
-        final localCount = state.swipeCount;
-        final useFirestoreData = firestoreCount > localCount || 
-                                 (firestoreReset != null && state.swipeResetTime == null);
-        
-        if (useFirestoreData) {
-          // Update local Hive storage
-          await swipeBox.put('swipe_count', firestoreCount);
-          if (firestoreReset != null) {
-            await swipeBox.put('swipe_limit_reached', firestoreReset);
-          }
+        // Clear if expired
+        if (firestoreResetTime.isBefore(DateTime.now())) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'swipeCount': 0,
+            'swipeResetTime': FieldValue.delete(),
+          }, SetOptions(merge: true));
           
-          final loadedReset = firestoreReset != null
-              ? DateTime.parse(firestoreReset).add(RESET_DURATION)
-              : null;
-              
-          if (mounted) {
-            state = state.copyWith(
-              swipeCount: firestoreCount,
-              swipeResetTime: loadedReset,
-            );
-          }
-          
-          print('[SYNC] Swipe limit synced from Firestore: count=$firestoreCount, reset=$loadedReset');
+          firestoreResetTime = null;
+          firestoreCount = 0;
         }
       }
-    } catch (e) {
-      print('Error syncing swipe limit from Firestore: $e');
+      
+      // Update local
+      await swipeBox.put('swipe_count', firestoreCount);
+      if (firestoreResetTime != null) {
+        await swipeBox.put('swipe_limit_reached', firestoreResetTime.subtract(RESET_DURATION).toIso8601String());
+      } else {
+        await swipeBox.delete('swipe_limit_reached');
+      }
+      
+      if (mounted) {
+        state = state.copyWith(
+          swipeCount: firestoreCount,
+          swipeResetTime: firestoreResetTime,
+        );
+      }
+      
+      print('[SYNC] Swipe limit synced from Firestore: count=$firestoreCount, reset=$firestoreResetTime');
     }
+  } catch (e) {
+    print('Error syncing swipe limit from Firestore: $e');
   }
+}
 
   Future<void> _loadLiked() async {
     if (!mounted) return;
@@ -877,8 +881,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
         seenBox.add(seenQuestion);
       }
     }
-    
-    // Set start time for next question
+
     _currentQuestionStartTime = DateTime.now();
     
     _maybeGenerateMore();

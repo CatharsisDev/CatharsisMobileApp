@@ -74,27 +74,31 @@ class SeenCardsNotifier extends StateNotifier<int> {
     }
   }
 
-  // Call this when a user views a new card
-  Future<void> incrementSeenCards() async {
-    if (!mounted || _currentUserId == null) return;
+Future<void> incrementSeenCards() async {
+  print('[PROVIDER] incrementSeenCards called - mounted: $mounted, userId: $_currentUserId, currentState: $state');
+  
+  if (!mounted || _currentUserId == null) {
+    print('[PROVIDER] Increment skipped - not ready');
+    return;
+  }
 
-    try {
-      // Update local state immediately for better UX
-      if (mounted) {
-        state = state + 1;
-      }
-      
-      // Update Firestore in background
-      await UserBehaviorService.incrementSeenCardsCount();
+  try {
+    // Update local state immediately for better UX
+    if (mounted) {
+      state = state + 1;
       print('[PROVIDER] Incremented seen cards to: $state');
-    } catch (e) {
-      print('Error incrementing seen cards count: $e');
-      // Revert local state on error
-      if (mounted && state > 0) {
-        state = state - 1;
-      }
+    }
+    
+    // Update Firestore in background
+    await UserBehaviorService.incrementSeenCardsCount();
+  } catch (e) {
+    print('[PROVIDER] Error incrementing seen cards count: $e');
+    // Revert local state on error
+    if (mounted && state > 0) {
+      state = state - 1;
     }
   }
+}
 
   // Call this to manually refresh the count from Firestore
   Future<void> refreshCount() async {

@@ -757,22 +757,21 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           final actualIndex = activeQuestions.indexWhere((q) =>
                             q.text == question.text && q.category == question.category
                           );
-                          if (actualIndex != -1) {
-                            // Track the question view (this handles the seen cards count internally)
-                            UserBehaviorService.trackQuestionView(
-                              question: question,
-                              viewDuration: 3000,
-                            );
 
-                            ref.read(seenCardsProvider.notifier).incrementSeenCards();
-                            
-                            // Handle the card swipe
-                            notifier.handleCardSwiped(
-                              actualIndex,
-                              direction: direction.name,
-                              velocity: 1.0,
-                            );
-                          }
+                          if (actualIndex != -1) {
+  ref.read(seenCardsProvider.notifier).incrementSeenCards();
+  
+  UserBehaviorService.trackQuestionView(
+    question: question,
+    viewDuration: 3000,
+  );
+  
+  notifier.handleCardSwiped(
+    actualIndex,
+    direction: direction.name,
+    velocity: 1.0,
+  );
+}
                           // Maybe show an interstitial every N swipes (Android only handled in service)
                           AdService.onSwipeAndMaybeShow(context);
                         }
