@@ -4,6 +4,11 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../questions_model.dart'; // Add this import
+import 'dart:io' show Platform;
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -11,6 +16,19 @@ class AuthService {
   
   /// Expose the Firebase auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // --- Apple Sign In helpers (nonce) ---
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final rand = Random.secure();
+    return List.generate(length, (_) => charset[rand.nextInt(charset.length)]).join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -49,32 +67,56 @@ class AuthService {
 
   Future<User?> signInWithApple() async {
     try {
-      print('Starting Apple Sign In...');
+      // --- Web (optional) ---
+      if (kIsWeb) {
+        final provider = AppleAuthProvider()
+          ..addScope('email')
+          ..addScope('name');
+        final result = await _auth.signInWithPopup(provider);
+        if (result.additionalUserInfo?.isNewUser ?? false) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('has_seen_welcome');
+        }
+        return result.user;
+      }
+
+      // --- Android: use Firebase provider flow (Chrome Custom Tabs), no web sessionStorage needed ---
+      if (Platform.isAndroid) {
+        final provider = AppleAuthProvider()
+          ..addScope('email')
+          ..addScope('name');
+        final result = await _auth.signInWithProvider(provider);
+        if (result.additionalUserInfo?.isNewUser ?? false) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('has_seen_welcome');
+        }
+        return result.user;
+      }
+
+      // --- iOS: use native Sign in with Apple with nonce ---
+      final rawNonce = _generateNonce();
+      final hashedNonce = _sha256ofString(rawNonce);
+
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        nonce: hashedNonce,
       );
-      
-      print('Apple credential received: ${credential.identityToken != null}');
 
-      final oauthCredential = OAuthProvider("apple.com").credential(
+      final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: credential.identityToken,
-        accessToken: credential.authorizationCode,
+        rawNonce: rawNonce,
       );
-      
-      print('Creating Firebase credential...');
+
       final UserCredential result = await _auth.signInWithCredential(oauthCredential);
-      
-      print('Firebase sign-in successful: ${result.user?.uid}');
-      
+
       if (result.additionalUserInfo?.isNewUser ?? false) {
-        print('New Apple user detected - clearing welcome state');
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('has_seen_welcome');
       }
-      
+
       return result.user;
     } catch (e) {
       print('Apple Sign In Error: $e');
