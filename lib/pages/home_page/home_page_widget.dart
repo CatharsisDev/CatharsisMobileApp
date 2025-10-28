@@ -22,6 +22,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -99,6 +100,43 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     // Preload Android interstitial ads
     if (Platform.isAndroid) {
       AdService.preload();
+    }
+    // Ask for notification permission once when the user reaches Home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _promptNotificationsOnce();
+    });
+  }
+
+  Future<void> _promptNotificationsOnce() async {
+    const askedKey = 'notif_prompted_after_welcome_v2';
+    final prefs = await SharedPreferences.getInstance();
+
+    // Don’t prompt if already asked before
+    final askedAlready = prefs.getBool(askedKey) ?? false;
+    if (askedAlready) return;
+
+    // Don’t prompt if already allowed
+    final allowed = await NotificationService.areNotificationsEnabled();
+    if (allowed) {
+      await prefs.setBool(askedKey, true);
+      return;
+    }
+
+    // Ask once
+    final granted = await NotificationService.ensurePermission(prompt: true);
+
+    // Mark that we asked, so we won’t nag again
+    await prefs.setBool(askedKey, true);
+
+    // Optional: small hint if denied (no navigation to settings here)
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can enable notifications later in Settings.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -299,13 +337,16 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     // Save to provider
     ref.read(popUpProvider.notifier).showPopUp(effectiveResetTime);
     
-    // Schedule notification
+    // Schedule notification (only if notifications are enabled)
     if (effectiveResetTime.isAfter(DateTime.now())) {
-      await NotificationService.cancelCooldownNotification('999');
-      await NotificationService.scheduleCooldownNotification(
-        id: '999',
-        delay: effectiveResetTime.difference(DateTime.now()),
-      );
+      final enabled = await NotificationService.areNotificationsEnabled();
+      if (enabled) {
+        await NotificationService.cancelCooldownNotification('999');
+        await NotificationService.scheduleCooldownNotification(
+          id: '999',
+          delay: effectiveResetTime.difference(DateTime.now()),
+        );
+      }
     }
     
     // Ensure context is still mounted
@@ -845,20 +886,19 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           );
 
                           if (actualIndex != -1) {
-  ref.read(seenCardsProvider.notifier).incrementSeenCards();
-  
-  UserBehaviorService.trackQuestionView(
-    question: question,
-    viewDuration: 3000,
-  );
-  
-  notifier.handleCardSwiped(
-    actualIndex,
-    direction: direction.name,
-    velocity: 1.0,
-  );
-}
-                          // Maybe show an interstitial every N swipes (Android only handled in service)
+    // Track the view once; Firestore logic will handle the counter
+    UserBehaviorService.trackQuestionView(
+      question: question,
+      viewDuration: 3000,
+    );
+
+    notifier.handleCardSwiped(
+      actualIndex,
+      direction: direction.name,
+      velocity: 1.0,
+    );
+  }
+
                           AdService.onSwipeAndMaybeShow(context);
                         }
                         setState(() => _currentCardIndex += 1);

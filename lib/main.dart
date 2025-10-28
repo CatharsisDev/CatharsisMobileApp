@@ -58,7 +58,7 @@ void main() async {
   );
 
   // Initialize Notifications (Awesome Notifications)
-  await NotificationService.init();
+  await NotificationService.init(promptUser: false);
 
   // Load environment variables
   await dotenv.load(fileName: ".env");
