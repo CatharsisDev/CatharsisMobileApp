@@ -49,6 +49,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   Offset? _lastTapPos;
   static const _doubleTapMaxDelay = Duration(milliseconds: 300);
   static const _doubleTapMaxDistance = 24.0;
+  // Guard: avoid re-prompting within the same app run (e.g., after logout/login)
+  static bool _askedNotifThisRun = false;
 
   void _handleCardTap(Offset pos, Question q) {
     final now = DateTime.now();
@@ -108,27 +110,40 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   }
 
   Future<void> _promptNotificationsOnce() async {
+    // Runtime guard so logging out/in during the same app run won't re-trigger a prompt
+    if (_askedNotifThisRun) return;
+
     const askedKey = 'notif_prompted_after_welcome_v2';
     final prefs = await SharedPreferences.getInstance();
 
-    // Don’t prompt if already asked before
+    // Don’t prompt if already asked before (persisted across launches)
     final askedAlready = prefs.getBool(askedKey) ?? false;
-    if (askedAlready) return;
+    if (askedAlready) {
+      _askedNotifThisRun = true;
+      return;
+    }
 
     // Don’t prompt if already allowed
     final allowed = await NotificationService.areNotificationsEnabled();
     if (allowed) {
       await prefs.setBool(askedKey, true);
+      _askedNotifThisRun = true;
       return;
     }
 
-    // Ask once
-    final granted = await NotificationService.ensurePermission(prompt: true);
+    bool granted = false;
+    try {
+      // Ask once. Implementation of NotificationService should NOT force-open settings.
+      granted = await NotificationService.ensurePermission(prompt: true);
+    } catch (e) {
+      // Fail silently and still mark as asked so we don't nag.
+      debugPrint('Notification permission request error: $e');
+    }
 
-    // Mark that we asked, so we won’t nag again
+    // Mark that we asked (persisted + runtime guard)
     await prefs.setBool(askedKey, true);
+    _askedNotifThisRun = true;
 
-    // Optional: small hint if denied (no navigation to settings here)
     if (!mounted) return;
     if (!granted) {
       ScaffoldMessenger.of(context).showSnackBar(

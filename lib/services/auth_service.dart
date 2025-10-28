@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 /// AuthService: Google + Apple (iOS native, Android provider with web fallback) + email
 class AuthService {
@@ -208,13 +209,33 @@ class AuthService {
       await _handleFirstLogin(result);
       return result.user;
     } on SignInWithAppleAuthorizationException catch (e) {
+      // User canceled the Apple sheet — return null without showing an error.
+      if (e.code == AuthorizationErrorCode.canceled) {
+        print('[AppleSignIn] User canceled — no error UI.');
+        return null;
+      }
       print('Apple authorization error: ${e.code} - ${e.message}');
       rethrow;
+    } on PlatformException catch (e) {
+      // Some platforms report cancelation as a PlatformException
+      final code = (e.code).toLowerCase();
+      final msg  = (e.message ?? '').toLowerCase();
+      if (code.contains('canceled') || code.contains('cancelled') || msg.contains('canceled')) {
+        print('[AppleSignIn] User canceled (platform) — no error UI.');
+        return null;
+      }
+      rethrow;
     } on FirebaseAuthException catch (e) {
+      // Handle "popup closed" / "web context cancelled" (web) or "canceled" codes gracefully
+      final code = e.code.toLowerCase();
+      if (code == 'popup-closed-by-user' || code == 'web-context-cancelled' || code.contains('canceled') || code.contains('cancelled')) {
+        print('[AppleSignIn] FirebaseAuth canceled — no error UI. code=${e.code}');
+        return null;
+      }
       // Surface helpful hints for common misconfigurations
       print('FirebaseAuthException (Apple): ${e.code} - ${e.message}');
       if (e.code == 'account-exists-with-different-credential') {
-        // You might want to call: await _auth.fetchSignInMethodsForEmail(email) to guide a merge flow.
+        // Optional: implement account linking or guidance flow
       }
       rethrow;
     } catch (e) {

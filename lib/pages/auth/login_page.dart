@@ -396,17 +396,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 _SignInButton(
   onPressed: () async {
     try {
-      final user = await authService.signInWithApple();
+      final user = await ref.read(authServiceProvider).signInWithApple();
       if (user == null) {
-        // Show error - sign in failed
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Apple Sign In failed or was cancelled')),
-        );
+        // User canceled — do nothing silently.
+        return;
       }
-      // If user != null, router will redirect automatically
-    } catch (e) {
+      // Success: downstream navigation/logic will proceed automatically.
+    } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(content: Text(e.message ?? 'Sign in failed.')),
+      );
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in failed.')),
       );
     }
   },
