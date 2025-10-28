@@ -6,160 +6,16 @@ import '../../provider/theme_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 
-// Define price tiers for different regions
-class RegionalPricing {
-  final String currencyCode;
-  final double? monthlyPrice; // Only used for the USD base
-  final double? annualPrice;  // Only used for the USD base
-  final String countryCode;
-
-  const RegionalPricing({
-    required this.currencyCode,
-    this.monthlyPrice,
-    this.annualPrice,
-    required this.countryCode,
-  });
-}
-
-class PricingService {
-  // Rates used to calculate non‑USD prices from the USD base price.
-  // Edit these multipliers if you want to tune regional pricing.
-  static const Map<String, double> _usdToCurrencyRate = {
-    'USD': 1.0,
-    'EUR': 1.0,    // keep EUR roughly at parity with USD for UI display
-    'GBP': 0.7526,
-    'CAD': 1.3769,
-    'AUD': 1.529,
-    'JPY': 146.05,
-    'INR': 82.80,
-    'BRL': 5.17,
-    'MXN': 17.35,
-    'KRW': 1309.17,
-  };
-
-  // Round amounts to a sensible number of decimals for each currency.
-  static double _roundForCurrency(String currencyCode, double amount) {
-    switch (currencyCode) {
-      case 'JPY':
-      case 'KRW':
-        return amount.roundToDouble(); // zero‑decimal currencies
-      default:
-        return double.parse(amount.toStringAsFixed(2));
-    }
-  }
-  
-  static RegionalPricing _pricesFromUSD(String countryCode, String currencyCode) {
-    final baseMonthlyUSD = _regionalPricing['US']?.monthlyPrice
-        ?? _regionalPricing['DEFAULT']?.monthlyPrice
-        ?? 1.99;
-    final baseAnnualUSD  = _regionalPricing['US']?.annualPrice
-        ?? _regionalPricing['DEFAULT']?.annualPrice
-        ?? 14.90;
-
-    final rate = _usdToCurrencyRate[currencyCode] ?? 1.0;
-    final monthly = _roundForCurrency(currencyCode, baseMonthlyUSD * rate);
-    final annual  = _roundForCurrency(currencyCode, baseAnnualUSD  * rate);
-
-    return RegionalPricing(
-      currencyCode: currencyCode,
-      monthlyPrice: monthly,
-      annualPrice: annual,
-      countryCode: countryCode,
+// Simple price formatting helper
+String _formatPrice(double price, String currencyCode, {String? locale}) {
+  try {
+    final format = NumberFormat.simpleCurrency(
+      name: currencyCode,
+      locale: locale,
     );
-  }
-  // Define regional currency mapping. Prices for non‑US regions are computed
-  // at runtime from the USD base; only the US/DEFAULT entries carry base USD prices.
-  static const Map<String, RegionalPricing> _regionalPricing = {
-    // United States (source of truth for base USD prices)
-    'US': RegionalPricing(
-      currencyCode: 'USD',
-      monthlyPrice: 1.99,
-      annualPrice: 14.99,
-      countryCode: 'US',
-    ),
-
-    // European Union (Euro)
-    'DE': RegionalPricing(currencyCode: 'EUR', countryCode: 'DE'),
-    'FR': RegionalPricing(currencyCode: 'EUR', countryCode: 'FR'),
-    'IT': RegionalPricing(currencyCode: 'EUR', countryCode: 'IT'),
-    'ES': RegionalPricing(currencyCode: 'EUR', countryCode: 'ES'),
-
-    // United Kingdom
-    'GB': RegionalPricing(currencyCode: 'GBP', countryCode: 'GB'),
-
-    // Canada
-    'CA': RegionalPricing(currencyCode: 'CAD', countryCode: 'CA'),
-
-    // Australia
-    'AU': RegionalPricing(currencyCode: 'AUD', countryCode: 'AU'),
-
-    // Japan
-    'JP': RegionalPricing(currencyCode: 'JPY', countryCode: 'JP'),
-
-    // India
-    'IN': RegionalPricing(currencyCode: 'INR', countryCode: 'IN'),
-
-    // Brazil
-    'BR': RegionalPricing(currencyCode: 'BRL', countryCode: 'BR'),
-
-    // Mexico
-    'MX': RegionalPricing(currencyCode: 'MXN', countryCode: 'MX'),
-
-    // South Korea
-    'KR': RegionalPricing(currencyCode: 'KRW', countryCode: 'KR'),
-
-    // Default fallback (also USD base to match US)
-    'DEFAULT': RegionalPricing(
-      currencyCode: 'USD',
-      monthlyPrice: 1.99,
-      annualPrice: 14.90,
-      countryCode: 'US',
-    ),
-  };
-
-  static RegionalPricing getPricingForLocale(BuildContext context) {
-    try {
-      // 1) Determine a country code preference
-      final locale = Localizations.localeOf(context);
-      String? countryCode = locale.countryCode;
-
-      // 2) If not available from Flutter locale, fallback to platform locale
-      if (countryCode == null || !_regionalPricing.containsKey(countryCode)) {
-        final platformLocale = Platform.localeName; // e.g. en_US
-        final parts = platformLocale.split('_');
-        final platformCountry = parts.isNotEmpty ? parts.last : null;
-        if (platformCountry != null && _regionalPricing.containsKey(platformCountry)) {
-          countryCode = platformCountry;
-        }
-      }
-
-      // 3) Default to US if we still couldn't resolve
-      countryCode ??= 'US';
-
-      // Use the existing regional map only to resolve currency & normalized country
-      final region = _regionalPricing[countryCode] ?? _regionalPricing['DEFAULT']!;
-      final currencyCode = region.currencyCode;
-      final normalizedCountry = region.countryCode;
-
-      // 4) Compute prices from USD base every time
-      return _pricesFromUSD(normalizedCountry, currencyCode);
-    } catch (e) {
-      // On any failure, fall back to USD computed prices
-      return _pricesFromUSD('US', 'USD');
-    }
-  }
-
-  static String formatPrice(double price, String currencyCode, {String? locale}) {
-    try {
-      final format = NumberFormat.simpleCurrency(
-        name: currencyCode,
-        locale: locale,
-      );
-      return format.format(price);
-    } catch (e) {
-      // Fallback formatting
-      return '$currencyCode ${price.toStringAsFixed(2)}';
-    }
+    return format.format(price);
+  } catch (e) {
+    return '$currencyCode ${price.toStringAsFixed(2)}';
   }
 }
 
@@ -183,7 +39,6 @@ class SubscriptionPlansPage extends StatefulWidget {
 class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   final PageController _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
-  late RegionalPricing _pricing;
 
 final _iap = InAppPurchase.instance;
 List<ProductDetails> _products = [];
@@ -275,12 +130,48 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
       print('Error in _buy(): $e');
     }
   }
+  
+  Widget _buildPlanCard(String productId, String title, String period, {bool showSavings = false}) {
+    // Find the actual product from the store
+    ProductDetails? product;
+    try {
+      product = _products.firstWhere((p) => p.id == productId);
+    } catch (e) {
+      // Product not loaded yet
+      return _PlanCard(
+        title: title,
+        price: 0.0,
+        currencyCode: 'USD',
+        period: period,
+        onPressed: () {},
+        locale: Localizations.localeOf(context).toString(),
+        isLoading: true,
+      );
+    }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Get regional pricing based on device locale
-    _pricing = PricingService.getPricingForLocale(context);
+    // Use actual store price
+    final price = product.rawPrice;
+    final currencyCode = product.currencyCode;
+    
+    // Calculate monthly price for savings
+    double? monthlyPrice;
+    if (showSavings) {
+      try {
+        final monthlyProduct = _products.firstWhere((p) => p.id == _kMonthlyId);
+        monthlyPrice = monthlyProduct.rawPrice;
+      } catch (e) {}
+    }
+
+    return _PlanCard(
+      title: title,
+      price: price,
+      currencyCode: currencyCode,
+      period: period,
+      onPressed: () => _buy(productId),
+      locale: Localizations.localeOf(context).toString(),
+      showSavings: showSavings,
+      monthlyPrice: monthlyPrice,
+    );
   }
 
   @override
@@ -351,24 +242,8 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
                   child: PageView(
                     controller: _pageController,
                     children: [
-                      _PlanCard(
-                        title: 'Monthly Subscription',
-                        price: _pricing.monthlyPrice!,
-                        currencyCode: _pricing.currencyCode,
-                        period: 'per month',
-                        onPressed: () => _buy(_kMonthlyId),
-                        locale: Localizations.localeOf(context).toString(),
-                      ),
-                      _PlanCard(
-                        title: 'Annual Subscription',
-                        price: _pricing.annualPrice!,
-                        currencyCode: _pricing.currencyCode,
-                        period: 'per year',
-                        onPressed: () => _buy(_kAnnualId),
-                        locale: Localizations.localeOf(context).toString(),
-                        showSavings: true,
-                        monthlyPrice: _pricing.monthlyPrice,
-                      ),
+                      _buildPlanCard(_kMonthlyId, 'Monthly Subscription', 'per month'),
+                      _buildPlanCard(_kAnnualId, 'Annual Subscription', 'per year', showSavings: true),
                     ],
                   ),
                 ),
@@ -410,6 +285,7 @@ class _PlanCard extends StatelessWidget {
   final String locale;
   final bool showSavings;
   final double? monthlyPrice;
+  final bool isLoading;
 
   const _PlanCard({
     Key? key,
@@ -421,11 +297,14 @@ class _PlanCard extends StatelessWidget {
     required this.locale,
     this.showSavings = false,
     this.monthlyPrice,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final priceString = PricingService.formatPrice(price, currencyCode, locale: locale);
+    final priceString = isLoading 
+        ? '...' 
+        : _formatPrice(price, currencyCode, locale: locale);
     
     // Calculate savings for annual plan
     String? savingsText;

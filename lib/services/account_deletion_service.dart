@@ -566,6 +566,7 @@ class AccountDeletionService {
     try {
       final rawNonce = _randomNonce();
       final nonce = _sha256ofString(rawNonce);
+      final state = _randomNonce(16); // Add state for fresh auth
 
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -573,10 +574,19 @@ class AccountDeletionService {
           AppleIDAuthorizationScopes.fullName,
         ],
         nonce: nonce,
+        state: state, // Forces Apple to return fresh credentials
       );
 
+      // Check if identityToken is null
+      if (appleCredential.identityToken == null) {
+        throw FirebaseAuthException(
+          code: 'invalid-credential',
+          message: 'Apple did not provide a valid token. Please try signing out and back in.',
+        );
+      }
+
       final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
+        idToken: appleCredential.identityToken!,
         rawNonce: rawNonce,
       );
 
@@ -585,6 +595,7 @@ class AccountDeletionService {
       print('Apple re-authentication successful');
     } catch (e) {
       _dismissDialog(context);
+      print('Apple reauth error: $e');
       rethrow;
     }
   }
