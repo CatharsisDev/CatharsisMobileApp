@@ -572,7 +572,7 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
       // Track swipe count and enforce limit
       final newCount = state.swipeCount + 1;
-      if (newCount >= SWIPE_LIMIT) {
+      if (newCount > SWIPE_LIMIT) {
         final now = DateTime.now();
         final resetTime = now.add(RESET_DURATION); // always fresh future time
 
@@ -763,7 +763,7 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       }
 
       final newCount = state.swipeCount + 1;
-      if (newCount >= SWIPE_LIMIT) {
+      if (newCount > SWIPE_LIMIT) {
         final now = DateTime.now();
         final resetTime = now.add(RESET_DURATION);
 

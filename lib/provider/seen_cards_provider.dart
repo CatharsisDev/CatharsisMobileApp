@@ -74,34 +74,23 @@ class SeenCardsNotifier extends StateNotifier<int> {
     }
   }
 
-  // This method is called after trackQuestionView() completes to refresh the count
-  // The actual increment happens in UserBehaviorService.markCardSeenOnce()
-  Future<void> onQuestionViewed() async {
-    print('[PROVIDER] onQuestionViewed called - mounted: $mounted, userId: $_currentUserId, currentState: $state');
-    
-    if (!mounted || _currentUserId == null) {
-      print('[PROVIDER] Refresh skipped - not ready');
-      return;
-    }
-
-    try {
-      // Optimistically increment for instant UI update
-      if (mounted) {
-        state = state + 1;
-        print('[PROVIDER] Optimistically incremented to: $state');
-      }
-      
-      // Verify with Firestore in background (with small delay for propagation)
-      Future.delayed(const Duration(milliseconds: 500)).then((_) async {
-        if (mounted) {
-          await _loadSeenCardsCount();
-          print('[PROVIDER] Verified count from Firestore: $state');
-        }
-      });
-    } catch (e) {
-      print('[PROVIDER] Error refreshing seen cards count: $e');
-    }
+Future<void> onQuestionViewed() async {
+  print('[PROVIDER] onQuestionViewed called - mounted: $mounted, userId: $_currentUserId, currentState: $state');
+  
+  if (!mounted || _currentUserId == null) {
+    print('[PROVIDER] Refresh skipped - not ready');
+    return;
   }
+
+  try {
+    // Wait for Firestore write to complete, then refresh
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _loadSeenCardsCount();
+    print('[PROVIDER] Refreshed count from Firestore: $state');
+  } catch (e) {
+    print('[PROVIDER] Error refreshing seen cards count: $e');
+  }
+}
 
   // Call this to manually refresh the count from Firestore
   Future<void> refreshCount() async {

@@ -564,39 +564,74 @@ class AccountDeletionService {
     _showLoadingDialog(context, 'Re-authenticating with Apple...');
 
     try {
+      // Fresh nonce + state for this auth round
       final rawNonce = _randomNonce();
       final nonce = _sha256ofString(rawNonce);
-      final state = _randomNonce(16); // Add state for fresh auth
+      final state = _randomNonce(16);
 
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-        nonce: nonce,
-        state: state, // Forces Apple to return fresh credentials
-      );
-
-      // Check if identityToken is null
-      if (appleCredential.identityToken == null) {
-        throw FirebaseAuthException(
-          code: 'invalid-credential',
-          message: 'Apple did not provide a valid token. Please try signing out and back in.',
+      // Request Apple credentials.
+      AuthorizationCredentialAppleID appleCredential;
+      if (Platform.isIOS) {
+        appleCredential = await SignInWithApple.getAppleIDCredential(
+          scopes: const [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+          nonce: nonce,
+          state: state,
+        );
+      } else {
+        // Android (and others) use the web flow.
+        appleCredential = await SignInWithApple.getAppleIDCredential(
+          scopes: const [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+          nonce: nonce,
+          state: state,
+          webAuthenticationOptions: WebAuthenticationOptions(
+            clientId: 'com.catharsis.cards.androidappleauth',
+            redirectUri: Uri.parse('https://catharsiscards.firebaseapp.com/__/auth/handler'),
+          ),
         );
       }
 
+      // Build Firebase OAuth credential.
+      // Important: include rawNonce and pass authorizationCode as accessToken for Android/web flows.
       final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken!,
+        idToken: appleCredential.identityToken,              // may be null on some Android flows
+        accessToken: appleCredential.authorizationCode,      // use auth code here (works with Firebase)
         rawNonce: rawNonce,
       );
 
       await _auth.currentUser!.reauthenticateWithCredential(oauthCredential);
+
       _dismissDialog(context);
       print('Apple re-authentication successful');
+    } on SignInWithAppleAuthorizationException catch (e) {
+      _dismissDialog(context);
+      // User cancelled from Apple sheet
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw FirebaseAuthException(
+          code: 'cancelled',
+          message: 'Apple re-authentication cancelled by user.',
+        );
+      }
+      print('Apple reauth error: $e');
+      throw FirebaseAuthException(
+        code: 'invalid-credential',
+        message: 'Apple did not return valid credentials. Please try again.',
+      );
+    } on FirebaseAuthException {
+      _dismissDialog(context);
+      rethrow;
     } catch (e) {
       _dismissDialog(context);
-      print('Apple reauth error: $e');
-      rethrow;
+      print('Apple reauth unexpected error: $e');
+      throw FirebaseAuthException(
+        code: 'invalid-credential',
+        message: 'Apple re-authentication failed. Please try again.',
+      );
     }
   }
 
