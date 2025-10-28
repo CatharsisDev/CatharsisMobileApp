@@ -157,17 +157,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: ListView(
                 padding: EdgeInsets.fromLTRB(
                   20,
-                  20,
+                  90,
                   20,
                   MediaQuery.of(context).padding.bottom + 20,
                 ),
                 children: [
                   Image.asset(
                     'assets/images/catharsis_word_only.png',
-                    height: MediaQuery.of(context).size.height * 0.20,
+                    height: MediaQuery.of(context).size.height * 0.06,
                     fit: BoxFit.contain,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 50),
                   Center(
                     child: Text(
                       _isLogin ? 'Welcome Back' : 'Create Account',
@@ -180,7 +180,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 16),
+                  SizedBox(height: 30),
                   Card(
                     elevation: 8,
                     color: Colors.white,

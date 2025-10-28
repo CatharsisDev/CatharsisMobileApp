@@ -30,6 +30,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     'assets/images/avatar5.png',
     'assets/images/avatar6.png',
   ];
+  // Per-avatar visual tweaks to keep artwork inside the circular frame
+  static const Map<String, double> _avatarScaleTweak = {
+    'assets/images/avatar3.png': 0.80, // slightly smaller so it doesn't touch the ring
+  };
+
+  static const Map<String, Alignment> _avatarAlignTweak = {
+    'assets/images/avatar3.png': Alignment(0, -0.50), // a touch less upward bias
+  };
   final PageController _pageController = PageController();
   int _currentPage = 0;
   
@@ -1198,6 +1206,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   Widget _buildAvatarChoice(String imagePath, int index) {
     final isSelected = _selectedAvatar == imagePath;
     final isCurrent = _currentAvatarIndex == index;
+    final bool isCustom = _avatarPath != null && imagePath == _avatarPath;
+    final double scale = isCustom ? 0.82 : (_avatarScaleTweak[imagePath] ?? 0.85);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: 100,
@@ -1223,38 +1233,64 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             : [],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(5),
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.grey[100],
           ),
           child: ClipOval(
-            child: _buildAvatar(imagePath), // Pass the imagePath
+            clipBehavior: Clip.antiAlias,
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: scale,
+                heightFactor: scale,
+                child: _buildAvatar(
+                  imagePath,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAvatar(String imagePath) {
-    if (_avatarPath != null && imagePath == _avatarPath) {
+  Widget _buildAvatar(String imagePath, {BoxFit fit = BoxFit.cover}) {
+    // Bias the viewport upward so the head/face region is favored.
+    // -1.0 = top, 0.0 = center, +1.0 = bottom
+    final bool isCustom = _avatarPath != null && imagePath == _avatarPath;
+    final Alignment headBias = isCustom
+        ? const Alignment(0, -0.15) // center slightly up for user uploads
+        : (_avatarAlignTweak[imagePath] ?? const Alignment(0, -0.55));
+
+    if (isCustom) {
       // Custom uploaded image
-      return CircleAvatar(
-        radius: 48,
-        backgroundImage: FileImage(File(_avatarPath!)),
+      return SizedBox.expand(
+        child: Image.file(
+          File(_avatarPath!),
+          fit: fit,
+          alignment: headBias,
+        ),
       );
     } else if (imagePath.startsWith('assets/')) {
       // Asset image
-      return CircleAvatar(
-        radius: 48,
-        backgroundImage: AssetImage(imagePath),
+      return SizedBox.expand(
+        child: Image.asset(
+          imagePath,
+          fit: fit,
+          alignment: headBias,
+        ),
       );
     } else {
-      // Fallback
-      return const CircleAvatar(
-        radius: 48,
-        backgroundImage: AssetImage('assets/images/default_avatar.jpeg'),
+      // Fallback to a default asset
+      return SizedBox.expand(
+        child: Image(
+          image: const AssetImage('assets/images/default_avatar.jpeg'),
+          fit: fit,
+          alignment: headBias,
+        ),
       );
     }
   }
