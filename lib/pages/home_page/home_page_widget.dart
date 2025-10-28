@@ -36,6 +36,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   late CardSwiperController _cardController;
   late AnimationController _handController;
   late Animation<Offset> _swipeAnimation;
+  // Heart fill animation (top -> bottom)
+  late AnimationController _heartFillController;
+  late Animation<double> _heartFill;
+  String? _lastHeartKey; // to sync state when the visible card changes
   int _currentCardIndex = 0;
   List<Question>? _cachedQuestions;
   String? _cacheKey;
@@ -83,6 +87,15 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       parent: _handController,
       curve: Curves.easeInOut,
     ));
+    // Heart fill animation controller
+    _heartFillController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _heartFill = CurvedAnimation(
+      parent: _heartFillController,
+      curve: Curves.easeInOut,
+    );
     // Preload Android interstitial ads
     if (Platform.isAndroid) {
       AdService.preload();
@@ -93,7 +106,79 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   void dispose() {
     _cardController.dispose();
     _handController.dispose();
+    _heartFillController.dispose();
     super.dispose();
+  }
+  void _syncHeartForCard(Question? q, bool liked) {
+    final key = q == null ? 'none' : '${q.category}_${q.text}';
+    if (_lastHeartKey != key) {
+      _lastHeartKey = key;
+      // Snap to the correct state when the visible card changes (no animation)
+      _heartFillController.value = liked ? 1.0 : 0.0;
+    }
+  }
+
+  Widget _buildAnimatedHeart(
+    bool isLiked,
+    ThemeData theme,
+    CustomThemeExtension? customTheme,
+  ) {
+    // Animate toward the target state for the CURRENT card
+    if (isLiked &&
+        _heartFillController.value != 1.0 &&
+        _heartFillController.status != AnimationStatus.forward) {
+      _heartFillController.forward();
+    } else if (!isLiked &&
+        _heartFillController.value != 0.0 &&
+        _heartFillController.status != AnimationStatus.reverse) {
+      _heartFillController.reverse();
+    }
+
+    // Keep icon size consistent with your other top‑bar icons
+    const double iconSize = 32.0; // was 28, looked too big
+    final Color baseColor =
+        customTheme?.likeAndShareIconColor ??
+        theme.iconTheme.color ??
+        Colors.white;
+
+    // Use a brand/secondary color for the filled state
+    final Color fillColor = Colors.red;
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _heartFill,
+          builder: (context, _) {
+            final double h = _heartFill.value.clamp(0.0, 1.0);
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1) Filled heart revealed TOP -> BOTTOM
+                ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: h,
+                    child: Icon(
+                      Icons.favorite,
+                      size: iconSize,
+                      color: fillColor,
+                    ),
+                  ),
+                ),
+                // 2) Outline on TOP so the border stays crisp
+                Icon(
+                  Icons.favorite_border,
+                  size: iconSize,
+                  color: baseColor,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _captureAndShareCard() async {
@@ -510,6 +595,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final customTheme = theme.extension<CustomThemeExtension>();
     final categoryColor = customTheme?.categoryChipColor ?? theme.primaryColor;
     final themeName = ref.watch(themeProvider).themeName;
+    final chipTextColor = themeName == 'catharsis_signature'
+        ? Colors.white
+        : (customTheme?.buttonFontColor ?? theme.textTheme.bodyMedium?.color);
 
     return Container(
       decoration: BoxDecoration(
@@ -531,7 +619,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
             category,
             style: TextStyle(
               fontFamily: 'Runtime',
-              color: customTheme?.buttonFontColor,
+              color: chipTextColor,
               fontSize: 14,
               fontWeight: FontWeight.bold,
               shadows: [
@@ -564,10 +652,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
 
-    // Seed/refresh the cached deck cautiously:
-    // - First time
-    // - When categories change (invalidate)
-    // - When the cache is empty but the provider just became non-empty
     final categoriesKey = _generateCacheKey(cardState);
     final categoriesChanged = _cacheKey != categoriesKey;
     final providerList = cardState.activeQuestions;
@@ -596,6 +680,8 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         cardState.likedQuestions.any((q) =>
             q.text == currentQuestion.text &&
             q.category == currentQuestion.category);
+
+    _syncHeartForCard(currentQuestion, isCurrentLiked);
 
     ref.listen<bool>(popUpProvider, (previous, next) {
       if (next) {
@@ -805,12 +891,12 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                       onTap: () => _captureAndShareCard(),
                       customBorder: const CircleBorder(),
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: 30,
+                        height: 30,
                         child: Image.asset(
                           'assets/images/share_icon.png',
-                          width: 24,
-                          height: 24,
+                          width: 30,
+                          height: 30,
                           color: customTheme?.likeAndShareIconColor ?? theme.iconTheme.color,
                         ),
                       ),
@@ -823,22 +909,17 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           ref.read(popUpProvider.notifier).state = true;
                         } else if (currentQuestion != null) {
                           HapticFeedback.lightImpact();
+                          // Trigger animation immediately for better feedback
+                          if (isCurrentLiked) {
+                            _heartFillController.reverse();
+                          } else {
+                            _heartFillController.forward();
+                          }
                           notifier.toggleLiked(currentQuestion);
                         }
                       },
                       customBorder: const CircleBorder(),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        child: Image.asset(
-                          'assets/images/heart_icon.png',
-                          width: 28,
-                          height: 28,
-                          color: isCurrentLiked
-                              ? Colors.red
-                              : (customTheme?.likeAndShareIconColor ?? theme.iconTheme.color),
-                        ),
-                      ),
+                      child: _buildAnimatedHeart(isCurrentLiked, theme, customTheme),
                     ),
                   ],
                 ),

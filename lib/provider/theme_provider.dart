@@ -126,6 +126,7 @@ class AppThemes {
         backgroundImagePath: "assets/images/background_texture.png",
         profileStatCardImagePath: null,
         categoryChipColor: Color.fromRGBO(42, 63, 44, 1),
+        categoryChipFontColor: Color.fromRGBO(255, 255, 255, 1),
         preferenceButtonColor: Color.fromRGBO(42, 63, 44, 1),
         preferenceModalBackgroundColor: Color.fromRGBO(250, 241, 225, 1),
         preferenceItemSelectedColor: Color.fromARGB(255, 242, 227, 200),
@@ -248,6 +249,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
   final bool showBackgroundTexture;
   final String? backgroundImagePath;
   final Color categoryChipColor;
+  final Color? categoryChipFontColor;
   final Color preferenceButtonColor;
   final Color preferenceModalBackgroundColor;
   final Color preferenceItemSelectedColor;
@@ -268,6 +270,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     required this.showBackgroundTexture,
     required this.backgroundImagePath,
     required this.categoryChipColor,
+    this.categoryChipFontColor,
     required this.preferenceButtonColor,
     required this.preferenceModalBackgroundColor,
     required this.preferenceItemSelectedColor,
@@ -290,6 +293,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
     bool? showBackgroundTexture,
     String? backgroundImagePath,
     Color? categoryChipColor,
+    Color? categoryChipFontColor,
     Color? preferenceButtonColor,
     Color? preferenceModalBackgroundColor,
     Color? preferenceItemSelectedColor,
@@ -310,6 +314,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       showBackgroundTexture: showBackgroundTexture ?? this.showBackgroundTexture,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
       categoryChipColor: categoryChipColor ?? this.categoryChipColor,
+      categoryChipFontColor: categoryChipFontColor ?? this.categoryChipFontColor,
       preferenceButtonColor: preferenceButtonColor ?? this.preferenceButtonColor,
       preferenceModalBackgroundColor: preferenceModalBackgroundColor ?? this.preferenceModalBackgroundColor,
       preferenceItemSelectedColor: preferenceItemSelectedColor ?? this.preferenceItemSelectedColor,
@@ -337,6 +342,7 @@ class CustomThemeExtension extends ThemeExtension<CustomThemeExtension> {
       showBackgroundTexture: t < 0.5 ? showBackgroundTexture : other.showBackgroundTexture,
       backgroundImagePath: t < 0.5 ? backgroundImagePath : other.backgroundImagePath,
       categoryChipColor: Color.lerp(categoryChipColor, other.categoryChipColor, t) ?? categoryChipColor,
+      categoryChipFontColor: Color.lerp(categoryChipFontColor, other.categoryChipFontColor, t) ?? this.categoryChipFontColor,
       preferenceButtonColor: Color.lerp(preferenceButtonColor, other.preferenceButtonColor, t) ?? preferenceButtonColor,
       preferenceModalBackgroundColor: Color.lerp(preferenceModalBackgroundColor, other.preferenceModalBackgroundColor, t) ?? preferenceModalBackgroundColor,
       preferenceItemSelectedColor: Color.lerp(preferenceItemSelectedColor, other.preferenceItemSelectedColor, t) ?? preferenceItemSelectedColor,
