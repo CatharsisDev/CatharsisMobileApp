@@ -10,6 +10,7 @@ import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
+import 'seen_cards_provider.dart';
 import 'dart:io';
 import 'dart:async';
 
@@ -854,6 +855,11 @@ Future<void> _syncSwipeLimitFromFirestore() async {
           question: question,
           viewDuration: duration,
         );
+        
+        // Notify the seen cards provider to refresh the count
+        if (mounted) {
+          await ref.read(seenCardsProvider.notifier).onQuestionViewed();
+        }
       }
 
       await UserBehaviorService.trackSwipeBehavior(

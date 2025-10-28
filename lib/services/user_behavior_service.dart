@@ -31,6 +31,8 @@ class UserBehaviorService {
 
       print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
       
+      // Mark card as seen once (handles Firestore increment)
+      await markCardSeenOnce(question);
     } catch (e) {
       print('Error tracking question view: $e');
     }
@@ -42,7 +44,6 @@ class UserBehaviorService {
     if (user == null) return 0;
 
     try {
-      // First try to get from user document (faster)
       final userDoc = await _firestore
           .collection('users')
           .doc(user.uid)
@@ -53,69 +54,50 @@ class UserBehaviorService {
         return count is int ? count : 0;
       }
 
-      // Fallback: count from views collection
-      final viewsSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('views')
-          .count()
-          .get();
-
-      final count = viewsSnapshot.count ?? 0;
-
-      // Store this count in user document for faster future access
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set({
-        'seenCardsCount': count,
-        'lastCountUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      return count;
+      return 0;
     } catch (e) {
       print('Error getting seen cards count: $e');
       return 0;
     }
   }
 
-  // Increment seen cards count in Firestore
-  static Future<void> incrementSeenCardsCount() async {
+  // Increment the counter only once per question per user
+  static Future<void> markCardSeenOnce(Question question) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    try {
-      print('[COUNT] Incrementing seen cards for user: ${user.uid}');
-      
-      // Use transaction to ensure atomic increment
-      await _firestore.runTransaction((transaction) async {
-        final userDocRef = _firestore.collection('users').doc(user.uid);
-        final userDoc = await transaction.get(userDocRef);
-        
-        int currentCount = 0;
-        if (userDoc.exists && userDoc.data() != null) {
-          final data = userDoc.data()!;
-          if (data.containsKey('seenCardsCount')) {
-            currentCount = data['seenCardsCount'] is int ? data['seenCardsCount'] : 0;
-          }
-        }
-        
-        transaction.set(userDocRef, {
-          'seenCardsCount': currentCount + 1,
-          'lastCountUpdate': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      });
-      
-      print('[COUNT] Seen cards count incremented.');
-    } catch (e) {
-      print('Error incrementing seen cards count: $e');
-    }
-  }
+    final userDoc = _firestore.collection('users').doc(user.uid);
+    final seenDoc = userDoc.collection('seen_cards').doc(question.trackingId);
 
-  // Update the seen cards counter (private)
-  static Future<void> _updateSeenCardsCount() async {
-    print('[COUNT] Updating seen cards count...');
-    await incrementSeenCardsCount();
+    try {
+      await _firestore.runTransaction((tx) async {
+        final seenSnap = await tx.get(seenDoc);
+
+        // Only count if this question hasn't been marked as seen yet
+        if (!seenSnap.exists) {
+          tx.set(seenDoc, {
+            'firstSeenAt': FieldValue.serverTimestamp(),
+            'questionId': question.trackingId,
+            'category': question.category,
+          });
+
+          tx.set(
+            userDoc,
+            {
+              'seenCardsCount': FieldValue.increment(1),
+              'lastCountUpdate': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+          
+          print('[COUNT] Marked "${question.trackingId}" as seen once and incremented count');
+        } else {
+          print('[COUNT] Question "${question.trackingId}" already seen, skipping increment');
+        }
+      });
+    } catch (e) {
+      print('Error marking card seen once: $e');
+    }
   }
 
   // Reset seen cards count (useful for testing)
@@ -210,7 +192,7 @@ class UserBehaviorService {
         await likedRef.set({
           'question': question.toJson(),
           'likedAt': FieldValue.serverTimestamp(),
-          'questionId': docId, // Add for easier querying
+          'questionId': docId,
         });
         print('[LIKE] Question liked and stored: ${question.text}');
       } else {
@@ -247,7 +229,7 @@ class UserBehaviorService {
   // Track swipe behavior
   static Future<void> trackSwipeBehavior({
     required Question question,
-    required String direction, // 'left', 'right', 'up', 'down'
+    required String direction,
     required double swipeVelocity,
   }) async {
     final user = _auth.currentUser;
@@ -380,7 +362,6 @@ class UserBehaviorService {
     if (user == null) return;
 
     try {
-      // Use a custom event name instead of the reserved "session_start"
       await _analytics.logEvent(name: 'app_session_start');
 
       await _firestore
@@ -390,9 +371,7 @@ class UserBehaviorService {
           .add({
         'userId': user.uid,
         'startTime': FieldValue.serverTimestamp(),
-        'deviceInfo': {
-          // Add device info if needed
-        },
+        'deviceInfo': {},
       });
     } catch (e) {
       print('Error starting session: $e');
@@ -436,7 +415,6 @@ class UserBehaviorService {
           }
         } catch (e) {
           print('Error processing view data: $e');
-          // Skip malformed documents
         }
       }
 

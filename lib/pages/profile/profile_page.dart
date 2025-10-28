@@ -47,6 +47,11 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
           _avatarSelectionPage = page;
         }
       });
+    
+    // Refresh seen cards count when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(seenCardsProvider.notifier).refreshCount();
+    });
   }
   
   @override
