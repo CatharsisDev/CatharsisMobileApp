@@ -134,7 +134,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     bool granted = false;
     try {
       // Ask once. Implementation of NotificationService should NOT force-open settings.
-      granted = await NotificationService.ensurePermission(prompt: true);
+      granted = await NotificationService.ensurePermission(
+        prompt: true,
+        openSettingsOnDeny: false, // DO NOT auto-open Settings from Home first-arrival
+      );
     } catch (e) {
       // Fail silently and still mark as asked so we don't nag.
       debugPrint('Notification permission request error: $e');
@@ -901,11 +904,6 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           );
 
                           if (actualIndex != -1) {
-    // Track the view once; Firestore logic will handle the counter
-    UserBehaviorService.trackQuestionView(
-      question: question,
-      viewDuration: 3000,
-    );
 
     notifier.handleCardSwiped(
       actualIndex,

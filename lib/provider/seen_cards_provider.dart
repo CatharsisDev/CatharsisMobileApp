@@ -1,8 +1,8 @@
 import 'package:catharsis_cards/questions_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'auth_provider.dart'; // Your existing auth provider
-import '../services/user_behavior_service.dart'; // The service we just updated
+import 'auth_provider.dart';
+import '../services/user_behavior_service.dart';
 
 class SeenCardsNotifier extends StateNotifier<int> {
   SeenCardsNotifier(this.ref) : super(0) {
@@ -14,7 +14,6 @@ class SeenCardsNotifier extends StateNotifier<int> {
   bool _isInitialized = false;
 
   Future<void> _init() async {
-    // First, check if user is already authenticated
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       _currentUserId = currentUser.uid;
@@ -22,19 +21,16 @@ class SeenCardsNotifier extends StateNotifier<int> {
       _isInitialized = true;
     }
 
-    // Then listen for future auth changes
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
         data: (user) async {
           final previousUserId = _currentUserId;
           
           if (user != null && user.uid != previousUserId) {
-            // New user logged in
             _currentUserId = user.uid;
             await _loadSeenCardsCount();
             _isInitialized = true;
           } else if (user == null && previousUserId != null) {
-            // User logged out
             _currentUserId = null;
             _isInitialized = false;
             if (mounted) {
@@ -42,9 +38,7 @@ class SeenCardsNotifier extends StateNotifier<int> {
             }
           }
         },
-        loading: () {
-          // Keep current state while loading
-        },
+        loading: () {},
         error: (error, stack) {
           print('Auth error in SeenCardsNotifier: $error');
           _currentUserId = null;
@@ -74,30 +68,10 @@ class SeenCardsNotifier extends StateNotifier<int> {
     }
   }
 
-Future<void> onQuestionViewed() async {
-  print('[PROVIDER] onQuestionViewed called - mounted: $mounted, userId: $_currentUserId, currentState: $state');
-  
-  if (!mounted || _currentUserId == null) {
-    print('[PROVIDER] Refresh skipped - not ready');
-    return;
-  }
-
-  try {
-    // Wait for Firestore write to complete, then refresh
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _loadSeenCardsCount();
-    print('[PROVIDER] Refreshed count from Firestore: $state');
-  } catch (e) {
-    print('[PROVIDER] Error refreshing seen cards count: $e');
-  }
-}
-
-  // Call this to manually refresh the count from Firestore
   Future<void> refreshCount() async {
     await _loadSeenCardsCount();
   }
 
-  // Reset the count (useful for testing)
   Future<void> resetCount() async {
     if (!mounted || _currentUserId == null) return;
 
@@ -111,7 +85,6 @@ Future<void> onQuestionViewed() async {
     }
   }
 
-  // Force reload when user becomes available
   void forceReload() {
     if (_currentUserId != null && !_isInitialized) {
       _loadSeenCardsCount();
@@ -119,7 +92,6 @@ Future<void> onQuestionViewed() async {
   }
 }
 
-// Provider for the seen cards count
 final seenCardsProvider = StateNotifierProvider<SeenCardsNotifier, int>(
   (ref) => SeenCardsNotifier(ref),
 );
@@ -134,7 +106,6 @@ class LikedQuestionsNotifier extends StateNotifier<AsyncValue<List<Question>>> {
   String? _currentUserId;
 
   Future<void> _init() async {
-    // Check if user is already authenticated
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       _currentUserId = currentUser.uid;
@@ -143,7 +114,6 @@ class LikedQuestionsNotifier extends StateNotifier<AsyncValue<List<Question>>> {
       state = const AsyncValue.data([]);
     }
 
-    // Listen for auth changes
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       next.when(
         data: (user) async {
@@ -188,7 +158,6 @@ class LikedQuestionsNotifier extends StateNotifier<AsyncValue<List<Question>>> {
     final isCurrentlyLiked = currentQuestions.any((q) => q.trackingId == question.trackingId);
     
     try {
-      // Update local state immediately
       if (isCurrentlyLiked) {
         state = AsyncValue.data(
           currentQuestions.where((q) => q.trackingId != question.trackingId).toList()
@@ -197,7 +166,6 @@ class LikedQuestionsNotifier extends StateNotifier<AsyncValue<List<Question>>> {
         state = AsyncValue.data([question, ...currentQuestions]);
       }
 
-      // Update Firestore
       await UserBehaviorService.trackQuestionLike(
         question: question,
         isLiked: !isCurrentlyLiked,
@@ -206,7 +174,6 @@ class LikedQuestionsNotifier extends StateNotifier<AsyncValue<List<Question>>> {
       print('[PROVIDER] Toggled like for question: ${question.text}');
     } catch (e) {
       print('Error toggling question like: $e');
-      // Revert on error
       state = AsyncValue.data(currentQuestions);
     }
   }
@@ -225,7 +192,6 @@ final likedQuestionsProvider = StateNotifierProvider<LikedQuestionsNotifier, Asy
   (ref) => LikedQuestionsNotifier(ref),
 );
 
-// Convenience providers
 final likedQuestionsCountProvider = Provider<int>((ref) {
   return ref.watch(likedQuestionsProvider).valueOrNull?.length ?? 0;
 });

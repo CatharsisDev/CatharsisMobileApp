@@ -35,6 +35,7 @@ class CardState {
   final int currentIndex;
   final Set<String> selectedCategories;
   final DateTime? swipeResetTime;
+
   /// How many cards the user has swiped since last reset
   final int swipeCount;
   final List<Question> sessionQuestions;
@@ -164,8 +165,12 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box<Question> cacheBox;
   late Box<Question> seenBox;
   DateTime? _currentQuestionStartTime;
+  String? _lastTrackedQuestionId;
+  DateTime? _lastTrackTime;
   bool _isDisposed = false;
   Timer? _rebuildTimer;
+
+  final Set<String> _seenThisSession = <String>{};
 
   Future<void> _initialize() async {
     print('INITIALIZE CALLED - isDisposed: $_isDisposed, mounted: $mounted');
@@ -680,10 +685,24 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
     final currentQuestion = qs[index];
 
-    // Track asynchronously without blocking
+    // Track asynchronously without blocking, with debouncing to prevent double logs
     () async {
+      final trackingId = currentQuestion.trackingId;
+      final now = DateTime.now();
+
+      // Skip if same card tracked within last 2000ms
+      if (_lastTrackedQuestionId == trackingId && 
+    _lastTrackTime != null && 
+    now.difference(_lastTrackTime!).inMilliseconds < 3500) {
+  print('[SKIP] Double track prevented: $trackingId');
+  return;
+}
+
+      _lastTrackedQuestionId = trackingId;
+      _lastTrackTime = now;
+
       if (_currentQuestionStartTime != null) {
-        final duration = DateTime.now().difference(_currentQuestionStartTime!).inSeconds;
+        final duration = now.difference(_currentQuestionStartTime!).inSeconds;
         await UserBehaviorService.trackQuestionView(
           question: currentQuestion,
           viewDuration: duration,
@@ -847,19 +866,28 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       }
     }
     
-    // Track asynchronously without blocking
+    // Track asynchronously without blocking, with debouncing to prevent double logs
     () async {
+      final trackingId = question.trackingId;
+      final now = DateTime.now();
+      
+      // Skip if same card tracked within 3.5 seconds
+      if (_lastTrackedQuestionId == trackingId && 
+          _lastTrackTime != null && 
+          now.difference(_lastTrackTime!).inMilliseconds < 3500) {
+        print('[SKIP] Double track prevented: $trackingId');
+        return;
+      }
+      
+      _lastTrackedQuestionId = trackingId;
+      _lastTrackTime = now;
+      
       if (_currentQuestionStartTime != null) {
-        final duration = DateTime.now().difference(_currentQuestionStartTime!).inSeconds;
+        final duration = now.difference(_currentQuestionStartTime!).inSeconds;
         await UserBehaviorService.trackQuestionView(
           question: question,
           viewDuration: duration,
         );
-        
-        // Notify the seen cards provider to refresh the count
-        if (mounted) {
-          await ref.read(seenCardsProvider.notifier).onQuestionViewed();
-        }
       }
 
       await UserBehaviorService.trackSwipeBehavior(

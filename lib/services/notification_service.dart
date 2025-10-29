@@ -41,15 +41,43 @@ class NotificationService {
   }
 
   /// Centralized guard. If `prompt` is true, show the OS dialog once.
-  static Future<bool> ensurePermission({bool prompt = false}) async {
+  /// If `openSettingsOnDeny` is true and the user still denies after the
+  /// system prompt, we open the app's Settings page.
+  static Future<bool> ensurePermission({
+    bool prompt = false,
+    bool openSettingsOnDeny = false,
+  }) async {
+    // Check current status first
     final allowed = await AwesomeNotifications().isNotificationAllowed();
     if (allowed) return true;
 
-    if (!prompt) return false;
+    // Optionally show the native permission dialog
+    if (prompt) {
+      try {
+        // Some plugin versions return void here; that's fine — we'll re-check below
+        await AwesomeNotifications().requestPermissionToSendNotifications();
+      } catch (_) {
+        // Ignore and fall through to re-check
+      }
+    } else {
+      // No prompt requested and not allowed
+      return false;
+    }
 
-    // This shows the native permission dialog (or does nothing if permanently denied).
-    final granted = await AwesomeNotifications().requestPermissionToSendNotifications();
-    // Some plugin versions return void; fall back to re-check.
+    // Re-check after the prompt
+    final allowedAfterPrompt = await AwesomeNotifications().isNotificationAllowed();
+    if (allowedAfterPrompt) return true;
+
+    // Still denied — optionally take user to Settings
+    if (openSettingsOnDeny) {
+      try {
+        await openAppSettings();
+      } catch (_) {
+        // Best-effort only
+      }
+    }
+
+    // Final status after any Settings jump
     return await AwesomeNotifications().isNotificationAllowed();
   }
 

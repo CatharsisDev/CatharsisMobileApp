@@ -8,35 +8,49 @@ class UserBehaviorService {
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static String? _lastTrackedId;
+  static DateTime? _lastTrackTime;
 
-  // Track when a user views a question
-  static Future<void> trackQuestionView({
-    required Question question,
-    required int viewDuration,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+static Future<void> trackQuestionView({
+  required Question question,
+  required int viewDuration,
+}) async {
+  final user = _auth.currentUser;
+  if (user == null) return;
 
-    try {
-      // Store in Firestore for AI training
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('views')
-          .add({
-        'question': question.toJson(),
-        'timestamp': FieldValue.serverTimestamp(),
-        'duration': viewDuration,
-      });
-
-      print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
-      
-      // Mark card as seen once (handles Firestore increment)
-      await markCardSeenOnce(question);
-    } catch (e) {
-      print('Error tracking question view: $e');
-    }
+  // Debounce: prevent same card within 4 seconds
+  final trackingId = question.trackingId;
+  final now = DateTime.now();
+  if (_lastTrackedId == trackingId && 
+      _lastTrackTime != null && 
+      now.difference(_lastTrackTime!).inSeconds < 4) {
+    print('[SKIP] Already tracked recently: $trackingId');
+    return;
   }
+  
+  _lastTrackedId = trackingId;
+  _lastTrackTime = now;
+
+  try {
+    // Store in Firestore for AI training
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('views')
+        .add({
+      'question': question.toJson(),
+      'timestamp': FieldValue.serverTimestamp(),
+      'duration': viewDuration,
+    });
+
+    print('[TRACK] Question viewed: ${question.text}, duration: $viewDuration');
+    
+    // Mark card as seen once (handles Firestore increment)
+    await markCardSeenOnce(question);
+  } catch (e) {
+    print('Error tracking question view: $e');
+  }
+}
 
   // Get the total number of cards the user has seen
   static Future<int> getSeenCardsCount() async {
