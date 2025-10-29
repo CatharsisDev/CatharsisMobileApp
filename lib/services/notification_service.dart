@@ -34,60 +34,47 @@ class NotificationService {
       ],
     );
 
-    // ✅ Do NOT auto-open settings. Only optionally ask.
     if (promptUser) {
       await ensurePermission(prompt: true);
     }
   }
 
-  /// Centralized guard. If `prompt` is true, show the OS dialog once.
-  /// If `openSettingsOnDeny` is true and the user still denies after the
-  /// system prompt, we open the app's Settings page.
-  static Future<bool> ensurePermission({
-    bool prompt = false,
-    bool openSettingsOnDeny = false,
-  }) async {
-    // Check current status first
-    final allowed = await AwesomeNotifications().isNotificationAllowed();
-    if (allowed) return true;
+static Future<bool> ensurePermission({
+  bool prompt = false,
+  bool openSettingsOnDeny = false,
+}) async {
+  // Check current status
+  final allowed = await AwesomeNotifications().isNotificationAllowed();
+  if (allowed) return true;
 
-    // Optionally show the native permission dialog
-    if (prompt) {
-      try {
-        // Some plugin versions return void here; that's fine — we'll re-check below
-        await AwesomeNotifications().requestPermissionToSendNotifications();
-      } catch (_) {
-        // Ignore and fall through to re-check
-      }
-    } else {
-      // No prompt requested and not allowed
+  if (prompt) {
+    // Check if previously denied (iOS won't show dialog again)
+    final status = await Permission.notification.status;
+    
+    // If permanently denied and we're not supposed to open settings, abort
+    if (status.isPermanentlyDenied && !openSettingsOnDeny) {
+      debugPrint('[NOTIFS] Permission previously denied, not opening settings');
       return false;
     }
-
-    // Re-check after the prompt
-    final allowedAfterPrompt = await AwesomeNotifications().isNotificationAllowed();
-    if (allowedAfterPrompt) return true;
-
-    // Still denied — optionally take user to Settings
-    if (openSettingsOnDeny) {
+    
+    // If never asked, show system dialog
+    if (status.isDenied) {
       try {
-        await openAppSettings();
-      } catch (_) {
-        // Best-effort only
-      }
+        await AwesomeNotifications().requestPermissionToSendNotifications();
+      } catch (_) {}
+      
+      // Re-check
+      final nowAllowed = await AwesomeNotifications().isNotificationAllowed();
+      if (nowAllowed) return true;
     }
-
-    // Final status after any Settings jump
-    return await AwesomeNotifications().isNotificationAllowed();
+    
+    if (openSettingsOnDeny) {
+      await openAppSettings();
+    }
   }
 
-  /// Optional: expose a manual way to open Settings from a user-tapped button.
-  static Future<void> openSettings() async {
-    // Uses permission_handler's top-level API
-    await openAppSettings();
-  }
-
-  /// --- SCHEDULERS (all guarded) ---
+  return await AwesomeNotifications().isNotificationAllowed();
+}
 
   static Future<void> scheduleCooldownNotification({
     required String id,
