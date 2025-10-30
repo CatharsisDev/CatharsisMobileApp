@@ -209,7 +209,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         },
         children: [
           // Page 0: Email Verification
-          _buildEmailVerificationPage(),
+          //_buildEmailVerificationPage(),
 
           // Page 1: Welcome Message
           _buildWelcomePage(),

@@ -1,3 +1,4 @@
+import 'package:catharsis_cards/pages/welcome_screen/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -76,8 +77,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             _isLoading = false;
           });
         }
+        // Navigator.of(context).pushReplacement(
+        //   MaterialPageRoute(builder: (_) => const EmailVerificationPage()),
+        // );
+        // NOTE: Temporarily redirect straight to WelcomeScreen instead of email verification.
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const EmailVerificationPage()),
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
         );
         return;
       }
