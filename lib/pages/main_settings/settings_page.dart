@@ -1,4 +1,5 @@
 import 'package:catharsis_cards/pages/account_settings/acount_settings_page.dart';
+import 'package:catharsis_cards/services/subscription_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,6 +9,7 @@ import '../../provider/app_state_provider.dart';
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl, LaunchMode;
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
+import '../subscription_plans/subscription_plans_page.dart';
 import 'package:catharsis_cards/services/account_deletion_service.dart';
 
 class SettingsMenuPage extends ConsumerWidget {
@@ -124,7 +126,33 @@ class SettingsMenuPage extends ConsumerWidget {
                           );
                         },
                       ),
-                      
+                      SizedBox(height: 16),
+
+                     _buildSettingsItem(
+  context: context,
+  theme: theme,
+  icon: Icons.subscriptions_outlined,
+  title: 'Subscription',
+  assetIcon: null,
+  onTap: () {
+    final service = ref.read(subscriptionServiceProvider);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SubscriptionPlansPage(
+          subscriptionService: service,
+          onMonthlyPurchase: () {
+            Navigator.pop(context, true);
+          },
+          onAnnualPurchase: () {
+            Navigator.pop(context, true);
+          },
+        ),
+      ),
+    );
+  },
+),
+
                       SizedBox(height: 16),
 
                       SizedBox(height: 40),

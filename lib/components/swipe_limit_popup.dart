@@ -172,22 +172,26 @@ class SwipeLimitPopup extends ConsumerWidget {
                       const SizedBox(height: 40),
                       ElevatedButton(
                         onPressed: () async {
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => SubscriptionPlansPage(
-                                onMonthlyPurchase: () async {
-                                  final service = ref.read(subscriptionServiceProvider);
-                                  await service.purchase('com.example.catharsiscards.subscription.monthly');
-                                  Navigator.pop(context, true); // indicate success
-                                },
-                                onAnnualPurchase: () async {
-                                  final service = ref.read(subscriptionServiceProvider);
-                                  await service.purchase('com.example.catharsiscards.subscription.annual');
-                                  Navigator.pop(context, true); // indicate success
-                                },
-                              ),
-                            ),
-                          );
+                        final result = await Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (context) {
+      final service = ref.read(subscriptionServiceProvider);
+      return SubscriptionPlansPage(
+        subscriptionService: service,  // ADD THIS LINE
+        onMonthlyPurchase: () async {
+          final service = ref.read(subscriptionServiceProvider);
+          await service.purchase('com.example.catharsis.cards.subscription.monthly');
+          Navigator.pop(context, true);
+        },
+        onAnnualPurchase: () async {
+          final service = ref.read(subscriptionServiceProvider);
+          await service.purchase('com.example.catharsis.cards.subscription.annual');
+          Navigator.pop(context, true);
+        },
+      );
+    },
+  ),
+);
 
                           // If purchase successful, dismiss this popup
                           if (result == true) {

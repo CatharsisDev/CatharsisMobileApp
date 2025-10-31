@@ -5,8 +5,9 @@ import 'dart:async';
 import '../../provider/theme_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
+import '../../services/subscription_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-// Simple price formatting helper
 String _formatPrice(double price, String currencyCode, {String? locale}) {
   try {
     final format = NumberFormat.simpleCurrency(
@@ -24,11 +25,13 @@ class SubscriptionPlansPage extends StatefulWidget {
   final VoidCallback onMonthlyPurchase;
   final VoidCallback onAnnualPurchase;
   final VoidCallback? onCancel;
+  final SubscriptionService subscriptionService;
 
   const SubscriptionPlansPage({
     Key? key,
     required this.onMonthlyPurchase,
     required this.onAnnualPurchase,
+    required this.subscriptionService,
     this.onCancel,
   }) : super(key: key);
 
@@ -40,22 +43,32 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   final PageController _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
 
-final _iap = InAppPurchase.instance;
-List<ProductDetails> _products = [];
+  final _iap = InAppPurchase.instance;
+  List<ProductDetails> _products = [];
 
-final _kMonthlyId = Platform.isAndroid
-  ? 'monthly_subscription'
-  : 'monthly_subscription';
+  final _kMonthlyId = Platform.isAndroid
+      ? 'monthly_subscription'
+      : 'monthly_subscription';
 
-final _kAnnualId = Platform.isAndroid
-  ? 'annual_subscription'
-  : 'annual_subscription1';
+  final _kAnnualId = Platform.isAndroid
+      ? 'annual_subscription'
+      : 'annual_subscription';
 
-late final StreamSubscription<List<PurchaseDetails>> _subscription;
+  late final StreamSubscription<List<PurchaseDetails>> _subscription;
+
+  String? _currentSubscriptionType;
+  DateTime? _subscriptionExpiry;
+  bool _isAlreadySubscribed = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Check current subscription status
+    _currentSubscriptionType = widget.subscriptionService.getCurrentSubscriptionType();
+    _subscriptionExpiry = widget.subscriptionService.getSubscriptionExpiry();
+    _isAlreadySubscribed = widget.subscriptionService.isUserSubscribed();
+
     _pageController.addListener(() {
       final page = _pageController.page?.round() ?? 0;
       if (page != _currentPage) {
@@ -64,6 +77,7 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
         });
       }
     });
+    
     _iap.isAvailable().then((available) {
       print('▶︎ IAP available? $available');
       if (available) {
@@ -79,6 +93,7 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
         });
       }
     });
+    
     // Listen for purchase updates
     _subscription = _iap.purchaseStream.listen(
       _listenToPurchaseUpdates,
@@ -87,6 +102,7 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
       },
     );
   }
+
   void _listenToPurchaseUpdates(List<PurchaseDetails> purchases) {
     for (var purchase in purchases) {
       switch (purchase.status) {
@@ -98,6 +114,13 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
             widget.onAnnualPurchase();
           }
           _iap.completePurchase(purchase);
+          
+          // Update UI after purchase
+          setState(() {
+            _currentSubscriptionType = widget.subscriptionService.getCurrentSubscriptionType();
+            _subscriptionExpiry = widget.subscriptionService.getSubscriptionExpiry();
+            _isAlreadySubscribed = true;
+          });
           break;
         case PurchaseStatus.error:
           final errorMsg = purchase.error?.message ?? 'Unknown error';
@@ -106,19 +129,26 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
           );
           break;
         case PurchaseStatus.pending:
-          // You can show a pending indicator here if desired
+          // Show pending indicator
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Purchase pending...')),
+          );
           break;
         default:
           break;
       }
     }
   }
+
   void _buy(String id) {
     print('▶︎ _buy() called for: $id, have products: ${_products.length}');
     try {
       final matching = _products.where((p) => p.id == id);
       if (matching.isEmpty) {
         print('‼️ Product not found for id: $id');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Product not available')),
+        );
         return;
       }
       final product = matching.first;
@@ -128,10 +158,55 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
       _iap.buyNonConsumable(purchaseParam: param);
     } catch (e) {
       print('Error in _buy(): $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error initiating purchase')),
+      );
     }
   }
-  
-  Widget _buildPlanCard(String productId, String title, String period, {bool showSavings = false}) {
+
+  bool _canPurchaseMonthly() {
+    // Can't purchase monthly if already have monthly or annual
+    return !_isAlreadySubscribed;
+  }
+
+  bool _canPurchaseAnnual() {
+    // Can purchase annual if no subscription or upgrading from monthly
+    return !_isAlreadySubscribed || _currentSubscriptionType == 'monthly';
+  }
+
+  String _getUpgradeMessage() {
+    if (_currentSubscriptionType == 'monthly') {
+      return 'Upgrade to Annual';
+    }
+    return '';
+  }
+
+  void _manageSubscription() async {
+    // Open subscription management
+    final Uri url;
+    if (Platform.isIOS) {
+      url = Uri.parse('https://apps.apple.com/account/subscriptions');
+    } else {
+      url = Uri.parse('https://play.google.com/store/account/subscriptions');
+    }
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open subscription management')),
+      );
+    }
+  }
+
+  Widget _buildPlanCard(
+    String productId,
+    String title,
+    String period, {
+    bool showSavings = false,
+    bool canPurchase = true,
+    String? upgradeMessage,
+  }) {
     // Find the actual product from the store
     ProductDetails? product;
     try {
@@ -146,13 +221,14 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
         onPressed: () {},
         locale: Localizations.localeOf(context).toString(),
         isLoading: true,
+        canPurchase: false,
       );
     }
 
     // Use actual store price
     final price = product.rawPrice;
     final currencyCode = product.currencyCode;
-    
+
     // Calculate monthly price for savings
     double? monthlyPrice;
     if (showSavings) {
@@ -167,10 +243,12 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
       price: price,
       currencyCode: currencyCode,
       period: period,
-      onPressed: () => _buy(productId),
+      onPressed: canPurchase ? () => _buy(productId) : () {},
       locale: Localizations.localeOf(context).toString(),
       showSavings: showSavings,
       monthlyPrice: monthlyPrice,
+      canPurchase: canPurchase,
+      upgradeMessage: upgradeMessage,
     );
   }
 
@@ -186,10 +264,36 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
     final indicatorColor = theme.textTheme.bodyMedium?.color ?? theme.primaryColor;
-    final fontColor = customTheme?.fontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor;
+    final fontColor = customTheme?.fontColor ??
+        theme.textTheme.bodyMedium?.color ??
+        theme.primaryColor;
+
+    // Build list of available plans
+    List<Widget> planCards = [];
     
+    if (_canPurchaseMonthly()) {
+      planCards.add(
+        _buildPlanCard(_kMonthlyId, 'Monthly Subscription', 'per month'),
+      );
+    }
+    
+    if (_canPurchaseAnnual()) {
+      planCards.add(
+        _buildPlanCard(
+          _kAnnualId,
+          'Annual Subscription',
+          'per year',
+          showSavings: true,
+          upgradeMessage: _currentSubscriptionType == 'monthly' ? _getUpgradeMessage() : null,
+        ),
+      );
+    }
+
+    // If already subscribed and can't purchase anything, show subscription info
+    if (_isAlreadySubscribed && planCards.isEmpty) {
+      return _buildAlreadySubscribedView(theme, customTheme, fontColor);
+    }
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
@@ -197,7 +301,7 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Upgrade to Unlimited',
+          _isAlreadySubscribed ? 'Manage Subscription' : 'Upgrade to Unlimited',
           style: TextStyle(
             fontFamily: 'Runtime',
             color: fontColor,
@@ -226,50 +330,205 @@ late final StreamSubscription<List<PurchaseDetails>> _subscription;
           ),
           SafeArea(
             child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Choose a plan',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontFamily: 'Runtime', color: fontColor),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
-                SizedBox(
-                  height: 500,
-                  child: PageView(
-                    controller: _pageController,
-                    children: [
-                      _buildPlanCard(_kMonthlyId, 'Monthly Subscription', 'per month'),
-                      _buildPlanCard(_kAnnualId, 'Annual Subscription', 'per year', showSavings: true),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    2,
-                    (index) => Container(
-                      width: 8,
-                      height: 8,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isAlreadySubscribed && _currentSubscriptionType != null) ...[
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      margin: EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _currentPage == index
-                            ? indicatorColor
-                            : indicatorColor.withOpacity(0.3),
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green, width: 1),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 32),
+                          SizedBox(height: 8),
+                          Text(
+                            'Current Plan: ${_currentSubscriptionType == 'monthly' ? 'Monthly' : 'Annual'}',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: fontColor,
+                            ),
+                          ),
+                          if (_subscriptionExpiry != null) ...[
+                            SizedBox(height: 4),
+                            Text(
+                              'Expires: ${DateFormat('MMM dd, yyyy').format(_subscriptionExpiry!)}',
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontSize: 14,
+                                color: fontColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
+                  ],
+                  Text(
+                    planCards.isEmpty ? 'You\'re all set!' : (_isAlreadySubscribed ? 'Upgrade your plan' : 'Choose a plan'),
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontFamily: 'Runtime', color: fontColor),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 30),
+                  if (planCards.isNotEmpty) ...[
+                    SizedBox(
+                      height: 500,
+                      child: planCards.length == 1
+                          ? Center(child: planCards[0])
+                          : PageView(
+                              controller: _pageController,
+                              children: planCards,
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (planCards.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          planCards.length,
+                          (index) => Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentPage == index
+                                  ? indicatorColor
+                                  : indicatorColor.withOpacity(0.3),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                  const SizedBox(height: 24),
+                  if (_isAlreadySubscribed)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      onPressed: _manageSubscription,
+                      icon: Icon(Icons.settings, color: customTheme?.buttonFontColor ?? fontColor),
+                      label: Text(
+                        'Manage Subscription',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontWeight: FontWeight.bold,
+                          color: customTheme?.buttonFontColor ?? fontColor,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlreadySubscribedView(ThemeData theme, CustomThemeExtension? customTheme, Color fontColor) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Subscription Active',
+          style: TextStyle(
+            fontFamily: 'Runtime',
+            color: fontColor,
+          ),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.close, color: theme.iconTheme.color),
+          onPressed: widget.onCancel ?? () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                image: customTheme?.backgroundImagePath != null
+                    ? DecorationImage(
+                        image: AssetImage(customTheme!.backgroundImagePath!),
+                        fit: BoxFit.cover,
+                        opacity: 0.4,
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 80),
+                    SizedBox(height: 24),
+                    Text(
+                      'You\'re Premium!',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontFamily: 'Runtime',
+                        fontWeight: FontWeight.bold,
+                        color: fontColor,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'You have an active ${_currentSubscriptionType} subscription',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontFamily: 'Runtime',
+                        color: fontColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_subscriptionExpiry != null) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        'Renews on ${DateFormat('MMM dd, yyyy').format(_subscriptionExpiry!)}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'Runtime',
+                          color: fontColor.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    SizedBox(height: 32),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      ),
+                      onPressed: _manageSubscription,
+                      child: Text(
+                        'Manage Subscription',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: customTheme?.buttonFontColor ?? fontColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -286,6 +545,8 @@ class _PlanCard extends StatelessWidget {
   final bool showSavings;
   final double? monthlyPrice;
   final bool isLoading;
+  final bool canPurchase;
+  final String? upgradeMessage;
 
   const _PlanCard({
     Key? key,
@@ -298,14 +559,16 @@ class _PlanCard extends StatelessWidget {
     this.showSavings = false,
     this.monthlyPrice,
     this.isLoading = false,
+    this.canPurchase = true,
+    this.upgradeMessage,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final priceString = isLoading 
-        ? '...' 
+    final priceString = isLoading
+        ? '...'
         : _formatPrice(price, currencyCode, locale: locale);
-    
+
     // Calculate savings for annual plan
     String? savingsText;
     if (showSavings && monthlyPrice != null) {
@@ -319,11 +582,11 @@ class _PlanCard extends StatelessWidget {
 
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
-    final fontColor = customTheme?.fontColor
-        ?? theme.textTheme.bodyMedium?.color
-        ?? theme.primaryColor;
+    final fontColor = customTheme?.fontColor ??
+        theme.textTheme.bodyMedium?.color ??
+        theme.primaryColor;
     final buttonFontColor = customTheme?.buttonFontColor ?? fontColor;
-    
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
@@ -346,6 +609,26 @@ class _PlanCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (upgradeMessage != null) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue, width: 1),
+                  ),
+                  child: Text(
+                    upgradeMessage!,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12),
+              ],
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -401,16 +684,18 @@ class _PlanCard extends StatelessWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.extension<CustomThemeExtension>()?.preferenceButtonColor
-                                   ?? theme.primaryColor,
+                  backgroundColor: canPurchase
+                      ? (theme.extension<CustomThemeExtension>()?.preferenceButtonColor ??
+                          theme.primaryColor)
+                      : Colors.grey,
                 ),
-                onPressed: onPressed,
+                onPressed: canPurchase ? onPressed : null,
                 child: Text(
-                  'Select',
+                  canPurchase ? (upgradeMessage != null ? 'Upgrade' : 'Select') : 'Unavailable',
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     fontWeight: FontWeight.bold,
-                    color: buttonFontColor,
+                    color: canPurchase ? buttonFontColor : Colors.white,
                   ),
                 ),
               ),

@@ -13,8 +13,8 @@ class SubscriptionService {
       };
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       return {
-        'com.example.catharsiscards.subscription.monthly',
-        'com.example.catharsiscards.subscription.annual',
+        'com.catharsis.cards.monthly',
+        'com.catharsis.cards.annual',
       };
     }
     return {};
@@ -22,6 +22,7 @@ class SubscriptionService {
 
   static const _kPremiumKey = 'is_premium';
   static const _kSubscriptionExpiryKey = 'subscription_expiry';
+  static const _kSubscriptionTypeKey = 'subscription_type';
 
   final ValueNotifier<bool> isPremium = ValueNotifier<bool>(false);
   final StreamController<bool> _premiumStatusController = StreamController<bool>.broadcast();
@@ -75,9 +76,20 @@ class SubscriptionService {
     }
   }
 
-  Future<void> _grantSubscription({Duration? duration}) async {
+  Future<void> _grantSubscription({Duration? duration, String? productId}) async {
     isPremium.value = true;
     await _prefs?.setBool(_kPremiumKey, true);
+    
+    // Store subscription type based on product ID
+    if (productId != null) {
+      String subscriptionType = 'unknown';
+      if (productId.contains('monthly')) {
+        subscriptionType = 'monthly';
+      } else if (productId.contains('annual')) {
+        subscriptionType = 'annual';
+      }
+      await _prefs?.setString(_kSubscriptionTypeKey, subscriptionType);
+    }
     
     // Set expiry date if duration provided (for subscriptions)
     if (duration != null) {
@@ -93,6 +105,7 @@ class SubscriptionService {
     isPremium.value = false;
     await _prefs?.setBool(_kPremiumKey, false);
     await _prefs?.remove(_kSubscriptionExpiryKey);
+    await _prefs?.remove(_kSubscriptionTypeKey);
     _premiumStatusController.add(false);
   }
 
@@ -109,7 +122,10 @@ class SubscriptionService {
             subscriptionDuration = Duration(days: 365);
           }
           
-          await _grantSubscription(duration: subscriptionDuration);
+          await _grantSubscription(
+            duration: subscriptionDuration,
+            productId: purchase.productID,
+          );
           
           if (purchase.pendingCompletePurchase) {
             await InAppPurchase.instance.completePurchase(purchase);
@@ -154,6 +170,21 @@ class SubscriptionService {
       return DateTime.now().isBefore(expiryDate);
     }
     return _prefs?.getBool(_kPremiumKey) ?? false;
+  }
+
+  // Get the current subscription type (monthly, annual, or none)
+  String? getCurrentSubscriptionType() {
+    if (!isUserSubscribed()) return null;
+    return _prefs?.getString(_kSubscriptionTypeKey);
+  }
+
+  // Get subscription expiry date
+  DateTime? getSubscriptionExpiry() {
+    final expiryTimestamp = _prefs?.getInt(_kSubscriptionExpiryKey);
+    if (expiryTimestamp != null) {
+      return DateTime.fromMillisecondsSinceEpoch(expiryTimestamp);
+    }
+    return null;
   }
 
   void dispose() {
