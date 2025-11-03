@@ -78,7 +78,7 @@ class SettingsMenuPage extends ConsumerWidget {
                         theme: theme,
                         icon: Icons.palette_outlined,
                         title: 'App appearance',
-                        assetIcon: 'assets/images/changetheme_icon.png',
+                        assetIcon: 'assets/images/spirituality_icon.png',
                         onTap: () {
                           Navigator.push(
                             context,
@@ -401,17 +401,38 @@ class SettingsMenuPage extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            if (assetIcon != null) 
-              Image.asset(
-                assetIcon, 
-                width: 24, 
-                height: 24,
-                color: isRed ? Colors.red : theme.iconTheme.color,
-              )
-            else if (icon == FontAwesomeIcons.bookmark)
-              FaIcon(icon, color: isRed ? Colors.red : theme.iconTheme.color, size: 20)
-            else
-              Icon(icon, color: isRed ? Colors.red : theme.iconTheme.color, size: 20),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: assetIcon != null
+                  ? ClipRect(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Transform.scale(
+                          // Boost only this asset which has extra transparent padding
+                          scale: assetIcon!.contains('spirituality_icon') ? 2.0 : 1.0,
+                          child: Image.asset(
+                            assetIcon,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.contain,
+                            color: isRed ? Colors.red : theme.iconTheme.color,
+                          ),
+                        ),
+                      ),
+                    )
+                  : (icon == FontAwesomeIcons.heart
+                      ? FaIcon(
+                          icon,
+                          color: isRed ? Colors.red : theme.iconTheme.color,
+                          size: 24,
+                        )
+                      : Icon(
+                          icon,
+                          color: isRed ? Colors.red : theme.iconTheme.color,
+                          size: 24,
+                        )),
+            ),
             SizedBox(width: 16),
             Text(
               title,

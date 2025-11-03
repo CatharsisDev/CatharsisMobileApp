@@ -30,6 +30,7 @@ import '/pages/home_page/home_page_widget.dart';
 import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/services.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   static final AppStateNotifier _instance = AppStateNotifier._internal();
@@ -51,6 +52,11 @@ Future<void> _initAdsAndroid() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
 
   // Initialize Firebase BEFORE anything else
   await Firebase.initializeApp(

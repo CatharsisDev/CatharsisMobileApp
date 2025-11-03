@@ -711,6 +711,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
 
+    final double prefButtonSize = 44.0;
+    final double prefIconScale = 0.56; // icon will be ~56% of the circle
+
     final categoriesKey = _generateCacheKey(cardState);
     final categoriesChanged = _cacheKey != categoriesKey;
     final providerList = cardState.activeQuestions;
@@ -977,20 +980,24 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                   ],
                 ),
                 // Preferences button
+                // Preferences button
                 InkWell(
                   onTap: _openPreferences,
                   customBorder: const CircleBorder(),
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: prefButtonSize,
+                    height: prefButtonSize,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
                     ),
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.antiAlias, // ensure the icon never paints outside the circle
                     child: Image.asset(
                       'assets/images/preferences_icon.png',
-                      width: 24,
-                      height: 24,
+                      width: prefButtonSize * prefIconScale,
+                      height: prefButtonSize * prefIconScale,
+                      fit: BoxFit.contain,
                       color: customTheme?.iconColor ?? theme.iconTheme.color,
                     ),
                   ),

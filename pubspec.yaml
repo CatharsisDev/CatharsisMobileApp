@@ -152,7 +152,7 @@ flutter:
     - assets/images/default_mode_background.png
     - assets/images/dark_mode_stat_card.png
     - assets/images/light_mode_stat_card.png
-    - assets/images/changetheme_icon.png
+    - assets/images/change_theme_icon.png
     - assets/images/saved_icon.png
     - assets/images/logout_icon.png
     - assets/images/dark_theme_image.png

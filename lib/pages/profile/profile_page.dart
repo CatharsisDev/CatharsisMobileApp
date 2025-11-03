@@ -124,216 +124,224 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                 final currentAvatar = sheetRef.watch(userAvatarProvider);
                 final hasCustom = currentAvatar != null && !presetAssets.contains(currentAvatar);
                 final avatarAssets = [...presetAssets, if (hasCustom) currentAvatar else null];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(20),
-                    ),
+                
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
                   ),
-                  child: SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 12),
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: theme.brightness == Brightness.dark 
-                                ? Colors.grey[500] 
-                                : Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Choose Avatar',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textTheme.titleLarge?.color,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          height: 100,
-                          child: PageView.builder(
-                            controller: _avatarSelectionController,
-                            itemCount: avatarAssets.length,
-                            onPageChanged: (i) => setModalState(() => _avatarSelectionPage = i),
-                            itemBuilder: (ctx, idx) {
-                              final avatarPath = avatarAssets[idx];
-                              if (avatarPath == null) {
-                                return GestureDetector(
-                                  onTap: () => _pickCustomAvatar(setModalState),
-                                  child: Container(
-                                    width: 70,
-                                    height: 70,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: (customTheme?.profileAvatarColor ?? theme.primaryColor).withOpacity(0.4),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.add,
-                                      size: 32,
-                                      color: (customTheme?.profileAvatarColor ?? theme.primaryColor),
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                                  child: _buildAvatarOption(
-                                    avatarPath,
-                                    currentAvatar,
-                                    theme,
-                                    customTheme,
-                                    index: idx,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            avatarAssets.length,
-                            (i) => Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              width: 8,
-                              height: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(40),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 12),
+                            Container(
+                              width: 40,
+                              height: 4,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _avatarSelectionPage == i
-                                    ? (customTheme?.profileAvatarColor ?? theme.primaryColor)
-                                    : (theme.textTheme.bodyMedium?.color ?? Colors.black).withOpacity(0.3),
+                                color: theme.brightness == Brightness.dark 
+                                    ? Colors.grey[500] 
+                                    : Colors.grey[400],
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Edit Username',
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'Choose Avatar',
                                 style: TextStyle(
                                   fontFamily: 'Runtime',
-                                  fontSize: 18,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
-                                  color: theme.textTheme.bodyMedium?.color,
+                                  color: theme.textTheme.titleLarge?.color,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _avatarUsernameController,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(
-                                    RegExp(r'[\p{L}\p{N}_]', unicode: true),
+                            ),
+                            const SizedBox(height: 30),
+                            SizedBox(
+                              height: 100,
+                              child: PageView.builder(
+                                controller: _avatarSelectionController,
+                                itemCount: avatarAssets.length,
+                                onPageChanged: (i) => setModalState(() => _avatarSelectionPage = i),
+                                itemBuilder: (ctx, idx) {
+                                  final avatarPath = avatarAssets[idx];
+                                  if (avatarPath == null) {
+                                    return GestureDetector(
+                                      onTap: () => _pickCustomAvatar(setModalState),
+                                      child: Container(
+                                        width: 70,
+                                        height: 70,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: (customTheme?.profileAvatarColor ?? theme.primaryColor).withOpacity(0.4),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 32,
+                                          color: (customTheme?.profileAvatarColor ?? theme.primaryColor),
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                      child: _buildAvatarOption(
+                                        avatarPath,
+                                        currentAvatar,
+                                        theme,
+                                        customTheme,
+                                        index: idx,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                avatarAssets.length,
+                                (i) => Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _avatarSelectionPage == i
+                                        ? (customTheme?.profileAvatarColor ?? theme.primaryColor)
+                                        : (theme.textTheme.bodyMedium?.color ?? Colors.black).withOpacity(0.3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Edit Username',
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.textTheme.bodyMedium?.color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _avatarUsernameController,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[\p{L}\p{N}_]', unicode: true),
+                                      ),
+                                    ],
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter username',
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: (() {
+                                            final themeName = sheetRef.watch(themeProvider).themeName;
+                                            return themeName == 'light'
+                                                ? const Color(0xFF85A1AD)
+                                                : const Color(0xFF987554);
+                                          }()),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: (() {
+                                            final themeName = sheetRef.watch(themeProvider).themeName;
+                                            return themeName == 'light'
+                                                ? const Color(0xFF85A1AD)
+                                                : const Color(0xFF987554);
+                                          }()),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (usernameError != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(
+                                        usernameError!,
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          fontSize: 14,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: (() {
+                                          final themeName = sheetRef.watch(themeProvider).themeName;
+                                          if (themeName == 'dark') return const Color.fromRGBO(232, 213, 255, 1);
+                                          else if (themeName == 'light') return const Color.fromRGBO(252, 102, 77, 1);
+                                          else return const Color(0xFF2A3F2C);
+                                        }()),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () async {
+                                        final username = _avatarUsernameController.text.trim();
+                                        if (_profanityFilter.hasProfanity(username)) {
+                                          setModalState(() {
+                                            usernameError = 'Username contains inappropriate words';
+                                          });
+                                          return;
+                                        }
+                                        if (!RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(username)) {
+                                          setModalState(() {
+                                            usernameError = 'Username may only include letters, numbers, and underscores';
+                                          });
+                                          return;
+                                        }
+                                        await ref.read(userProfileProvider.notifier).updateProfile(username: username);
+                                        Navigator.pop(context);
+                                      },
+                                      child: Text(
+                                        'Save',
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.extension<CustomThemeExtension>()?.buttonFontColor,
+                                          shadows: [
+                                            Shadow(
+                                              color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
+                                              offset: Offset(0, 1),
+                                              blurRadius: 15,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
-                                decoration: InputDecoration(
-                                  hintText: 'Enter username',
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: (() {
-                                        final themeName = sheetRef.watch(themeProvider).themeName;
-                                        return themeName == 'light'
-                                            ? const Color(0xFF85A1AD)
-                                            : const Color(0xFF987554);
-                                      }()),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: (() {
-                                        final themeName = sheetRef.watch(themeProvider).themeName;
-                                        return themeName == 'light'
-                                            ? const Color(0xFF85A1AD)
-                                            : const Color(0xFF987554);
-                                      }()),
-                                    ),
-                                  ),
-                                ),
                               ),
-                              if (usernameError != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    usernameError!,
-                                    style: TextStyle(
-                                      fontFamily: 'Runtime',
-                                      fontSize: 14,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: (() {
-                                      final themeName = sheetRef.watch(themeProvider).themeName;
-                                      if (themeName == 'dark') return const Color.fromRGBO(232, 213, 255, 1);
-                                      else if (themeName == 'light') return const Color.fromRGBO(252, 102, 77, 1);
-                                      else return const Color(0xFF2A3F2C);
-                                    }()),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  onPressed: () async {
-                                    final username = _avatarUsernameController.text.trim();
-                                    if (_profanityFilter.hasProfanity(username)) {
-                                      setModalState(() {
-                                        usernameError = 'Username contains inappropriate words';
-                                      });
-                                      return;
-                                    }
-                                    if (!RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(username)) {
-                                      setModalState(() {
-                                        usernameError = 'Username may only include letters, numbers, and underscores';
-                                      });
-                                      return;
-                                    }
-                                    await ref.read(userProfileProvider.notifier).updateProfile(username: username);
-                                    Navigator.pop(context);
-                                  },
-                                  child: Text(
-                                    'Save',
-                                    style: TextStyle(
-                                      fontFamily: 'Runtime',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: theme.extension<CustomThemeExtension>()?.buttonFontColor,
-                                      shadows: [
-                                        Shadow(
-                                          color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
-                                          offset: Offset(0, 1),
-                                          blurRadius: 15,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 );
