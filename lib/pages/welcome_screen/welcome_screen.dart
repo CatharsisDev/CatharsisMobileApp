@@ -180,7 +180,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   void _finishTutorial() async {
     // Request notification permissions
-    await NotificationService.init(); // This already handles permissions
+    await NotificationService.init(); 
     
     // Save profile data if provided
     if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
@@ -199,7 +199,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+    
+      backgroundColor: const Color(0xFFFAF1E1),
+      resizeToAvoidBottomInset: true,
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {

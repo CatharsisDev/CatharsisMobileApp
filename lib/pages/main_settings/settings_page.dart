@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl, La
 import '../theme_settings/theme_settings_page.dart';
 import '../liked_cards/liked_cards_widget.dart';
 import '../subscription_plans/subscription_plans_page.dart';
+import '../tutorial_page/tutorial_page.dart';
 import 'package:catharsis_cards/services/account_deletion_service.dart';
 
 class SettingsMenuPage extends ConsumerWidget {
@@ -20,6 +21,12 @@ class SettingsMenuPage extends ConsumerWidget {
     final authService = ref.read(authServiceProvider);
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
+    // Show "Account" section only for users with email/password sign-in
+    final authState = ref.watch(authStateProvider);
+    final bool showAccount = authState.maybeWhen(
+      data: (user) => user?.providerData.any((p) => p.providerId == 'password') ?? false,
+      orElse: () => false,
+    );
     
     return Scaffold(
       body: Stack(
@@ -71,6 +78,7 @@ class SettingsMenuPage extends ConsumerWidget {
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     children: [
                       SizedBox(height: 16),
+
                             
                       // Customize Theme
                       _buildSettingsItem(
@@ -110,23 +118,25 @@ class SettingsMenuPage extends ConsumerWidget {
                       
                       SizedBox(height: 16),
 
-                      // Account Settings
-                      _buildSettingsItem(
-                        context: context,
-                        theme: theme,
-                        icon: Icons.person,
-                        title: 'Account',
-                        assetIcon: 'assets/images/profile_icon.png',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AccountSettingsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      SizedBox(height: 16),
+                      // Account Settings (visible only for email/password users)
+                      if (showAccount)
+                        _buildSettingsItem(
+                          context: context,
+                          theme: theme,
+                          icon: Icons.person,
+                          title: 'Account',
+                          assetIcon: 'assets/images/profile_icon.png',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AccountSettingsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      if (showAccount)
+                        SizedBox(height: 16),
 
                      _buildSettingsItem(
   context: context,
@@ -160,7 +170,24 @@ class SettingsMenuPage extends ConsumerWidget {
                       SizedBox(height: 20),
 
                       
-                      
+                      // Tutorial
+                      _buildSettingsItem(
+                        context: context,
+                        theme: theme,
+                        icon: FontAwesomeIcons.circleQuestion,
+                        title: 'Tutorial',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TutorialPage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      SizedBox(height: 16),
+
                       // Log Out
                       _buildSettingsItem(
                         context: context,
