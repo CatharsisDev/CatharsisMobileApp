@@ -20,7 +20,6 @@ String _formatPrice(double price, String currencyCode, {String? locale}) {
   }
 }
 
-/// A full‑screen page presenting subscription options.
 class SubscriptionPlansPage extends StatefulWidget {
   final VoidCallback onMonthlyPurchase;
   final VoidCallback onAnnualPurchase;

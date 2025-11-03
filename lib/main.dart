@@ -133,6 +133,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     });
 
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'CatharsisCards',
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,

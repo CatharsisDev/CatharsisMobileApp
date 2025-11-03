@@ -26,6 +26,7 @@ class SwipeLimitPopup extends ConsumerWidget {
     const double borderRadiusValue = 15;
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
+    final themeName = ref.watch(themeProvider).themeName;
 
     return Stack(
       children: [
@@ -213,9 +214,11 @@ class SwipeLimitPopup extends ConsumerWidget {
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 20,
-                            color: customTheme?.buttonFontColor ??
-                                theme.textTheme.bodyMedium?.color ??
-                                theme.primaryColor,
+                            color: (themeName != 'dark' && themeName != 'light')
+                                ? Colors.white
+                                : (customTheme?.buttonFontColor ??
+                                    theme.textTheme.bodyMedium?.color ??
+                                    theme.primaryColor),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
