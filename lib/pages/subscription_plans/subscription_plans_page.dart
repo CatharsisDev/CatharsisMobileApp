@@ -46,12 +46,12 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   List<ProductDetails> _products = [];
 
   final _kMonthlyId = Platform.isAndroid
-      ? 'monthly_subscription'
-      : 'monthly_subscription';
+    ? 'monthly_subscription'
+    : 'com.catharsis.cards.monthly';
 
-  final _kAnnualId = Platform.isAndroid
-      ? 'annual_subscription'
-      : 'annual_subscription';
+final _kAnnualId = Platform.isAndroid
+    ? 'annual_subscription'
+    : 'com.catharsis.cards.annual';
 
   late final StreamSubscription<List<PurchaseDetails>> _subscription;
 
@@ -79,6 +79,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
     
     _iap.isAvailable().then((available) {
       print('▶︎ IAP available? $available');
+      print('🔴 Querying product IDs: $_kMonthlyId, $_kAnnualId');
       if (available) {
         final ids = {_kMonthlyId, _kAnnualId};
         _iap.queryProductDetails(ids).then((response) {
