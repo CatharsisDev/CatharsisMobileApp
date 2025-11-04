@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:catharsis_cards/services/ad_service.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -65,6 +66,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
 
   Future<void> _initializeBannerAd() async {
     if (!Platform.isAndroid) return;
+    if (!await AdService.shouldShowAds()) return;
+
     final int screenWidth = MediaQuery.of(context).size.width.toInt();
     final AdSize? adSize =
         await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(screenWidth);

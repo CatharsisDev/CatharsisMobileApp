@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode; // Add this import
 
 class AdService {
+  static SubscriptionService? _subscriptionService;
+
+  static void initialize(SubscriptionService service) {
+    _subscriptionService = service;
+  }
   // Show an interstitial every N swipes
   static const int frequency = 12;
   static int _swipesSinceAd = 0;
@@ -12,12 +17,51 @@ class AdService {
   static InterstitialAd? _interstitial;
   static bool _loading = false;
 
+  static bool _adsDisabled = false;
+
+  static Future<bool> _isSubscribed() async {
+    if (_adsDisabled) return true;
+    if (_subscriptionService == null) return false;
+
+    try {
+      final subscribed = await _subscriptionService!.isUserSubscribed();
+      if (subscribed) {
+        await setAdsDisabled(true); // latch and dispose any queued ads
+      }
+      return subscribed;
+    } catch (_) {
+      // On error, keep current latch
+      return _adsDisabled;
+    }
+  }
+
+  static Future<void> setAdsDisabled(bool disabled) async {
+    _adsDisabled = disabled;
+    if (disabled) {
+      _swipesSinceAd = 0;
+      _interstitial?.dispose();
+      _interstitial = null;
+      _loading = false;
+    } else {
+      await preload();
+    }
+  }
+
+  static Future<bool> shouldShowAds() async {
+  if (_subscriptionService == null) return true;
+  return !_subscriptionService!.isUserSubscribed();
+}
+
   static String get _androidInterstitialUnitId => kReleaseMode
       ? 'ca-app-pub-2028088731421171/6845706769'  
       : 'ca-app-pub-3940256099942544/1033173712'; // Google TEST interstitial unit ID
 
   static Future<void> preload() async {
     if (!Platform.isAndroid || _interstitial != null || _loading) return;
+
+    // Don't load if the user is subscribed
+    if (await _isSubscribed()) return;
+
     _loading = true;
 
     await InterstitialAd.load(
@@ -57,27 +101,35 @@ class AdService {
   static Future<void> onSwipeAndMaybeShow(BuildContext context) async {
     if (!Platform.isAndroid) return;
 
-    final isSubscribed = await SubscriptionService().isUserSubscribed(); // Assume async check
-    if (isSubscribed) return;
+    // Short-circuit if subscribed; also dispose anything queued just in case.
+    if (await _isSubscribed()) {
+      _interstitial?.dispose();
+      _interstitial = null;
+      _loading = false;
+      return;
+    }
 
     _swipesSinceAd++;
-    // Not time yet → keep preloading
+
     if (_swipesSinceAd % frequency != 0) {
-      if (_interstitial == null) preload();
+      if (_interstitial == null) {
+        preload();
+      }
       return;
     }
 
     if (_interstitial != null) {
-      // Show and let callbacks handle reloading
       _interstitial!.show();
       _interstitial = null;
     } else {
-      // Not ready; try to load for next time
       preload();
     }
   }
 
   static void resetCounter() {
     _swipesSinceAd = 0;
+  }
+  static Future<void> refreshSubscriptionGate() async {
+    await _isSubscribed();
   }
 }

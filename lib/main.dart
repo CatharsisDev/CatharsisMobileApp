@@ -3,6 +3,8 @@ import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
 import 'package:catharsis_cards/provider/user_profile_provider.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
+import 'package:catharsis_cards/services/subscription_service.dart';
+import 'package:catharsis_cards/services/ad_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'questions_model.dart';
@@ -98,6 +100,14 @@ class _MyAppState extends ConsumerState<MyApp> {
     super.initState();
     _appStateNotifier = AppStateNotifier.instance;
     _router = app_router.createRouter(_appStateNotifier, ref);
+    // Initialize AdService with SubscriptionService from Riverpod
+    try {
+      final subscriptionService = ref.read(subscriptionServiceProvider);
+      AdService.initialize(subscriptionService);
+    } catch (e) {
+      // Safe log; avoid crashing if initialization fails during hot reload
+      // print('AdService init failed: $e');
+    }
   }
 
   @override
