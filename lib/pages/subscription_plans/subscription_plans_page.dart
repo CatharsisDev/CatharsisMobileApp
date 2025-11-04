@@ -266,6 +266,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
     final fontColor = customTheme?.fontColor ??
         theme.textTheme.bodyMedium?.color ??
         theme.primaryColor;
+    final bool isDefaultTheme = customTheme?.backgroundImagePath == null;
 
     // Build list of available plans
     List<Widget> planCards = [];
@@ -330,102 +331,122 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_isAlreadySubscribed && _currentSubscriptionType != null) ...[
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      margin: EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green, width: 1),
-                      ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Make the card height responsive and clamp it to sensible bounds
+                  final double cardHeight =
+                      (constraints.maxHeight * 0.55).clamp(320.0, 480.0);
+
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green, size: 32),
-                          SizedBox(height: 8),
-                          Text(
-                            'Current Plan: ${_currentSubscriptionType == 'monthly' ? 'Monthly' : 'Annual'}',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: fontColor,
-                            ),
-                          ),
-                          if (_subscriptionExpiry != null) ...[
-                            SizedBox(height: 4),
-                            Text(
-                              'Expires: ${DateFormat('MMM dd, yyyy').format(_subscriptionExpiry!)}',
-                              style: TextStyle(
-                                fontFamily: 'Runtime',
-                                fontSize: 14,
-                                color: fontColor.withOpacity(0.7),
+                          if (_isAlreadySubscribed && _currentSubscriptionType != null) ...[
+                            Container(
+                              padding: EdgeInsets.all(16),
+                              margin: EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green, width: 1),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.green, size: 32),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Current Plan: ${_currentSubscriptionType == 'monthly' ? 'Monthly' : 'Annual'}',
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: fontColor,
+                                    ),
+                                  ),
+                                  if (_subscriptionExpiry != null) ...[
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Expires: ${DateFormat('MMM dd, yyyy').format(_subscriptionExpiry!)}',
+                                      style: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: 14,
+                                        color: fontColor.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
+                          Text(
+                            planCards.isEmpty
+                                ? 'You\'re all set!'
+                                : (_isAlreadySubscribed ? 'Upgrade your plan' : 'Choose a plan'),
+                            style: theme.textTheme.titleLarge
+                                ?.copyWith(fontFamily: 'Runtime', color: fontColor),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 30),
+                          if (planCards.isNotEmpty) ...[
+                            SizedBox(
+                              height: cardHeight,
+                              child: planCards.length == 1
+                                  ? Center(child: planCards[0])
+                                  : PageView(
+                                      controller: _pageController,
+                                      children: planCards,
+                                    ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (planCards.length > 1)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  planCards.length,
+                                  (index) => Container(
+                                    width: 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _currentPage == index
+                                          ? indicatorColor
+                                          : indicatorColor.withOpacity(0.3),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                          const SizedBox(height: 24),
+                          if (_isAlreadySubscribed)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    customTheme?.preferenceButtonColor ?? theme.primaryColor,
+                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              onPressed: _manageSubscription,
+                              icon: Icon(
+                                Icons.settings,
+                                color: isDefaultTheme ? Colors.white : (customTheme?.buttonFontColor ?? fontColor),
+                              ),
+                              label: Text(
+                                'Manage Subscription',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  fontWeight: FontWeight.bold,
+                                  color: isDefaultTheme ? Colors.white : (customTheme?.buttonFontColor ?? fontColor),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  ],
-                  Text(
-                    planCards.isEmpty ? 'You\'re all set!' : (_isAlreadySubscribed ? 'Upgrade your plan' : 'Choose a plan'),
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontFamily: 'Runtime', color: fontColor),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 30),
-                  if (planCards.isNotEmpty) ...[
-                    SizedBox(
-                      height: 500,
-                      child: planCards.length == 1
-                          ? Center(child: planCards[0])
-                          : PageView(
-                              controller: _pageController,
-                              children: planCards,
-                            ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (planCards.length > 1)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          planCards.length,
-                          (index) => Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _currentPage == index
-                                  ? indicatorColor
-                                  : indicatorColor.withOpacity(0.3),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                  const SizedBox(height: 24),
-                  if (_isAlreadySubscribed)
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      ),
-                      onPressed: _manageSubscription,
-                      icon: Icon(Icons.settings, color: customTheme?.buttonFontColor ?? fontColor),
-                      label: Text(
-                        'Manage Subscription',
-                        style: TextStyle(
-                          fontFamily: 'Runtime',
-                          fontWeight: FontWeight.bold,
-                          color: customTheme?.buttonFontColor ?? fontColor,
-                        ),
-                      ),
-                    ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -435,6 +456,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   }
 
   Widget _buildAlreadySubscribedView(ThemeData theme, CustomThemeExtension? customTheme, Color fontColor) {
+    final bool isDefaultTheme = customTheme?.backgroundImagePath == null;
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
@@ -519,7 +541,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
                           fontFamily: 'Runtime',
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: customTheme?.buttonFontColor ?? fontColor,
+                          color: isDefaultTheme ? Colors.white : (customTheme?.buttonFontColor ?? fontColor),
                         ),
                       ),
                     ),
@@ -585,6 +607,7 @@ class _PlanCard extends StatelessWidget {
         theme.textTheme.bodyMedium?.color ??
         theme.primaryColor;
     final buttonFontColor = customTheme?.buttonFontColor ?? fontColor;
+    final bool isDefaultTheme = customTheme?.backgroundImagePath == null;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -694,7 +717,7 @@ class _PlanCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     fontWeight: FontWeight.bold,
-                    color: canPurchase ? buttonFontColor : Colors.white,
+                    color: canPurchase ? (isDefaultTheme ? Colors.white : buttonFontColor) : Colors.white,
                   ),
                 ),
               ),
