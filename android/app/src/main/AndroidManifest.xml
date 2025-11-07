@@ -40,25 +40,6 @@
                <category android:name="android.intent.category.LAUNCHER"/>
            </intent-filter>
            
-           <!-- Firebase Auth deep link handling with path prefix -->
-           <intent-filter android:autoVerify="true">
-               <action android:name="android.intent.action.VIEW" />
-               <category android:name="android.intent.category.DEFAULT" />
-               <category android:name="android.intent.category.BROWSABLE" />
-               <data android:scheme="https"
-                     android:host="catharsiscards.firebaseapp.com"
-                     android:pathPrefix="/__/auth/handler" />
-           </intent-filter>
-           
-           <!-- Additional Firebase Auth handler without path for root domain -->
-           <intent-filter>
-               <action android:name="android.intent.action.VIEW" />
-               <category android:name="android.intent.category.DEFAULT" />
-               <category android:name="android.intent.category.BROWSABLE" />
-               <data android:scheme="https"
-                     android:host="catharsiscards.firebaseapp.com" />
-           </intent-filter>
-           
            <!-- Custom scheme for OAuth redirects -->
            <intent-filter>
                <action android:name="android.intent.action.VIEW" />

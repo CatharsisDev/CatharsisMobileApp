@@ -73,8 +73,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
         await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(screenWidth);
 
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/9214589741',
-      size: adSize ?? AdSize.banner, // Fallback to standard banner if adaptive is unavailable
+      adUnitId: 'ca-app-pub-2028088731421171/6426688761',
+      size: adSize ?? AdSize.banner, 
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {

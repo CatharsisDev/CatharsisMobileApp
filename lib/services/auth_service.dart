@@ -11,7 +11,6 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
-/// AuthService: Google + Apple (iOS native, Android provider with web fallback) + email
 class AuthService {
   AuthService();
   
@@ -125,8 +124,7 @@ class AuthService {
           await _handleFirstLogin(result);
           return result.user;
         } on FirebaseAuthException catch (e) {
-          // Common when Apple/Firebase config is not fully recognized on device.
-          // Fall back to Apple web flow via sign_in_with_apple (Service ID + Redirect URI).
+          
           final isInvalidCredential = e.code == 'invalid-credential' ||
               (e.message != null && e.message!.toLowerCase().contains('apple.com'));
           if (!isInvalidCredential) {
