@@ -40,7 +40,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   };
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  
+
   // Profile setup state
   String? _selectedAvatar;
   final TextEditingController _usernameController = TextEditingController();
@@ -83,13 +83,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   // Appearance carousel controller & state
   late final PageController _appearanceController;
   int _currentAppearancePage = 0;
-  
+
   // Animation controller
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
   // Debounce timer for profanity/invalid char check
   Timer? _debounceTimer;
-  
+
   // Catharsis translations list (add this if you're using it)
   final List<String> _catharsisTranslations = [
     "Catharsis", "κάθαρσις", "カタルシス", "Catarse", "Katharsis"
@@ -169,6 +169,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     super.dispose();
   }
 
+  // Responsive font helper (375 = base iPhone logical width)
+  double _responsiveFontSize(BuildContext context, double baseSize) {
+    return baseSize * MediaQuery.of(context).size.width / 375;
+  }
+
   void _nextPage() {
     if (_currentPage < 6) {
       _pageController.nextPage(
@@ -180,8 +185,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   void _finishTutorial() async {
     // Request notification permissions
-    await NotificationService.init(); 
-    
+    await NotificationService.init();
+
     // Save profile data if provided
     if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
       await ref.read(userProfileProvider.notifier).updateProfile(
@@ -189,7 +194,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         username: _usernameController.text.trim(),
       );
     }
-    
+
     await ref.read(tutorialProvider.notifier).setTutorialSeen();
     if (mounted) {
       context.go('/home');
@@ -198,39 +203,46 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-    
-      backgroundColor: const Color(0xFFFAF1E1),
-      resizeToAvoidBottomInset: true,
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentPage = index;
-          });
-        },
-        children: [
-          // Page 0: Email Verification
-          //_buildEmailVerificationPage(),
+    final mq = MediaQuery.of(context);
+    final double clampedTextScale = mq.textScaleFactor < 1.0
+        ? 1.0
+        : (mq.textScaleFactor > 1.3 ? 1.3 : mq.textScaleFactor);
 
-          // Page 1: Welcome Message
-          _buildWelcomePage(),
+    return MediaQuery(
+      data: mq.copyWith(textScaleFactor: clampedTextScale),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFAF1E1),
+        resizeToAvoidBottomInset: true,
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentPage = index;
+            });
+          },
+          children: [
+            // Page 0: Email Verification
+            //_buildEmailVerificationPage(),
 
-          // Page 2: How it Works
-          _buildHowItWorksPage(),
+            // Page 1: Welcome Message
+            _buildWelcomePage(),
 
-          // Page 3: Categories Introduction
-          _buildCategoriesPage(),
+            // Page 2: How it Works
+            _buildHowItWorksPage(),
 
-          // Page 4: Appearance Theme Selection
-          _buildAppearancePage(),
+            // Page 3: Categories Introduction
+            _buildCategoriesPage(),
 
-          // Page 5: Profile Setup
-          _buildProfileSetupPage(),
+            // Page 4: Appearance Theme Selection
+            _buildAppearancePage(),
 
-          // Page 6: Get Started
-          _buildGetStartedPage(),
-        ],
+            // Page 5: Profile Setup
+            _buildProfileSetupPage(),
+
+            // Page 6: Get Started
+            _buildGetStartedPage(),
+          ],
+        ),
       ),
     );
   }
@@ -323,7 +335,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   Widget _buildWelcomePage() {
     return Stack(
       children: [
-        // Cream gradient background
+        // Background
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -336,7 +348,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Texture overlay at 40% opacity
         Opacity(
           opacity: 0.4,
           child: Container(
@@ -348,60 +359,74 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Content with consistent navigation positioning
+
+        // Content
         Column(
           children: [
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 40,
+                  right: 40,
+                  top: MediaQuery.of(context).size.height * 0.1,
+                  bottom: 20,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
                       'assets/images/boat_illustration.png',
-                      width: 300,
-                      height: 300,
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: MediaQuery.of(context).size.height * 0.3,
                       fit: BoxFit.contain,
                     )
-                        .animate(
-                          onPlay: (controller) => controller.forward(),
-                        )
+                        .animate(onPlay: (controller) => controller.forward())
                         .slideX(
                           begin: 1.0,
                           end: 0.0,
-                          duration: Duration(seconds: 2),
+                          duration: const Duration(seconds: 2),
                           curve: Curves.easeInOut,
                         )
-                        .fadeIn(duration: Duration(seconds: 1)),
-                    const SizedBox(height: 40),
-                    Text(
-                      'Welcome to\nCatharsis Cards',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                        height: 1.2,
+                        .fadeIn(duration: const Duration(seconds: 1)),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.04),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Welcome to\nCatharsis Cards',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontSize: _responsiveFontSize(context, 36),
+                          fontWeight: FontWeight.bold,
+                          color: const Color.fromRGBO(32, 28, 17, 1),
+                          height: 1.2,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Your journey to emotional clarity\nand self-discovery begins here',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                        height: 1.5,
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'Your journey to emotional clarity\nand self-discovery begins here',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: _responsiveFontSize(context, 18),
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromRGBO(32, 28, 17, 1),
+                            height: 1.5,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            // Fixed position navigation
+
+            // Bottom nav
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
               child: _buildNavigationButtons(),
@@ -503,7 +528,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       {'name': 'Relationships', 'icon': 'assets/images/interactions_relationships_icon.png'},
       {'name': 'Personal Development', 'icon': 'assets/images/personal_development_icon.png'},
     ];
-    
+
     return Stack(
       children: [
         Container(
@@ -561,9 +586,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       final idx = e.key;
                       final entry = e.value;
                       return _buildCategoryItem(entry)
-                        .animate()
-                        .fadeIn(delay: Duration(milliseconds: 200 * (idx + 1)))
-                        .slideY(begin: 0.2);
+                          .animate()
+                          .fadeIn(delay: Duration(milliseconds: 200 * (idx + 1)))
+                          .slideY(begin: 0.2);
                     }).toList(),
                   ],
                 ),
@@ -634,13 +659,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Personalize Your Profile',
-                                  style: TextStyle(
-                                    fontFamily: 'Runtime',
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color.fromRGBO(32, 28, 17, 1),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    child: Text(
+                                      'Personalize Your Profile',
+                                      style: TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: _responsiveFontSize(context, 26),
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color.fromRGBO(32, 28, 17, 1),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 30),
@@ -940,15 +971,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Widget _buildAppearancePage() {
     // Local theme state for demo purposes only
-    final selectedTheme = _currentAppearancePage == 0 ? 'catharsis_signature' 
-                        : _currentAppearancePage == 1 ? 'dark' 
-                        : 'light';
-    
+    final selectedTheme = _currentAppearancePage == 0
+        ? 'catharsis_signature'
+        : _currentAppearancePage == 1
+            ? 'dark'
+            : 'light';
+
     // Define theme-specific colors for demo
     Color backgroundColor;
     Color textColor;
     Color secondaryTextColor;
-    
+
     switch (selectedTheme) {
       case 'dark':
         backgroundColor = const Color(0xFF1A1A1A);
@@ -1012,17 +1045,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                      child: const Text(
-                        'Choose Your Theme',
-                        textAlign: TextAlign.center,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'Choose Your Theme',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: _responsiveFontSize(context, 32),
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 40),
@@ -1094,12 +1130,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                       color: textColor.withOpacity(0.5),
                                       width: 1.5,
                                     ),
-                                    color: isSelected 
-                                        ? const Color.fromRGBO(42, 63, 44, 0.7) 
+                                    color: isSelected
+                                        ? const Color.fromRGBO(42, 63, 44, 0.7)
                                         : Colors.transparent,
                                   ),
-                                  child: isSelected 
-                                      ? const Icon(Icons.check, size: 16, color: Colors.white) 
+                                  child: isSelected
+                                      ? const Icon(Icons.check, size: 16, color: Colors.white)
                                       : null,
                                 ),
                               ],
@@ -1465,7 +1501,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       setState(() {
         _hasProfanity = _profanityFilter.hasProfanity(value);
-        _hasInvalidChars = !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
+        _hasInvalidChars =
+            !RegExp(r'^[\p{L}\p{N}_]+$', unicode: true).hasMatch(value);
       });
     });
   }

@@ -140,7 +140,6 @@ class AccountDeletionService {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Grab handle
               Container(
                 width: 40,
                 height: 4,
@@ -152,7 +151,6 @@ class AccountDeletionService {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              // Title
               Text(
                 'Delete account',
                 style: TextStyle(
@@ -163,7 +161,6 @@ class AccountDeletionService {
                 ),
               ),
               const SizedBox(height: 16),
-              // Body
               Text(
                 'This will permanently delete your account and all data. This cannot be undone.',
                 textAlign: TextAlign.center,
@@ -177,7 +174,6 @@ class AccountDeletionService {
                 ),
               ),
               const SizedBox(height: 24),
-              // Buttons
               Row(
                 children: [
                   Expanded(
@@ -247,19 +243,14 @@ class AccountDeletionService {
     final userId = user.uid;
 
     try {
-      // Explicitly reset user counters before deleting Firestore data
       await _resetUserCounters(userId);
-
-      // 1. Delete Firestore data
       await _deleteFirestoreData(userId);
-      
-      // 2. Delete local data  
       await _deleteLocalData(userId);
       
-      // 3. Delete Firebase Auth user (this must be last)
+      // Delete Firebase Auth user
       await user.delete();
       
-      // 4. Sign out completely
+      // Sign out immediately to prevent redirect issues
       await _auth.signOut();
       
       print('Account deletion completed successfully');
@@ -272,13 +263,11 @@ class AccountDeletionService {
   Future<void> _deleteFirestoreData(String userId) async {
     final tasks = <Future>[];
 
-    // Delete main collections - use correct collection names
     tasks.add(_safeFirestoreDelete('users', userId));
-    tasks.add(_safeFirestoreDelete('user_behaviors', userId)); // plural
-    tasks.add(_safeFirestoreDelete('user_sessions', userId)); // from your service
+    tasks.add(_safeFirestoreDelete('user_behaviors', userId));
+    tasks.add(_safeFirestoreDelete('user_sessions', userId));
     tasks.add(_safeFirestoreDelete('user_preferences', userId));
 
-    // Delete subcollections
     tasks.add(_deleteSubcollection('users', userId, 'liked_questions'));
     tasks.add(_deleteSubcollection('user_behaviors', userId, 'views'));
     tasks.add(_deleteSubcollection('user_behaviors', userId, 'swipes'));
@@ -290,7 +279,6 @@ class AccountDeletionService {
 
   Future<void> _resetUserCounters(String userId) async {
     try {
-      // Explicitly reset the seen cards counter before deletion
       await UserBehaviorService.resetSeenCardsCount();
       print('User counters reset for: $userId');
     } catch (e) {
@@ -331,11 +319,9 @@ class AccountDeletionService {
 
   Future<void> _deleteLocalData(String userId) async {
     try {
-      // Clear SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
       
-      // Clear Hive boxes
       await _clearHiveBoxes(userId);
       
       print('Local data deleted successfully');
@@ -354,10 +340,10 @@ class AccountDeletionService {
 
   Future<void> _clearBoxVariants(String prefix, String userId) async {
     final boxNames = [
-      prefix,                    // Default box
-      '${prefix}_$userId',       // User-specific box
-      '${prefix}_default',       // Default pattern
-      '${prefix}_temp',          // Temp pattern
+      prefix,
+      '${prefix}_$userId'.toLowerCase(),
+      '${prefix}_default',
+      '${prefix}_temp',
     ];
     
     for (final boxName in boxNames) {
@@ -429,7 +415,6 @@ class AccountDeletionService {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
                 Container(
                   width: 40,
                   height: 4,
@@ -527,7 +512,7 @@ class AccountDeletionService {
 
     try {
       final googleSignIn = GoogleSignIn(scopes: ['email']);
-      await googleSignIn.signOut(); // Clear any cached session
+      await googleSignIn.signOut();
       
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
@@ -564,12 +549,10 @@ class AccountDeletionService {
     _showLoadingDialog(context, 'Re-authenticating with Apple...');
 
     try {
-      // Fresh nonce + state for this auth round
       final rawNonce = _randomNonce();
       final nonce = _sha256ofString(rawNonce);
       final state = _randomNonce(16);
 
-      // Request Apple credentials.
       AuthorizationCredentialAppleID appleCredential;
       if (Platform.isIOS) {
         appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -581,7 +564,6 @@ class AccountDeletionService {
           state: state,
         );
       } else {
-        // Android (and others) use the web flow.
         appleCredential = await SignInWithApple.getAppleIDCredential(
           scopes: const [
             AppleIDAuthorizationScopes.email,
@@ -596,11 +578,9 @@ class AccountDeletionService {
         );
       }
 
-      // Build Firebase OAuth credential.
-      // Important: include rawNonce and pass authorizationCode as accessToken for Android/web flows.
       final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,              // may be null on some Android flows
-        accessToken: appleCredential.authorizationCode,      // use auth code here (works with Firebase)
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
         rawNonce: rawNonce,
       );
 
@@ -610,7 +590,6 @@ class AccountDeletionService {
       print('Apple re-authentication successful');
     } on SignInWithAppleAuthorizationException catch (e) {
       _dismissDialog(context);
-      // User cancelled from Apple sheet
       if (e.code == AuthorizationErrorCode.canceled) {
         throw FirebaseAuthException(
           code: 'cancelled',
@@ -760,8 +739,7 @@ class AccountDeletionService {
       ),
     );
 
-    await Future.delayed(const Duration(milliseconds: 2500));
-
+    // Navigate immediately without waiting for the snackbar
     if (context.mounted) {
       try {
         context.go('/login');
