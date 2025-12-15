@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:catharsis_cards/provider/auth_provider.dart';
-import 'package:catharsis_cards/provider/theme_provider.dart'; // Add this import
+import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/provider/user_profile_provider.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'questions_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -33,6 +34,7 @@ import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
+import 'package:device_preview/device_preview.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   static final AppStateNotifier _instance = AppStateNotifier._internal();
@@ -46,9 +48,7 @@ class AppStateNotifier extends ChangeNotifier {
   }
 }
 
-
 Future<void> _initAdsAndroid() async {
-  // Initialize the Mobile Ads SDK (Android only)
   await MobileAds.instance.initialize();
 }
 
@@ -59,19 +59,12 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-
-  // Initialize Firebase BEFORE anything else
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Notifications (Awesome Notifications)
   await NotificationService.init(promptUser: false);
-
-  // Load environment variables
   await dotenv.load(fileName: ".env");
-
-  // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
 
@@ -79,7 +72,12 @@ void main() async {
     await _initAdsAndroid();
   }
 
-  runApp(ProviderScope(child: MyApp()));
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode, // Only in debug mode
+      builder: (context) => ProviderScope(child: MyApp()),
+    ),
+  );
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -100,32 +98,25 @@ class _MyAppState extends ConsumerState<MyApp> {
     super.initState();
     _appStateNotifier = AppStateNotifier.instance;
     _router = app_router.createRouter(_appStateNotifier, ref);
-    // Initialize AdService with SubscriptionService from Riverpod
     try {
       final subscriptionService = ref.read(subscriptionServiceProvider);
       AdService.initialize(subscriptionService);
     } catch (e) {
-      // Safe log; avoid crashing if initialization fails during hot reload
-      // print('AdService init failed: $e');
+      // Silent fail
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch the theme provider instead of using the old theme mode
     final themeState = ref.watch(themeProvider);
 
-    // Auth state listener with proper cleanup
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       final previousUser = previous?.whenOrNull(data: (user) => user);
       final currentUser = next.whenOrNull(data: (user) => user);
       
-      // Handle logout scenario
       if (previousUser != null && currentUser == null) {
-        // User logged out - invalidate providers after navigation
         Future.delayed(Duration(milliseconds: 100), () {
           if (mounted) {
-            // Invalidate providers to force fresh state on next login
             ref.invalidate(userProfileProvider);
             ref.invalidate(cardStateProvider);
             ref.invalidate(tutorialProvider);
@@ -133,11 +124,9 @@ class _MyAppState extends ConsumerState<MyApp> {
         });
       }
       
-      // Always refresh router
       _router.refresh();
     });
 
-    // Tutorial state listener
     ref.listen<TutorialState>(tutorialProvider, (previous, next) {
       _router.refresh();
     });
@@ -145,17 +134,26 @@ class _MyAppState extends ConsumerState<MyApp> {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'CatharsisCards',
+      locale: DevicePreview.locale(context),
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en', '')],
-      // Use the theme from your custom theme provider
       theme: themeState.themeData,
-      darkTheme: themeState.themeData, // You can also set a specific dark theme here if needed
-      themeMode: ThemeMode.light, // Let your custom provider handle the theme switching
+      darkTheme: themeState.themeData,
+      themeMode: ThemeMode.light,
       routerConfig: _router,
+      builder: (context, child) {
+        child = DevicePreview.appBuilder(context, child);
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
@@ -191,7 +189,6 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
 
-    // Check if current question is liked
     final isCurrentQuestionLiked = cardState.currentQuestion != null &&
         cardState.likedQuestions.any((q) =>
             q.text == cardState.currentQuestion!.text &&

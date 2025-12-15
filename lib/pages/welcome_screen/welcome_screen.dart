@@ -30,28 +30,26 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     'assets/images/avatar5.png',
     'assets/images/avatar6.png',
   ];
-  // Per-avatar visual tweaks to keep artwork inside the circular frame
+  
   static const Map<String, double> _avatarScaleTweak = {
-    'assets/images/avatar3.png': 0.80, // slightly smaller so it doesn't touch the ring
+    'assets/images/avatar3.png': 0.80,
   };
 
   static const Map<String, Alignment> _avatarAlignTweak = {
-    'assets/images/avatar3.png': Alignment(0, -0.50), // a touch less upward bias
+    'assets/images/avatar3.png': Alignment(0, -0.50),
   };
+  
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Profile setup state
   String? _selectedAvatar;
   final TextEditingController _usernameController = TextEditingController();
-  // Avatar carousel controller - increased viewportFraction for wider view
   late final PageController _avatarCarouselController;
   int _currentAvatarIndex = 0;
 
-  // Avatar image picker state
   String? _avatarPath;
   static const String defaultAvatarPath = 'assets/images/avatar1.jpg';
-  // Image picker for custom avatar
+  
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -62,7 +60,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         final fileName = 'custom_avatar.jpg';
         final newImage = await File(pickedFile.path).copy('${directory.path}/$fileName');
 
-        // Optional: Delete old image if any
         if (_avatarPath != null && _avatarPath != defaultAvatarPath) {
           final oldFile = File(_avatarPath!);
           if (await oldFile.exists()) {
@@ -80,17 +77,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     }
   }
 
-  // Appearance carousel controller & state
   late final PageController _appearanceController;
   int _currentAppearancePage = 0;
 
-  // Animation controller
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
-  // Debounce timer for profanity/invalid char check
   Timer? _debounceTimer;
 
-  // Catharsis translations list (add this if you're using it)
   final List<String> _catharsisTranslations = [
     "Catharsis", "κάθαρσις", "カタルシス", "Catarse", "Katharsis"
   ];
@@ -98,6 +91,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late final ProfanityFilter _profanityFilter;
   bool _hasProfanity = false;
   bool _hasInvalidChars = false;
+  bool _showUsernameError = false;
 
   @override
   void initState() {
@@ -108,7 +102,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
     _animationController.forward();
 
-    // Create staggered animations for each translation
     _fadeAnimations = List.generate(
       _catharsisTranslations.length,
       (index) => Tween<double>(
@@ -128,9 +121,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
     _profanityFilter = ProfanityFilter.filterAdditionally(['nazi', 'hitler']);
     _usernameController.addListener(() {
-      setState(() {});
+      setState(() {
+        _showUsernameError = false;
+      });
     });
-    // Changed viewportFraction from 0.6 to 0.4 for narrower carousel
+    
     _avatarCarouselController = PageController(viewportFraction: 0.4)
       ..addListener(() {
         final page = (_avatarCarouselController.page ?? 0).round();
@@ -147,7 +142,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       });
     _selectedAvatar = _avatars[0];
     _avatarPath = null;
-    // Appearance carousel setup
+    
     _appearanceController = PageController(viewportFraction: 0.8)
       ..addListener(() {
         final page = (_appearanceController.page ?? 0).round();
@@ -169,7 +164,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     super.dispose();
   }
 
-  // Responsive font helper (375 = base iPhone logical width)
   double _responsiveFontSize(BuildContext context, double baseSize) {
     return baseSize * MediaQuery.of(context).size.width / 375;
   }
@@ -184,10 +178,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _finishTutorial() async {
-    // Request notification permissions
     await NotificationService.init();
 
-    // Save profile data if provided
     if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
       await ref.read(userProfileProvider.notifier).updateProfile(
         avatar: _selectedAvatar,
@@ -203,139 +195,48 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final double clampedTextScale = mq.textScaleFactor < 1.0
-        ? 1.0
-        : (mq.textScaleFactor > 1.3 ? 1.3 : mq.textScaleFactor);
-
-    return MediaQuery(
-      data: mq.copyWith(textScaleFactor: clampedTextScale),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFFAF1E1),
-        resizeToAvoidBottomInset: true,
-        body: PageView(
-          controller: _pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _currentPage = index;
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAF1E1),
+      resizeToAvoidBottomInset: true,
+      body: PageView(
+        controller: _pageController,
+        physics: const ClampingScrollPhysics(),
+        onPageChanged: (index) {
+          // Prevent swiping forward from Profile Setup without valid username
+          if (_currentPage == 4 &&
+              index == 5 &&
+              (_usernameController.text.trim().isEmpty ||
+                  _hasProfanity ||
+                  _hasInvalidChars)) {
+            // Jump back and show message
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _pageController.jumpToPage(4);
+              setState(() {
+                _showUsernameError = true;
+              });
             });
-          },
-          children: [
-            // Page 0: Email Verification
-            //_buildEmailVerificationPage(),
+            return;
+          }
 
-            // Page 1: Welcome Message
-            _buildWelcomePage(),
-
-            // Page 2: How it Works
-            _buildHowItWorksPage(),
-
-            // Page 3: Categories Introduction
-            _buildCategoriesPage(),
-
-            // Page 4: Appearance Theme Selection
-            _buildAppearancePage(),
-
-            // Page 5: Profile Setup
-            _buildProfileSetupPage(),
-
-            // Page 6: Get Started
-            _buildGetStartedPage(),
-          ],
-        ),
+          setState(() {
+            _currentPage = index;
+          });
+        },
+        children: [
+          _buildWelcomePage(),
+          _buildHowItWorksPage(),
+          _buildCategoriesPage(),
+          _buildAppearancePage(),
+          _buildProfileSetupPage(),
+          _buildGetStartedPage(),
+        ],
       ),
-    );
-  }
-
-  Widget _buildEmailVerificationPage() {
-    // Matches the background and overlay of other slides, but only shows title, description, and a single "Continue" button.
-    return Stack(
-      children: [
-        // Cream gradient background
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFFAF1E1),
-                const Color(0xFFFAF1E1).withOpacity(0.95),
-              ],
-            ),
-          ),
-        ),
-        // Texture overlay at 40% opacity
-        Opacity(
-          opacity: 0.4,
-          child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/background_texture.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ),
-        // Content centered, no navigation or extra buttons
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Verify Your Email',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromRGBO(32, 28, 17, 1),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Please check your inbox for a verification email and click the link to continue.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    fontSize: 18,
-                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                ElevatedButton(
-                  onPressed: _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontFamily: 'Runtime',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildWelcomePage() {
     return Stack(
       children: [
-        // Background
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -359,8 +260,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-
-        // Content
         Column(
           children: [
             Expanded(
@@ -425,8 +324,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
               ),
             ),
-
-            // Bottom nav
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
               child: _buildNavigationButtons(),
@@ -440,7 +337,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   Widget _buildHowItWorksPage() {
     return Stack(
       children: [
-        // Cream gradient background
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -453,7 +349,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Texture overlay at 40% opacity
         Opacity(
           opacity: 0.4,
           child: Container(
@@ -465,7 +360,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Content with consistent navigation positioning
         Column(
           children: [
             Expanded(
@@ -508,7 +402,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
               ),
             ),
-            // Fixed position navigation
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
               child: _buildNavigationButtons(),
@@ -520,7 +413,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildCategoriesPage() {
-    // Use explicit category data with icons
     final categories = [
       {'name': 'Love & Intimacy', 'icon': 'assets/images/love_intimacy_icon.png'},
       {'name': 'Spirituality', 'icon': 'assets/images/spirituality_icon.png'},
@@ -528,6 +420,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       {'name': 'Relationships', 'icon': 'assets/images/interactions_relationships_icon.png'},
       {'name': 'Personal Development', 'icon': 'assets/images/personal_development_icon.png'},
     ];
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
 
     return Stack(
       children: [
@@ -554,47 +449,66 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Content with consistent navigation positioning
         Column(
           children: [
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Explore Categories',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: isSmallScreen
+                        ? screenHeight * 0.05
+                        : screenHeight * 0.1,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (!isSmallScreen)
+                        SizedBox(height: screenHeight * 0.08),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Explore Categories',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromRGBO(32, 28, 17, 1),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Questions tailored to your journey',
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 16,
-                        color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
+                      SizedBox(height: screenHeight * 0.02),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Questions tailored to your journey',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            color: const Color.fromRGBO(32, 28, 17, 1)
+                                .withOpacity(0.9),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                    ...categories.asMap().entries.map((e) {
-                      final idx = e.key;
-                      final entry = e.value;
-                      return _buildCategoryItem(entry)
-                          .animate()
-                          .fadeIn(delay: Duration(milliseconds: 200 * (idx + 1)))
-                          .slideY(begin: 0.2);
-                    }).toList(),
-                  ],
+                      SizedBox(height: screenHeight * 0.04),
+                      ...categories.asMap().entries.map((e) {
+                        final idx = e.key;
+                        final entry = e.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildCategoryItem(entry)
+                              .animate()
+                              .fadeIn(
+                                  delay:
+                                      Duration(milliseconds: 200 * (idx + 1)))
+                              .slideY(begin: 0.2),
+                        );
+                      }).toList(),
+                    ],
+                  ),
                 ),
               ),
             ),
-            // Fixed position navigation
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
               child: _buildNavigationButtons(),
@@ -610,6 +524,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     if (_avatarPath != null) {
       avatarList.add(_avatarPath!);
     }
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.transparent,
@@ -624,7 +542,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               child: IntrinsicHeight(
                 child: Stack(
                   children: [
-                    // Background gradient
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -637,7 +554,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         ),
                       ),
                     ),
-                    // Texture overlay
                     Opacity(
                       opacity: 0.4,
                       child: Container(
@@ -649,13 +565,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         ),
                       ),
                     ),
-                    // Main content
                     Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(40),
+                            padding: EdgeInsets.all(isSmallScreen ? 20 : 40),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -667,36 +582,35 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                       'Personalize Your Profile',
                                       style: TextStyle(
                                         fontFamily: 'Runtime',
-                                        fontSize: _responsiveFontSize(context, 26),
+                                        fontSize: isSmallScreen ? 22 : 26,
                                         fontWeight: FontWeight.bold,
                                         color: const Color.fromRGBO(32, 28, 17, 1),
                                       ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 30),
+                                SizedBox(height: isSmallScreen ? 16 : 30),
                                 Text(
                                   'Choose your avatar and username',
                                   style: TextStyle(
                                     fontFamily: 'Runtime',
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
+                                    color: const Color.fromRGBO(32, 28, 17, 1)
+                                        .withOpacity(0.9),
                                   ),
                                 ),
-                                const SizedBox(height: 50),
-                                // Avatar Selection
+                                SizedBox(height: isSmallScreen ? 24 : 50),
                                 Text(
                                   'Choose Avatar',
                                   style: TextStyle(
                                     fontFamily: 'Runtime',
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: const Color.fromRGBO(32, 28, 17, 1),
                                   ),
                                 ),
-                                const SizedBox(height: 40),
-                                // Added ShaderMask for edge blur effect
+                                SizedBox(height: isSmallScreen ? 20 : 40),
                                 ShaderMask(
                                   shaderCallback: (Rect bounds) {
                                     return LinearGradient(
@@ -753,86 +667,110 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                     );
                                   }),
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
                                 Center(
                                   child: ElevatedButton.icon(
                                     onPressed: _pickImage,
-                                    icon: const Icon(Icons.upload),
+                                    icon: const Icon(Icons.upload, size: 18),
                                     label: const Text('Upload Avatar'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color.fromRGBO(32, 28, 17, 1),
+                                      backgroundColor:
+                                          const Color.fromRGBO(32, 28, 17, 1),
                                       foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isSmallScreen ? 16 : 24,
+                                        vertical: isSmallScreen ? 10 : 12,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                const SizedBox(height: 40),
-                                // Username Input
+                                SizedBox(height: isSmallScreen ? 20 : 40),
                                 Text(
                                   'Username',
                                   style: TextStyle(
                                     fontFamily: 'Runtime',
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: const Color.fromRGBO(32, 28, 17, 1),
                                   ),
                                 ),
-                                const SizedBox(height: 40),
+                                SizedBox(height: isSmallScreen ? 16 : 24),
                                 Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.8),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.2),
+                                      color: const Color.fromRGBO(32, 28, 17, 1)
+                                          .withOpacity(0.2),
                                       width: 1,
                                     ),
                                   ),
                                   child: TextField(
                                     onChanged: _checkText,
                                     controller: _usernameController,
-                                    cursorColor: const Color.fromRGBO(42, 63, 44, 1),
+                                    cursorColor:
+                                        const Color.fromRGBO(42, 63, 44, 1),
                                     style: const TextStyle(
                                       fontFamily: 'Runtime',
                                       fontSize: 16,
-                                      color: Color.fromRGBO(32, 28, 17, 1),
+                                      color:
+                                          Color.fromRGBO(32, 28, 17, 1),
                                     ),
                                     decoration: InputDecoration(
                                       hintText: 'Enter your username',
                                       hintStyle: TextStyle(
                                         fontFamily: 'Runtime',
-                                        color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.5),
+                                        color: const Color.fromRGBO(32, 28, 17, 1)
+                                            .withOpacity(0.5),
                                       ),
                                       border: InputBorder.none,
                                       focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
                                         horizontal: 16,
                                         vertical: 12,
                                       ),
                                     ),
                                     maxLength: 20,
-                                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                                    buildCounter: (context,
+                                            {required currentLength,
+                                            required isFocused,
+                                            maxLength}) =>
+                                        null,
                                   ),
                                 ),
+                                if (_showUsernameError && _usernameController.text.trim().isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Please enter a username to continue',
+                                      style: const TextStyle(
+                                        fontFamily: 'Runtime',
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
                                 if (_hasProfanity)
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
                                     child: Text(
                                       'Username contains inappropriate language',
                                       style: TextStyle(
                                         fontFamily: 'Runtime',
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         color: Colors.red,
                                       ),
                                     ),
                                   ),
                                 if (_hasInvalidChars)
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
                                     child: Text(
                                       'Username can only contain letters, numbers, and underscores',
                                       style: TextStyle(
                                         fontFamily: 'Runtime',
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         color: Colors.red,
                                       ),
                                     ),
@@ -842,7 +780,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 20 : 40,
+                            vertical: isSmallScreen ? 16 : 32,
+                          ),
                           child: _buildNavigationButtons(),
                         ),
                       ],
@@ -883,7 +824,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-        // Content centered properly
         Center(
           child: Padding(
             padding: const EdgeInsets.all(40),
@@ -970,14 +910,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildAppearancePage() {
-    // Local theme state for demo purposes only
     final selectedTheme = _currentAppearancePage == 0
         ? 'catharsis_signature'
         : _currentAppearancePage == 1
             ? 'dark'
             : 'light';
 
-    // Define theme-specific colors for demo
     Color backgroundColor;
     Color textColor;
     Color secondaryTextColor;
@@ -993,15 +931,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         textColor = const Color(0xFF333333);
         secondaryTextColor = const Color(0xFF666666);
         break;
-      default: // catharsis_signature
+      default:
         backgroundColor = const Color(0xFFFAF1E1);
         textColor = const Color.fromRGBO(32, 28, 17, 1);
         secondaryTextColor = const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.8);
     }
 
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
     return Stack(
       children: [
-        // Dynamic background based on selected theme
         if (selectedTheme == 'catharsis_signature')
           Container(
             decoration: BoxDecoration(
@@ -1024,7 +964,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               fit: BoxFit.cover,
             ),
           ),
-        // Texture overlay for default theme only
         if (selectedTheme == 'catharsis_signature')
           Opacity(
             opacity: 0.4,
@@ -1040,147 +979,153 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         Column(
           children: [
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Choose Your Theme',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: _responsiveFontSize(context, 32),
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: isSmallScreen ? screenHeight * 0.05 : screenHeight * 0.1,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (!isSmallScreen)
+                        SizedBox(height: screenHeight * 0.05),
+                      
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            'Choose Your Theme',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 16,
-                        color: secondaryTextColor,
-                        fontWeight: FontWeight.bold,
+                      SizedBox(height: screenHeight * 0.03),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Select the appearance that suits you best',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            color: secondaryTextColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      child: const Text(
-                        'Select the appearance that suits you best',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      height: 350,
-                      child: PageView.builder(
-                        controller: _appearanceController,
-                        itemCount: 3,
-                        onPageChanged: (i) => setState(() => _currentAppearancePage = i),
-                        itemBuilder: (ctx, i) {
-                          final opts = [
-                            {'title': 'Default', 'image': 'assets/images/default_theme_image.png', 'value': 'catharsis_signature'},
-                            {'title': 'Dark', 'image': 'assets/images/dark_theme_image.png', 'value': 'dark'},
-                            {'title': 'Light', 'image': 'assets/images/light_theme_image.png', 'value': 'light'},
-                          ];
-                          final o = opts[i];
-                          final isSelected = i == _currentAppearancePage;
-                          return GestureDetector(
-                            onTap: () {
-                              _appearanceController.animateToPage(
-                                i,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
-                            child: Column(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image.asset(
-                                    o['image']!,
-                                    height: 250,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                AnimatedDefaultTextStyle(
+                      SizedBox(height: screenHeight * 0.03),
+                      SizedBox(
+                        height: screenHeight * 0.4,
+                        child: PageView.builder(
+                          controller: _appearanceController,
+                          itemCount: 3,
+                          onPageChanged: (i) => setState(() => _currentAppearancePage = i),
+                          itemBuilder: (ctx, i) {
+                            final opts = [
+                              {'title': 'Default', 'image': 'assets/images/default_theme_image.png', 'value': 'catharsis_signature'},
+                              {'title': 'Dark', 'image': 'assets/images/dark_theme_image.png', 'value': 'dark'},
+                              {'title': 'Light', 'image': 'assets/images/light_theme_image.png', 'value': 'light'},
+                            ];
+                            final o = opts[i];
+                            final isSelected = i == _currentAppearancePage;
+                            return GestureDetector(
+                              onTap: () {
+                                _appearanceController.animateToPage(
+                                  i,
                                   duration: const Duration(milliseconds: 300),
-                                  style: TextStyle(
-                                    fontFamily: 'Runtime',
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
-                                  child: Text(o['title']!),
-                                ),
-                                const SizedBox(height: 8),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: textColor.withOpacity(0.5),
-                                      width: 1.5,
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                              child: Column(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.asset(
+                                      o['image']!,
+                                      height: screenHeight * 0.28,
+                                      fit: BoxFit.cover,
                                     ),
-                                    color: isSelected
-                                        ? const Color.fromRGBO(42, 63, 44, 0.7)
-                                        : Colors.transparent,
                                   ),
-                                  child: isSelected
-                                      ? const Icon(Icons.check, size: 16, color: Colors.white)
-                                      : null,
-                                ),
-                              ],
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    o['title']!,
+                                    style: TextStyle(
+                                      fontFamily: 'Runtime',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: textColor.withOpacity(0.5),
+                                        width: 1.5,
+                                      ),
+                                      color: isSelected
+                                          ? const Color.fromRGBO(42, 63, 44, 0.7)
+                                          : Colors.transparent,
+                                    ),
+                                    child: isSelected
+                                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(3, (i) {
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentAppearancePage == i
+                                  ? textColor
+                                  : textColor.withOpacity(0.3),
                             ),
                           );
-                        },
+                        }),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (i) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentAppearancePage == i
-                                ? textColor
-                                : textColor.withOpacity(0.3),
+                      SizedBox(height: screenHeight * 0.03),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'This is just a preview - you can change themes later in settings',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: secondaryTextColor,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 50),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: secondaryTextColor,
-                        fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Text(
-                        'This is just a preview - you can change themes later in settings',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-            // Navigation buttons with dynamic colors
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
               child: Row(
@@ -1193,14 +1138,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         curve: Curves.easeInOut,
                       );
                     },
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      'Back',
                       style: TextStyle(
                         fontFamily: 'Runtime',
                         color: textColor.withOpacity(0.8),
                         fontSize: 16,
                       ),
-                      child: const Text('Back'),
                     ),
                   ),
                   Row(
@@ -1221,15 +1165,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   ),
                   TextButton(
                     onPressed: _nextPage,
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      'Next',
                       style: TextStyle(
                         fontFamily: 'Runtime',
                         color: textColor,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
-                      child: const Text('Next'),
                     ),
                   ),
                 ],
@@ -1296,15 +1239,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildAvatar(String imagePath, {BoxFit fit = BoxFit.cover}) {
-    // Bias the viewport upward so the head/face region is favored.
-    // -1.0 = top, 0.0 = center, +1.0 = bottom
     final bool isCustom = _avatarPath != null && imagePath == _avatarPath;
     final Alignment headBias = isCustom
-        ? const Alignment(0, -0.15) // center slightly up for user uploads
+        ? const Alignment(0, -0.15)
         : (_avatarAlignTweak[imagePath] ?? const Alignment(0, -0.55));
 
     if (isCustom) {
-      // Custom uploaded image
       return SizedBox.expand(
         child: Image.file(
           File(_avatarPath!),
@@ -1313,7 +1253,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
       );
     } else if (imagePath.startsWith('assets/')) {
-      // Asset image
       return SizedBox.expand(
         child: Image.asset(
           imagePath,
@@ -1322,7 +1261,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
       );
     } else {
-      // Fallback to a default asset
       return SizedBox.expand(
         child: Image(
           image: const AssetImage('assets/images/default_avatar.jpeg'),
@@ -1339,7 +1277,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     required String description,
     required int delay,
   }) {
-    // Remove flutter_animate effect, replace with AnimatedOpacity for simple transition
     return AnimatedOpacity(
       opacity: 1.0,
       duration: const Duration(milliseconds: 300),
@@ -1393,7 +1330,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left side - Back button or spacer
         _currentPage > 0
             ? TextButton(
                 onPressed: () {
@@ -1412,11 +1348,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
               )
             : const SizedBox(width: 60),
-
-        // Center - Dots indicator
         Row(
           children: List.generate(
-            7,
+            6,
             (index) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 8,
@@ -1430,13 +1364,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
         ),
-
-        // Right side - Next button or spacer
-        _currentPage < 6
+        _currentPage < 5
             ? TextButton(
-                onPressed: (_currentPage == 5 && (_usernameController.text.trim().isEmpty || _hasProfanity || _hasInvalidChars))
-                    ? null
-                    : _nextPage,
+                onPressed: () {
+                  if (_currentPage == 4 &&
+                      (_usernameController.text.trim().isEmpty ||
+                          _hasProfanity ||
+                          _hasInvalidChars)) {
+                    setState(() {
+                      _showUsernameError = true;
+                    });
+                    return;
+                  }
+                  _nextPage();
+                },
                 child: Text(
                   'Next',
                   style: TextStyle(
@@ -1452,7 +1393,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
-  /// Builds a single category introduction item for the tutorial.
   Widget _buildCategoryItem(Map<String, String> entry) {
     return AnimatedOpacity(
       opacity: 1.0,
@@ -1495,7 +1435,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
-  // Debounced profanity and invalid character check for username
   void _checkText(String value) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
