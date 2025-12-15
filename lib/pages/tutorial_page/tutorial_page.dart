@@ -109,7 +109,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
               ),
               // Navigation
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -223,128 +223,156 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
   }
 
   Widget _buildHowItWorksPage(_Palette p) {
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'How It Works',
-            style: TextStyle(
-              fontFamily: 'Runtime',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: p.text,
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 40,
+          vertical: isSmallScreen ? 24 : 40,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: isSmallScreen ? 20 : 40),
+            Text(
+              'How It Works',
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                fontSize: isSmallScreen ? 26 : 32,
+                fontWeight: FontWeight.bold,
+                color: p.text,
+              ),
             ),
-          ),
-          const SizedBox(height: 60),
-          _featureItem(
-            p: p,
-            icon: Icons.swipe,
-            title: 'Swipe Through Cards',
-            description: 'Swipe left or right to explore thought-provoking questions',
-          ),
-          const SizedBox(height: 40),
-          _featureItem(
-            p: p,
-            icon: Icons.favorite,
-            title: 'Double Tap to Like',
-            description: 'Save your favorite questions for later reflection',
-          ),
-          const SizedBox(height: 40),
-          _featureItem(
-            p: p,
-            icon: Icons.category,
-            title: 'Choose Categories',
-            description: 'Filter questions by topics that resonate with you',
-          ),
-        ],
+            SizedBox(height: isSmallScreen ? 32 : 60),
+            _featureItem(
+              p: p,
+              icon: Icons.swipe,
+              title: 'Swipe Through Cards',
+              description: 'Swipe left or right to explore thought-provoking questions',
+            ),
+            SizedBox(height: isSmallScreen ? 24 : 40),
+            _featureItem(
+              p: p,
+              icon: Icons.favorite,
+              title: 'Double Tap to Like',
+              description: 'Save your favorite questions for later reflection',
+            ),
+            SizedBox(height: isSmallScreen ? 24 : 40),
+            _featureItem(
+              p: p,
+              icon: Icons.category,
+              title: 'Choose Categories',
+              description: 'Filter questions by topics that resonate with you',
+            ),
+            SizedBox(height: isSmallScreen ? 24 : 40),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCategoriesPage(_Palette p) {
-    // Use explicit category data with icons
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
     final categories = [
-      {'name': 'Love &amp; Intimacy', 'icon': 'assets/images/love_intimacy_icon.png'},
+      {'name': 'Love & Intimacy', 'icon': 'assets/images/love_intimacy_icon.png'},
       {'name': 'Spirituality', 'icon': 'assets/images/spirituality_icon.png'},
       {'name': 'Society', 'icon': 'assets/images/society_icon.png'},
       {'name': 'Relationships', 'icon': 'assets/images/interactions_relationships_icon.png'},
       {'name': 'Personal Development', 'icon': 'assets/images/personal_development_icon.png'},
     ];
-  
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Explore Categories',
-            style: TextStyle(
-              fontFamily: 'Runtime',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: p.text,
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 40,
+          vertical: isSmallScreen ? 24 : 40,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (!isSmallScreen)
+              SizedBox(height: screenHeight * 0.08),
+            Text(
+              'Explore Categories',
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                fontSize: isSmallScreen ? 26 : 32,
+                fontWeight: FontWeight.bold,
+                color: p.text,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Questions tailored to your journey',
-            style: TextStyle(
-              fontFamily: 'Runtime',
-              fontSize: 16,
-              color: p.subText,
+            SizedBox(height: isSmallScreen ? 12 : 20),
+            Text(
+              'Questions tailored to your journey',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                fontSize: isSmallScreen ? 14 : 16,
+                color: p.subText,
+              ),
             ),
-          ),
-          const SizedBox(height: 40),
-          ...categories.asMap().entries.map((e) {
-            final entry = e.value;
-            return _categoryItem(p: p, name: entry['name']!, iconAsset: entry['icon']!);
-          }).toList(),
-        ],
+            SizedBox(height: isSmallScreen ? 24 : 40),
+            ...categories.map(
+              (entry) => _categoryItem(
+                p: p,
+                name: entry['name']!,
+                iconAsset: entry['icon']!,
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 16 : 24),
+          ],
+        ),
       ),
     );
   }
 
   Widget _featureItem({required _Palette p, required IconData icon, required String title, required String description}) {
-    return Row(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            child: Icon(icon, color: p.text.withOpacity(0.8), size: 30),
           ),
-          child: Icon(icon, color: p.text.withOpacity(0.8), size: 30),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: p.text,
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: p.text,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  fontSize: 14,
-                  color: p.subText,
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 14,
+                    color: p.subText,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
