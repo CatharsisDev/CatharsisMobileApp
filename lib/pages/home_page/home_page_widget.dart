@@ -40,6 +40,9 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   // Heart fill animation (top -> bottom)
   late AnimationController _heartFillController;
   late Animation<double> _heartFill;
+  // Text pop animation
+  late AnimationController _textPopController;
+  late Animation<double> _textPopScale;
   String? _lastHeartKey; // to sync state when the visible card changes
   int _currentCardIndex = 0;
   List<Question>? _cachedQuestions;
@@ -99,13 +102,39 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       parent: _heartFillController,
       curve: Curves.easeInOut,
     );
+    // Text pop animation controller
+    _textPopController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _textPopScale = TweenSequence<double>([
+  TweenSequenceItem(
+    tween: Tween(begin: 1.0, end: 1.18)
+        .chain(CurveTween(curve: Curves.easeOutCubic)),
+    weight: 50,
+  ),
+  TweenSequenceItem(
+    tween: Tween(begin: 1.18, end: 0.97)
+        .chain(CurveTween(curve: Curves.easeInOut)),
+    weight: 25,
+  ),
+  TweenSequenceItem(
+    tween: Tween(begin: 0.97, end: 1.0)
+        .chain(CurveTween(curve: Curves.easeOut)),
+    weight: 25,
+  ),
+]).animate(_textPopController);
     // Preload Android interstitial ads
     if (Platform.isAndroid) {
       AdService.preload();
     }
     // Ask for notification permission once when the user reaches Home
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _promptNotificationsOnce();
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          _promptNotificationsOnce();
+        }
+      });
     });
   }
 
@@ -163,6 +192,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     _cardController.dispose();
     _handController.dispose();
     _heartFillController.dispose();
+    _textPopController.dispose();
     super.dispose();
   }
   void _syncHeartForCard(Question? q, bool liked) {
@@ -821,6 +851,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               }
                               HapticFeedback.lightImpact();
                               notifier.toggleLiked(q);
+                              _textPopController.forward(from: 0);
                             },
                             onTapUp: (details) {
                               _handleCardTap(details.localPosition, q);
@@ -855,17 +886,26 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                           const SizedBox(height: 100),
                                           Flexible(
                                             child: Center(
-                                              child: Text(
-                                                q.text,
-                                                style: TextStyle(
-                                                  fontFamily: 'Runtime',
-                                                  color: customTheme?.fontColor,
-                                                  fontSize: 32,
-                                                  fontWeight: FontWeight.bold,
-                                                  height: 1.3,
-                                                  letterSpacing: 2,
+                                              child: AnimatedBuilder(
+                                                animation: _textPopScale,
+                                                builder: (context, child) {
+                                                  return Transform.scale(
+                                                    scale: _textPopScale.value,
+                                                    child: child,
+                                                  );
+                                                },
+                                                child: Text(
+                                                  q.text,
+                                                  style: TextStyle(
+                                                    fontFamily: 'Runtime',
+                                                    color: customTheme?.fontColor,
+                                                    fontSize: 32,
+                                                    fontWeight: FontWeight.bold,
+                                                    height: 1.3,
+                                                    letterSpacing: 2,
+                                                  ),
+                                                  textAlign: TextAlign.center,
                                                 ),
-                                                textAlign: TextAlign.center,
                                               ),
                                             ),
                                           ),
@@ -972,6 +1012,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                             _heartFillController.forward();
                           }
                           notifier.toggleLiked(currentQuestion);
+                          _textPopController.forward(from: 0);
                         }
                       },
                       customBorder: const CircleBorder(),
