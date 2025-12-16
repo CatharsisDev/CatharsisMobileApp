@@ -6,6 +6,7 @@ import 'package:catharsis_cards/question_categories.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/flutter_flow/flutter_flow_swipeable_stack.dart';
@@ -916,23 +917,27 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                                             final width = MediaQuery.of(context).size.width;
                                                             final height = MediaQuery.of(context).size.height;
                                                             final isSmallPhone = width < 380;
-                                                            return Text(
+                                                            final baseFontSize = isSmallPhone
+                                                                ? width * 0.072
+                                                                : height > 820
+                                                                    ? width * 0.080
+                                                                    : width * 0.075;
+                                                            final minFontSize = isSmallPhone ? 16.0 : 18.0;
+                                                            return AutoSizeText(
                                                               q.text,
                                                               style: TextStyle(
                                                                 fontFamily: 'Runtime',
                                                                 color: customTheme?.fontColor,
-                                                                fontSize: isSmallPhone
-                                                                    ? width * 0.072
-                                                                    : height > 820
-                                                                        ? width * 0.080 // large phones
-                                                                        : width * 0.075, // normal phones
+                                                                fontSize: baseFontSize,
                                                                 fontWeight: FontWeight.bold,
-                                                                height: isSmallPhone ? 1.4 : 1.25,
-                                                                letterSpacing: isSmallPhone ? 1.5 : 1.8,
+                                                                height: isSmallPhone ? 1.32 : 1.22,
+                                                                letterSpacing: isSmallPhone ? 1.1 : 1.4,
                                                               ),
                                                               textAlign: TextAlign.center,
-                                                              maxLines: 8,
-                                                              overflow: TextOverflow.ellipsis,
+                                                              maxLines: 10,
+                                                              minFontSize: minFontSize,
+                                                              stepGranularity: 0.4,
+                                                              overflow: TextOverflow.visible,
                                                             );
                                                           })(),
                                                         ),
