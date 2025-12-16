@@ -885,34 +885,76 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                         children: [
                                           const SizedBox(height: 100),
                                           Flexible(
-                                            child: Center(
-                                              child: AnimatedBuilder(
-                                                animation: _textPopScale,
-                                                builder: (context, child) {
-                                                  return Transform.scale(
-                                                    scale: _textPopScale.value,
-                                                    child: child,
-                                                  );
-                                                },
-                                                child: Text(
-                                                  q.text,
-                                                  style: TextStyle(
-                                                    fontFamily: 'Runtime',
-                                                    color: customTheme?.fontColor,
-                                                    fontSize: 32,
-                                                    fontWeight: FontWeight.bold,
-                                                    height: 1.3,
-                                                    letterSpacing: 2,
+                                            child: LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                return SingleChildScrollView(
+                                                  physics: const ClampingScrollPhysics(),
+                                                  child: ConstrainedBox(
+                                                    constraints: BoxConstraints(
+                                                      minHeight: constraints.maxHeight * 0.6,
+                                                      maxHeight: constraints.maxHeight * 0.8,
+                                                    ),
+                                                    child: Center(
+                                                      child: AnimatedBuilder(
+                                                        animation: _textPopScale,
+                                                        builder: (context, child) {
+                                                          return Transform.scale(
+                                                            scale: _textPopScale.value,
+                                                            child: child,
+                                                          );
+                                                        },
+                                                        child: Padding(
+                                                          padding: (() {
+                                                            final width = MediaQuery.of(context).size.width;
+                                                            final isSmallPhone = width < 380;
+                                                            return EdgeInsets.symmetric(
+                                                              horizontal: isSmallPhone ? width * 0.08 : width * 0.05,
+                                                              vertical: 20,
+                                                            );
+                                                          })(),
+                                                          child: (() {
+                                                            final width = MediaQuery.of(context).size.width;
+                                                            final height = MediaQuery.of(context).size.height;
+                                                            final isSmallPhone = width < 380;
+                                                            return Text(
+                                                              q.text,
+                                                              style: TextStyle(
+                                                                fontFamily: 'Runtime',
+                                                                color: customTheme?.fontColor,
+                                                                fontSize: isSmallPhone
+                                                                    ? width * 0.072
+                                                                    : height > 820
+                                                                        ? width * 0.080 // large phones
+                                                                        : width * 0.075, // normal phones
+                                                                fontWeight: FontWeight.bold,
+                                                                height: isSmallPhone ? 1.4 : 1.25,
+                                                                letterSpacing: isSmallPhone ? 1.5 : 1.8,
+                                                              ),
+                                                              textAlign: TextAlign.center,
+                                                              maxLines: 8,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            );
+                                                          })(),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
+                                                );
+                                              },
                                             ),
                                           ),
                                           Column(
                                             children: [
                                               _buildCategoryChip(q.category),
-                                              SizedBox(height: MediaQuery.of(context).padding.bottom + 180),
+                                              (() {
+                                                final h = MediaQuery.of(context).size.height;
+                                                final bottomInset = MediaQuery.of(context).padding.bottom;
+                                                return SizedBox(
+                                                  height: h < 650
+                                                      ? h * 0.12
+                                                      : h * 0.09 + bottomInset,
+                                                );
+                                              })(),
                                             ],
                                           ),
                                         ],

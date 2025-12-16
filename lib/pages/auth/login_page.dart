@@ -157,273 +157,296 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
             ),
-            // Existing SafeArea + ListView
+            // Responsive SafeArea layout
             SafeArea(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  70,
-                  20,
-                  MediaQuery.of(context).padding.bottom + 20,
-                ),
-                children: [
-                  Image.asset(
-                    'assets/images/catharsis_word_only.png',
-                    height: MediaQuery.of(context).size.height * 0.1,
-                    fit: BoxFit.contain,
-                  ),
-                  SizedBox(height: 20),
-                  Center(
-                    child: Text(
-                      _isLogin ? 'Welcome Back' : 'Create Account',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Card(
-                    elevation: 8,
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Form(
-                        key: _formKey,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final height = constraints.maxHeight;
+                  final isSmallPhone = height < 700;
+
+                  return SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: height),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          isSmallPhone ? 32 : 70,
+                          20,
+                          MediaQuery.of(context).padding.bottom + (isSmallPhone ? 16 : 20),
+                        ),
                         child: Column(
                           children: [
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                labelStyle: TextStyle(color: Colors.grey[600]),
-                                prefixIcon: Icon(Icons.email, color: Colors.grey[600]),
-                                filled: true,
-                                fillColor: Colors.grey[50],
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: Color.fromRGBO(42, 63, 44, 1), width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red[300]!),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              style: TextStyle(
-                                fontFamily: 'Runtime',
-                                color: Colors.black87,
-                                fontSize: 16,
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
+                            Image.asset(
+                              'assets/images/catharsis_word_only.png',
+                              height: MediaQuery.of(context).size.height < 700
+                                  ? MediaQuery.of(context).size.height * 0.08
+                                  : MediaQuery.of(context).size.height * 0.1,
+                              fit: BoxFit.contain,
                             ),
-                            SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                labelStyle: TextStyle(color: Colors.grey[600]),
-                                prefixIcon: Icon(Icons.lock, color: Colors.grey[600]),
-                                filled: true,
-                                fillColor: Colors.grey[50],
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                    color: Colors.grey[600],
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: Color.fromRGBO(42, 63, 44, 1), width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red[300]!),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              style: TextStyle(
-                                fontFamily: 'Runtime',
-                                color: Colors.black87,
-                                fontSize: 16,
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
-                                }
-                                if (!_isLogin) {
-                                  // Minimum length
-                                  if (value.length < 8) {
-                                    return 'Password must be at least 8 characters';
-                                  }
-                                  // Uppercase letter
-                                  if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                                    return 'Password must contain an uppercase letter';
-                                  }
-                                  // Lowercase letter
-                                  if (!RegExp(r'[a-z]').hasMatch(value)) {
-                                    return 'Password must contain a lowercase letter';
-                                  }
-                                  // Numeric digit
-                                  if (!RegExp(r'\d').hasMatch(value)) {
-                                    return 'Password must contain a number';
-                                  }
-                                  // Special character
-                                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>_]').hasMatch(value)) {
-                                    return 'Password must contain a special character';
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                            if (_errorMessage != null) ...[
-                              SizedBox(height: 16),
-                              Text(
-                                _errorMessage!,
+                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
+                            Center(
+                              child: Text(
+                                _isLogin ? 'Welcome Back' : 'Create Account',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'Runtime',
-                                  color: Colors.red,
-                                  fontSize: 14,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color.fromRGBO(32, 28, 17, 1),
                                 ),
                               ),
-                            ],
-                            SizedBox(height: 20),
-                            _isLoading
-                                ? CircularProgressIndicator(
-                                    color: Color.fromRGBO(42, 63, 44, 1),
-                                  )
-                                : ElevatedButton(
-                                    onPressed: _submitForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color.fromRGBO(42, 63, 44, 1),
-                                      foregroundColor: Colors.white,
-                                      minimumSize: Size(double.infinity, 50),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
+                            Card(
+                              elevation: 8,
+                              color: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.all(
+                                  MediaQuery.of(context).size.height < 700 ? 16 : 20,
+                                ),
+                                child: Form(
+                                  key: _formKey,
+                                  child: Column(
+                                    children: [
+                                      TextFormField(
+                                        controller: _emailController,
+                                        keyboardType: TextInputType.emailAddress,
+                                        decoration: InputDecoration(
+                                          labelText: 'Email',
+                                          labelStyle: TextStyle(color: Colors.grey[600]),
+                                          prefixIcon: Icon(Icons.email, color: Colors.grey[600]),
+                                          filled: true,
+                                          fillColor: Colors.grey[50],
+                                          focusedBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                                color: Color.fromRGBO(42, 63, 44, 1), width: 2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.grey[300]!),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.red[300]!),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          focusedErrorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.red, width: 2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          color: Colors.black87,
+                                          fontSize: 16,
+                                        ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your email';
+                                          }
+                                          if (!value.contains('@')) {
+                                            return 'Please enter a valid email';
+                                          }
+                                          return null;
+                                        },
                                       ),
-                                    ),
-                                    child: Text(
-                                      _isLogin ? 'Sign In' : 'Register',
-                                      style: TextStyle(
-                                        fontFamily: 'Runtime',
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                      SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _passwordController,
+                                        obscureText: _obscurePassword,
+                                        decoration: InputDecoration(
+                                          labelText: 'Password',
+                                          labelStyle: TextStyle(color: Colors.grey[600]),
+                                          prefixIcon: Icon(Icons.lock, color: Colors.grey[600]),
+                                          filled: true,
+                                          fillColor: Colors.grey[50],
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _obscurePassword
+                                                  ? Icons.visibility_off
+                                                  : Icons.visibility,
+                                              color: Colors.grey[600],
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _obscurePassword = !_obscurePassword;
+                                              });
+                                            },
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.grey[300]!),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                                color: Color.fromRGBO(42, 63, 44, 1), width: 2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.red[300]!),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          focusedErrorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(color: Colors.red, width: 2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          color: Colors.black87,
+                                          fontSize: 16,
+                                        ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your password';
+                                          }
+                                          if (!_isLogin) {
+                                            // Minimum length
+                                            if (value.length < 8) {
+                                              return 'Password must be at least 8 characters';
+                                            }
+                                            // Uppercase letter
+                                            if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                              return 'Password must contain an uppercase letter';
+                                            }
+                                            // Lowercase letter
+                                            if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                              return 'Password must contain a lowercase letter';
+                                            }
+                                            // Numeric digit
+                                            if (!RegExp(r'\d').hasMatch(value)) {
+                                              return 'Password must contain a number';
+                                            }
+                                            // Special character
+                                            if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>_]').hasMatch(value)) {
+                                              return 'Password must contain a special character';
+                                            }
+                                          }
+                                          return null;
+                                        },
                                       ),
-                                    ),
+                                      if (_errorMessage != null) ...[
+                                        SizedBox(height: 16),
+                                        Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            fontFamily: 'Runtime',
+                                            color: Colors.red,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                      SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
+                                      _isLoading
+                                          ? CircularProgressIndicator(
+                                              color: Color.fromRGBO(42, 63, 44, 1),
+                                            )
+                                          : ElevatedButton(
+                                              onPressed: _submitForm,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Color.fromRGBO(42, 63, 44, 1),
+                                                foregroundColor: Colors.white,
+                                                minimumSize: Size(
+                                                  double.infinity,
+                                                  MediaQuery.of(context).size.height < 700 ? 46 : 50,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                _isLogin ? 'Sign In' : 'Register',
+                                                style: TextStyle(
+                                                  fontFamily: 'Runtime',
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                      SizedBox(height: 16),
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _isLogin = !_isLogin;
+                                            _errorMessage = null;
+                                          });
+                                        },
+                                        child: Text(
+                                          _isLogin
+                                              ? "Don't have an account? Register"
+                                              : "Already have an account? Sign In",
+                                          style: TextStyle(
+                                            fontFamily: 'Runtime',
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromRGBO(42, 63, 44, 1),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                            SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLogin = !_isLogin;
-                                  _errorMessage = null;
-                                });
-                              },
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
+                            Center(
                               child: Text(
-                                _isLogin
-                                    ? "Don't have an account? Register"
-                                    : "Already have an account? Sign In",
+                                'Or continue with',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'Runtime',
                                   fontWeight: FontWeight.bold,
-                                  color: Color.fromRGBO(42, 63, 44, 1),
+                                  color: const Color.fromRGBO(32, 28, 17, 1),
                                 ),
                               ),
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
+                            _SignInButton(
+                              onPressed: () async {
+                                await authService.signInWithGoogle();
+                                // Router will handle redirecting new users to welcome screen
+                              },
+                              icon: FontAwesomeIcons.google,
+                              text: 'Sign in with Google',
+                              backgroundColor: Colors.white,
+                              textColor: Colors.black87,
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 16),
+                            _SignInButton(
+                              onPressed: () async {
+                                try {
+                                  final user = await ref.read(authServiceProvider).signInWithApple();
+                                  if (user == null) {
+                                    // User canceled — do nothing silently.
+                                    return;
+                                  }
+                                  // Success: downstream navigation/logic will proceed automatically.
+                                } on FirebaseAuthException catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.message ?? 'Sign in failed.')),
+                                  );
+                                } catch (_) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Sign in failed.')),
+                                  );
+                                }
+                              },
+                              icon: FontAwesomeIcons.apple,
+                              text: 'Sign in with Apple',
+                              backgroundColor: Colors.black,
+                              textColor: Colors.white,
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 20),
-                  Center(
-                    child: Text(
-                      'Or continue with',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Runtime',
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(32, 28, 17, 1),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  _SignInButton(
-                    onPressed: () async {
-                      await authService.signInWithGoogle();
-                      // Router will handle redirecting new users to welcome screen
-                    },
-                    icon: FontAwesomeIcons.google,
-                    text: 'Sign in with Google',
-                    backgroundColor: Colors.white,
-                    textColor: Colors.black87,
-                  ),
-               SizedBox(height: 16),
-_SignInButton(
-  onPressed: () async {
-    try {
-      final user = await ref.read(authServiceProvider).signInWithApple();
-      if (user == null) {
-        // User canceled — do nothing silently.
-        return;
-      }
-      // Success: downstream navigation/logic will proceed automatically.
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Sign in failed.')),
-      );
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in failed.')),
-      );
-    }
-  },
-  icon: FontAwesomeIcons.apple,
-  text: 'Sign in with Apple',
-  backgroundColor: Colors.black,
-  textColor: Colors.white,
-),               ],
+                  );
+                },
               ),
-            ),  // end SafeArea
+            ), // end SafeArea
           ],    // end Stack children
         ),      // end Stack
       ),
@@ -455,7 +478,10 @@ class _SignInButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
-          minimumSize: Size(double.infinity, 50),
+          minimumSize: Size(
+            double.infinity,
+            MediaQuery.of(context).size.height < 700 ? 46 : 50,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
