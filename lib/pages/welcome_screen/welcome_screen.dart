@@ -451,20 +451,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         ),
         Column(
           children: [
+            // Header + list share vertical space; list scrolls naturally if needed.
             Expanded(
-              child: SingleChildScrollView(
+              child: SafeArea(
+                bottom: false,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: isSmallScreen
-                        ? screenHeight * 0.05
-                        : screenHeight * 0.1,
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    isSmallScreen ? 24 : 48,
+                    20,
+                    0,
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (!isSmallScreen)
-                        SizedBox(height: screenHeight * 0.08),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
@@ -477,41 +477,55 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           ),
                         ),
                       ),
-                      SizedBox(height: screenHeight * 0.02),
+                      SizedBox(height: isSmallScreen ? 8 : 16),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
                           'Questions tailored to your journey',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             fontSize: 16,
-                            color: const Color.fromRGBO(32, 28, 17, 1)
-                                .withOpacity(0.9),
+                            color: const Color.fromRGBO(32, 28, 17, 1).withOpacity(0.9),
                           ),
                         ),
                       ),
-                      SizedBox(height: screenHeight * 0.04),
-                      ...categories.asMap().entries.map((e) {
-                        final idx = e.key;
-                        final entry = e.value;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildCategoryItem(entry)
-                              .animate()
-                              .fadeIn(
-                                  delay:
-                                      Duration(milliseconds: 200 * (idx + 1)))
-                              .slideY(begin: 0.2),
-                        );
-                      }).toList(),
+                      SizedBox(height: isSmallScreen ? 16 : 24),
+                      // Fill remaining space with the scrollable category list.
+                      Expanded(
+                        child: ListView(
+                          physics: const ClampingScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          children: categories.asMap().entries.map((e) {
+                            final idx = e.key;
+                            final entry = e.value;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildCategoryItem(entry)
+                                  .animate()
+                                  .fadeIn(
+                                    delay: Duration(milliseconds: 120 * (idx + 1)),
+                                  )
+                                  .slideY(begin: 0.15),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-              child: _buildNavigationButtons(),
+            // Bottom navigation: use reasonable padding and respect safe area.
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: isSmallScreen ? 12 : 20,
+                ),
+                child: _buildNavigationButtons(),
+              ),
             ),
           ],
         ),
@@ -1400,7 +1414,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
@@ -1409,8 +1423,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             children: [
               Image.asset(
                 entry['icon']!,
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 45,
                 color: const Color(0xFF4A4A4A),
               ),
               const SizedBox(width: 16),

@@ -529,9 +529,13 @@ Future<void> _syncSwipeLimitFromFirestore() async {
   }
 
   void _scheduleRebuild() {
-    _rebuildTimer?.cancel();
-    _rebuildTimer = Timer(Duration(milliseconds: 100), _rebuildSessionQuestions);
-  }
+  _rebuildTimer?.cancel();
+  _rebuildTimer = Timer(Duration(milliseconds: 100), () {
+    if (!_isDisposed && mounted) { // Add check here
+      _rebuildSessionQuestions();
+    }
+  });
+}
 
   void updateCategory(String cat) {
     if (!mounted) return;
@@ -1077,9 +1081,8 @@ Future<void> _syncSwipeLimitFromFirestore() async {
   }
 
   void _rebuildSessionQuestions() {
-    // Build a stable snapshot for the current filter, excluding already seen or liked and deduping by text+category.
+     if (_isDisposed || !mounted) return;
 
-    // Start from the same category filtering logic as CardState.activeQuestions (pre-session).
     var filtered = state.allQuestions;
     if (state.selectedCategories.isNotEmpty) {
       final normSel = state.selectedCategories.map(_normalizeCategory).toSet();
@@ -1106,13 +1109,13 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       }
     }
 
-    if (mounted) {
-      state = state.copyWith(
-        sessionQuestions: session,
-        currentIndex: 0,
-      );
-    }
+     if (!_isDisposed && mounted) {
+    state = state.copyWith(
+      sessionQuestions: session,
+      currentIndex: 0,
+    );
   }
+}
   
   @override
   void dispose() {
