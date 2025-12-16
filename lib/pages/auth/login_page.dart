@@ -99,20 +99,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No user found with this email';
-      case 'wrong-password':
-        return 'Incorrect password';
-      case 'email-already-in-use':
-        return 'Email is already registered';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'weak-password':
-      case 'invalid-password':
-        return 'Password does not meet requirements (min 8 chars, uppercase, lowercase, number & special char)';
-      default:
-        return 'An error occurred. Please try again.';
+     switch (code) {
+    case 'user-not-found':
+    case 'wrong-password':
+    case 'invalid-credential':
+    case 'invalid-login-credentials':
+      return 'Incorrect email or password';
+
+    case 'email-already-in-use':
+      return 'Email is already registered';
+
+    case 'invalid-email':
+      return 'Invalid email address';
+
+    case 'weak-password':
+    case 'invalid-password':
+      return 'Password does not meet requirements';
+
+    case 'too-many-requests':
+      return 'Too many attempts. Please try again later.';
+
+    case 'network-request-failed':
+      return 'Network error. Check your connection.';
+
+    default:
+      return 'An error occurred. Please try again.';
     }
   }
 
