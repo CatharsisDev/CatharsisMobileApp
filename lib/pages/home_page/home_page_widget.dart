@@ -453,11 +453,48 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
 
         return StatefulBuilder(
           builder: (context, setState) {
+          final h = MediaQuery.of(context).size.height;
+final safeTop = MediaQuery.of(context).padding.top;
+final safeBottom = MediaQuery.of(context).padding.bottom;
+
+final availableHeight = h - safeTop - safeBottom;
+
+// More granular breakpoints
+final isVerySmall = h < 650;
+final isSmall = h >= 650 && h < 700;
+final isMediumSmall = h >= 700 && h < 750;
+final isMedium = h >= 750 && h < 820;
+final isMediumLarge = h >= 820 && h < 900;
+final isLarge = h >= 900;
+
+final modalHeight = isVerySmall
+    ? availableHeight * 0.65
+    : isSmall
+        ? availableHeight * 0.75
+        : isMediumSmall
+            ? availableHeight * 0.68
+            : isMedium
+                ? availableHeight * 0.63
+                : isMediumLarge
+                    ? availableHeight * 0.58
+                    : availableHeight * 0.52; // isLarge
+
+final isSmallPhone = isVerySmall || isSmall;
+
+            // Calculate spacing based on available space
+            final headerHeight = isSmallPhone ? 80.0 : 100.0;
+            final buttonHeight = isSmallPhone ? 60.0 : 76.0;
+            final categorySpace = modalHeight - headerHeight - buttonHeight - 40;
+            final singleItemHeight = categorySpace / 5;
+            final itemVerticalPadding =
+                (singleItemHeight - (isSmallPhone ? 40 : 44)) / 2;
+            final itemSpacing = isSmallPhone ? 8.0 : 10.0;
+
             return Container(
-              height: MediaQuery.of(context).size.height * 0.6,
+              height: modalHeight,
               decoration: BoxDecoration(
-                color: customTheme?.preferenceModalBackgroundColor ??
-                    theme.cardColor,
+                color:
+                    customTheme?.preferenceModalBackgroundColor ?? theme.cardColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -478,144 +515,154 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                         ),
                       ),
                     ),
-                  SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: customTheme?.iconColor ?? theme.iconTheme.color,
-                        borderRadius: BorderRadius.circular(2),
+                  Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: customTheme?.iconColor ??
+                              theme.iconTheme.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Back button
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              icon: Icon(Icons.arrow_back_ios,
-                                  color: theme.iconTheme.color, size: 24),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ),
-                          // Title
-                          Text(
-                            'Categories',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textTheme.titleLarge?.color,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          // Clear All button
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () =>
-                                  setState(() => tempSelectedKeys.clear()),
-                              child: Text(
-                                'Clear All',
-                                style: TextStyle(
-                                    fontFamily: 'Runtime',
-                                    color: theme.brightness == Brightness.dark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold),
+                      SizedBox(height: isSmallPhone ? 12 : 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                icon: Icon(Icons.arrow_back_ios,
+                                    color: theme.iconTheme.color,
+                                    size: 24),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Flexible(
-                      child: ListView(
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: displayCats.map((display) {
-                          final key =
-                              QuestionCategories.normalizeCategory(display);
-                          final isSelected = tempSelectedKeys.contains(key);
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      tempSelectedKeys.remove(key);
-                                    } else {
-                                      tempSelectedKeys.add(key);
-                                    }
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(30),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? (customTheme
-                                                ?.preferenceItemSelectedColor
-                                                ?.withOpacity(0.8) ??
-                                            Colors.grey[700])
-                                        : (customTheme
-                                                ?.preferenceItemUnselectedColor ??
-                                            Colors.grey[800]),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: customTheme
-                                                ?.preferenceBorderColor ??
-                                            Colors.grey[600]!,
-                                        width: 1),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            display,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontFamily: 'Runtime',
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: theme
-                                                  .textTheme.bodyMedium?.color,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                            Text(
+                              'Categories',
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontSize: isSmallPhone ? 20 : 24,
+                                fontWeight: FontWeight.bold,
+                                color: theme
+                                    .textTheme.titleLarge?.color,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () =>
+                                    setState(() =>
+                                        tempSelectedKeys.clear()),
+                                child: Text(
+                                  'Clear All',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    color: theme.brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ],
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
+                      SizedBox(height: isSmallPhone ? 8 : 12),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: displayCats.map((display) {
+                            final key =
+                                QuestionCategories.normalizeCategory(
+                                    display);
+                            final isSelected =
+                                tempSelectedKeys.contains(key);
+
+                            return Padding(
+                              padding:
+                                  EdgeInsets.only(bottom: itemSpacing),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        tempSelectedKeys.remove(
+                                            key);
+                                      } else {
+                                        tempSelectedKeys.add(key);
+                                      }
+                                    });
+                                  },
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(
+                                        milliseconds: 200),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: itemVerticalPadding
+                                          .clamp(8.0, 15.0),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (customTheme
+                                                  ?.preferenceItemSelectedColor
+                                                  ?.withOpacity(
+                                                      0.8) ??
+                                              Colors.grey[700])
+                                          : (customTheme
+                                                  ?.preferenceItemUnselectedColor ??
+                                              Colors.grey[800]),
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: customTheme
+                                                ?.preferenceBorderColor ??
+                                            Colors.grey[600]!,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        display,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow:
+                                            TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          fontSize: isSmallPhone
+                                              ? 14.0
+                                              : 16.0,
+                                          fontWeight:
+                                              FontWeight.w600,
+                                          color: theme.textTheme
+                                              .bodyMedium?.color,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      SizedBox(height: isSmallPhone ? 16 : 24),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -627,18 +674,22 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                                 _lastTapTime = null;
                                 _lastTapPos = null;
                               });
-                              notifier
-                                  .updateSelectedCategories(tempSelectedKeys);
+                              notifier.updateSelectedCategories(
+                                  tempSelectedKeys);
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme
-                                      .extension<CustomThemeExtension>()
+                                      .extension<
+                                          CustomThemeExtension>()
                                       ?.preferenceButtonColor ??
                                   theme.primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(
+                                  vertical:
+                                      isSmallPhone ? 12 : 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
+                                borderRadius:
+                                    BorderRadius.circular(25),
                               ),
                               elevation: 0,
                             ),
@@ -647,13 +698,16 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                               style: TextStyle(
                                 fontFamily: 'Runtime',
                                 color: theme
-                                      .extension<CustomThemeExtension>()
-                                      ?.buttonFontColor,
+                                    .extension<
+                                        CustomThemeExtension>()
+                                    ?.buttonFontColor,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize:
+                                    isSmallPhone ? 16 : 18,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.black.withOpacity(0.25),
+                                    color: Colors.black
+                                        .withOpacity(0.25),
                                     offset: Offset(0, 1),
                                     blurRadius: 15,
                                   ),
@@ -663,12 +717,10 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
                           ),
                         ),
                       ),
-                    ),
-                      ],
-                    ),
-                  ) // end SafeArea
-                ], // end children
-              ), // end Stack
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         );
