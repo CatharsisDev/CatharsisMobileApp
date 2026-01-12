@@ -34,7 +34,7 @@ import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
-import 'package:device_preview/device_preview.dart';
+// import 'package:device_preview/device_preview.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   static final AppStateNotifier _instance = AppStateNotifier._internal();
@@ -59,6 +59,10 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.immersiveSticky, // or SystemUiMode.immersive
+  );
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -73,9 +77,12 @@ void main() async {
   }
 
   runApp(
-    DevicePreview(
-      enabled: !kReleaseMode, // Only in debug mode
-      builder: (context) => ProviderScope(child: MyApp()),
+    // DevicePreview(
+    //   enabled: !kReleaseMode, // Only in debug mode
+    //   builder: (context) => ProviderScope(child: MyApp()),
+    // ),
+    ProviderScope(
+      child: MyApp(),
     ),
   );
 }
@@ -134,7 +141,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'CatharsisCards',
-      locale: DevicePreview.locale(context),
+      // locale: DevicePreview.locale(context),
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -146,7 +153,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       themeMode: ThemeMode.light,
       routerConfig: _router,
       builder: (context, child) {
-        child = DevicePreview.appBuilder(context, child);
+        // child = DevicePreview.appBuilder(context, child);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3),

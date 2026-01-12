@@ -60,7 +60,9 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     final palette = _paletteForTheme(context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: palette.useImageBg
+          ? Colors.black
+          : palette.gradientTop,
       body: Stack(
         children: [
           // Background – either gradient (signature) or themed image (dark/light)
@@ -250,7 +252,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
               p: p,
               icon: Icons.swipe,
               title: 'Swipe Through Cards',
-              description: 'Swipe left or right to explore thought-provoking questions',
+              description: 'Swipe left or right to explore thought-provoking questions. Left swipes will show you less of that category in the future',
             ),
             SizedBox(height: isSmallScreen ? 24 : 40),
             _featureItem(

@@ -381,7 +381,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     _buildFeatureItem(
                       icon: Icons.swipe,
                       title: 'Swipe Through Cards',
-                      description: 'Swipe left or right to explore thought-provoking questions',
+                      description: 'Swipe left or right to explore thought-provoking questions. Left swipes will show you less of that category in the future',
                       delay: 200,
                     ),
                     const SizedBox(height: 40),

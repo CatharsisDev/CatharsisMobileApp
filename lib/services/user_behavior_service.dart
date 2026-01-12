@@ -273,7 +273,7 @@ static Future<void> trackQuestionView({
     }
   }
 
-  // Update user's category preferences
+  // Update user's category preferences with decay
   static Future<void> _updateUserPreferences(
       String category, double scoreChange) async {
     final user = _auth.currentUser;
@@ -286,8 +286,34 @@ static Future<void> trackQuestionView({
         final snapshot = await transaction.get(userDoc);
 
         Map<String, dynamic> preferences = {};
-        if (snapshot.exists && snapshot.data() != null && snapshot.data()!.containsKey('preferences')) {
-          preferences = Map<String, dynamic>.from(snapshot.data()!['preferences']);
+        DateTime? lastUpdated;
+        
+        if (snapshot.exists && snapshot.data() != null) {
+          if (snapshot.data()!.containsKey('preferences')) {
+            preferences = Map<String, dynamic>.from(snapshot.data()!['preferences']);
+          }
+          if (snapshot.data()!.containsKey('lastUpdated')) {
+            final timestamp = snapshot.data()!['lastUpdated'];
+            if (timestamp is Timestamp) {
+              lastUpdated = timestamp.toDate();
+            }
+          }
+        }
+
+        // Apply decay to all preferences (move towards 0 over time)
+        if (lastUpdated != null) {
+          final daysSinceUpdate = DateTime.now().difference(lastUpdated).inDays;
+          if (daysSinceUpdate > 0) {
+            final decayFactor = 0.95; // 5% decay per day
+            final decay = pow(decayFactor, daysSinceUpdate);
+            
+            preferences.forEach((key, value) {
+              if (value is num) {
+                preferences[key] = (value.toDouble() * decay).clamp(-1.0, 1.0);
+              }
+            });
+            print('[DECAY] Applied $daysSinceUpdate days of decay to preferences');
+          }
         }
 
         // Update category score
@@ -310,13 +336,13 @@ static Future<void> trackQuestionView({
     }
   }
 
-  // Get personalized questions based on user behavior
+  // Get personalized questions with improved diversity
   static Future<List<Question>> getPersonalizedQuestions({
     required List<Question> allQuestions,
     int count = 20,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) return allQuestions.take(count).toList();
+    if (user == null) return allQuestions..shuffle();
 
     try {
       // Get user preferences
@@ -337,12 +363,27 @@ static Future<void> trackQuestionView({
         }
       });
 
-      // Score and sort questions
+      // Get all unique categories
+      final allCategories = allQuestions.map((q) => q.category).toSet();
+      
+      // Calculate category exposure count
+      final categoryCount = <String, int>{};
+      for (var category in allCategories) {
+        categoryCount[category] = allQuestions.where((q) => q.category == category).length;
+      }
+
+      // Score questions with diversity bonus
       final scoredQuestions = allQuestions.map((q) {
         double score = preferences[q.category] ?? 0.0;
 
-        // Add randomness to prevent too much repetition
-        score += (score * 0.3 * (0.5 - _random.nextDouble()));
+        // Add exploration bonus for underrepresented categories
+        final categoryPreference = preferences[q.category] ?? 0.0;
+        if (categoryPreference < 0.2) {
+          score += 0.3; // Boost neutral/slightly negative categories
+        }
+
+        // Add randomness to prevent too much repetition (reduced from 30% to 20%)
+        score += (score * 0.2 * (0.5 - _random.nextDouble()));
 
         return MapEntry(q, score);
       }).toList();
@@ -350,20 +391,53 @@ static Future<void> trackQuestionView({
       // Sort by score (highest first)
       scoredQuestions.sort((a, b) => b.value.compareTo(a.value));
 
-      // Mix preferred and random questions
+      // IMPROVED DISTRIBUTION: 45% preferred, 55% diverse
+      final preferredCount = (count * 0.45).floor();
+      final diverseCount = count - preferredCount;
+
+      // Get preferred questions
       final preferred = scoredQuestions
-          .where((e) => e.value > 0)
-          .take((count * 0.6).floor())
+          .where((e) => e.value > 0.2) // Only strongly preferred
+          .take(preferredCount)
           .map((e) => e.key)
           .toList();
 
-      final random = scoredQuestions
-          .where((e) => e.value <= 0)
+      // Get diverse questions (mix of neutral and random)
+      final remaining = scoredQuestions
+          .where((e) => !preferred.contains(e.key))
           .map((e) => e.key)
           .toList()
         ..shuffle();
 
-      return [...preferred, ...random.take(count - preferred.length)];
+      final result = [...preferred, ...remaining.take(diverseCount)];
+
+      // DIVERSITY CHECK: Ensure at least 3 different categories in the batch
+      final resultCategories = result.map((q) => q.category).toSet();
+      if (resultCategories.length < 3 && allCategories.length >= 3) {
+        print('[DIVERSITY] Only ${resultCategories.length} categories, rebalancing...');
+        
+        // Force include questions from underrepresented categories
+        final missingCategories = allCategories.difference(resultCategories).toList()..shuffle();
+        final toAdd = min(3 - resultCategories.length, missingCategories.length);
+        
+        for (var i = 0; i < toAdd; i++) {
+          final category = missingCategories[i];
+          final categoryQuestions = allQuestions.where((q) => q.category == category).toList();
+          if (categoryQuestions.isNotEmpty) {
+            categoryQuestions.shuffle();
+            // Replace lowest scoring question with one from missing category
+            result.removeLast();
+            result.add(categoryQuestions.first);
+          }
+        }
+      }
+
+      // Final shuffle to prevent same order
+      result.shuffle();
+
+      print('[PERSONALIZATION] Returned ${result.length} questions with ${result.map((q) => q.category).toSet().length} categories');
+      return result;
+      
     } catch (e) {
       print('Error getting personalized questions: $e');
       return allQuestions..shuffle();

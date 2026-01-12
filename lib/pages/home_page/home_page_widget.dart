@@ -139,54 +139,59 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
     });
   }
 
-  Future<void> _promptNotificationsOnce() async {
-    // Runtime guard so logging out/in during the same app run won't re-trigger a prompt
-    if (_askedNotifThisRun) return;
+Future<void> _promptNotificationsOnce() async {
+  if (_askedNotifThisRun) return;
 
-    const askedKey = 'notif_prompted_after_welcome_v2';
-    final prefs = await SharedPreferences.getInstance();
+  const askedKey = 'notif_prompted_after_welcome_v2';
+  const deniedKey = 'notif_explicitly_denied_v2'; // Add this
+  final prefs = await SharedPreferences.getInstance();
 
-    // Don’t prompt if already asked before (persisted across launches)
-    final askedAlready = prefs.getBool(askedKey) ?? false;
-    if (askedAlready) {
-      _askedNotifThisRun = true;
-      return;
-    }
+  final askedAlready = prefs.getBool(askedKey) ?? false;
+  if (askedAlready) {
+    _askedNotifThisRun = true;
+    return;
+  }
 
-    // Don’t prompt if already allowed
-    final allowed = await NotificationService.areNotificationsEnabled();
-    if (allowed) {
-      await prefs.setBool(askedKey, true);
-      _askedNotifThisRun = true;
-      return;
-    }
+  // Check if user explicitly denied before
+  final deniedBefore = prefs.getBool(deniedKey) ?? false;
+  if (deniedBefore) {
+    _askedNotifThisRun = true;
+    return;
+  }
 
-    bool granted = false;
-    try {
-      // Ask once. Implementation of NotificationService should NOT force-open settings.
-      granted = await NotificationService.ensurePermission(
-        prompt: true,
-        openSettingsOnDeny: false, // DO NOT auto-open Settings from Home first-arrival
-      );
-    } catch (e) {
-      // Fail silently and still mark as asked so we don't nag.
-      debugPrint('Notification permission request error: $e');
-    }
-
-    // Mark that we asked (persisted + runtime guard)
+  final allowed = await NotificationService.areNotificationsEnabled();
+  if (allowed) {
     await prefs.setBool(askedKey, true);
     _askedNotifThisRun = true;
-
-    if (!mounted) return;
-    if (!granted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can enable notifications later in Settings.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
+    return;
   }
+
+  bool granted = false;
+  try {
+    granted = await NotificationService.ensurePermission(
+      prompt: true,
+      openSettingsOnDeny: false,
+    );
+  } catch (e) {
+    debugPrint('Notification permission request error: $e');
+  }
+
+  await prefs.setBool(askedKey, true);
+  if (!granted) {
+    await prefs.setBool(deniedKey, true); // Mark as denied
+  }
+  _askedNotifThisRun = true;
+
+  if (!mounted) return;
+  if (!granted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('You can enable notifications later in Settings.'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -300,7 +305,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       final logoHeight = logoWidth * aspectRatio;
       // position logo a bit higher and account for cropped top
       final dx = (cardImage.width - logoWidth) / 2;
-      final dy = outputHeight - 40 /* bottom padding */ - 200 /* gap below chip */ - logoHeight;
+      final dy = outputHeight - 40 /* bottom padding */ - -150 /* gap below chip */ - logoHeight;
       final dstRect = Rect.fromLTWH(dx, dy, logoWidth, logoHeight);
       // draw the scaled logo
       canvas.drawImageRect(

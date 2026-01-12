@@ -25,9 +25,10 @@ Widget _buildThemeOption({
             child: AspectRatio(
               aspectRatio: 0.5, // Adjust this ratio to fit your screen images
               child: Image.asset(
-                imageAsset, 
-                width: double.infinity, 
-                fit: BoxFit.cover
+                imageAsset,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment(0.0, 0.5), // shifts image down → crops more top
               ),
             ),
           ),
