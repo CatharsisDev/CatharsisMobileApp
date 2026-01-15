@@ -51,8 +51,10 @@ dependencies:
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
   firebase_analytics: any
+  firebase_storage: ^12.4.10
   cloud_firestore: any
   cloud_functions: ^5.1.4
+  
   
 
   # Authentication

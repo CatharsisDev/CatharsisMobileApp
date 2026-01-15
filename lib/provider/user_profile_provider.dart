@@ -1,6 +1,7 @@
 // provider/user_profile_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 import '../services/user_profile_service.dart';
 import 'auth_provider.dart';
 
@@ -24,10 +25,10 @@ class UserProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
     }
   }
 
-  Future<void> updateProfile({String? avatar, String? username}) async {
+  Future<void> updateProfile({File? avatarFile, String? username}) async {
     try {
       await UserProfileService.updateProfile(
-        avatar: avatar,
+        avatarFile: avatarFile,
         username: username,
       );
       

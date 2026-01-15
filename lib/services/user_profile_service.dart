@@ -1,7 +1,8 @@
 // services/user_profile_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class UserProfile {
   final String? avatar;
@@ -52,6 +53,25 @@ class UserProfile {
 class UserProfileService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  // Upload profile picture to Firebase Storage
+  static Future<String?> uploadProfilePicture(File imageFile) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user');
+
+    try {
+      final fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('profile_pictures').child(fileName);
+      
+      await ref.putFile(imageFile);
+      final downloadUrl = await ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading profile picture: $e');
+      throw Exception('Failed to upload profile picture');
+    }
+  }
 
   // Get current user's profile
   static Future<UserProfile?> getUserProfile() async {
@@ -59,128 +79,63 @@ class UserProfileService {
     if (user == null) return null;
 
     try {
-      // Try to get from Firestore first
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final doc = await _firestore.collection('users').doc(user.uid).get();
 
       if (doc.exists) {
         return UserProfile.fromMap(doc.data()!);
       }
 
-      // Fallback to local storage
-      final prefs = await SharedPreferences.getInstance();
-      final avatar = prefs.getString('user_avatar');
-      final username = prefs.getString('user_username');
-
-      if (avatar != null || username != null) {
-        return UserProfile(avatar: avatar, username: username);
-      }
-
       return null;
     } catch (e) {
       print('Error getting user profile: $e');
-      
-      // Fallback to local storage on error
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final avatar = prefs.getString('user_avatar');
-        final username = prefs.getString('user_username');
-        
-        if (avatar != null || username != null) {
-          return UserProfile(avatar: avatar, username: username);
-        }
-      } catch (localError) {
-        print('Error getting local profile: $localError');
-      }
-      
       return null;
     }
   }
 
   // Update user profile
   static Future<void> updateProfile({
-    String? avatar,
+    File? avatarFile,
     String? username,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user');
 
+    String? avatarUrl;
+    
+    // Upload avatar file if provided
+    if (avatarFile != null) {
+      avatarUrl = await uploadProfilePicture(avatarFile);
+    }
+
     final now = DateTime.now();
-    final profile = UserProfile(
-      avatar: avatar,
-      username: username,
-      updatedAt: now,
-    );
 
     try {
-      // Check if profile exists
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final doc = await _firestore.collection('users').doc(user.uid).get();
 
       if (doc.exists) {
-        // Update existing profile
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          if (avatar != null) 'avatar': avatar,
+        await _firestore.collection('users').doc(user.uid).update({
+          if (avatarUrl != null) 'avatar': avatarUrl,
           if (username != null) 'username': username,
           'updatedAt': now.toIso8601String(),
         });
       } else {
-        // Create new profile
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .set({
-          if (avatar != null) 'avatar': avatar,
+        await _firestore.collection('users').doc(user.uid).set({
+          if (avatarUrl != null) 'avatar': avatarUrl,
           if (username != null) 'username': username,
           'createdAt': now.toIso8601String(),
           'updatedAt': now.toIso8601String(),
         });
       }
-
-      // Also save locally for offline access
-      final prefs = await SharedPreferences.getInstance();
-      if (avatar != null) {
-        await prefs.setString('user_avatar', avatar);
-      }
-      if (username != null) {
-        await prefs.setString('user_username', username);
-      }
-
     } catch (e) {
-      print('Error updating profile in Firestore: $e');
-      
-      // Fallback to local storage only
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        if (avatar != null) {
-          await prefs.setString('user_avatar', avatar);
-        }
-        if (username != null) {
-          await prefs.setString('user_username', username);
-        }
-      } catch (localError) {
-        print('Error saving profile locally: $localError');
-        throw Exception('Failed to save profile');
-      }
+      print('Error updating profile: $e');
+      throw Exception('Failed to save profile');
     }
   }
 
-  // Clear profile data (for sign out)
+  // Clear profile data (kept for compatibility)
   static Future<void> clearProfile() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_avatar');
-      await prefs.remove('user_username');
-    } catch (e) {
-      print('Error clearing local profile: $e');
-    }
+    // No local data to clear since everything is in Firestore
+    return;
   }
 
   // Stream user profile changes

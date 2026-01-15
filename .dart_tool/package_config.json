@@ -338,6 +338,24 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "firebase_storage",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_storage-12.4.10",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_storage_platform_interface",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_storage_platform_interface-5.2.10",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_storage_web",
+      "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/firebase_storage_web-3.10.17",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "fixnum",
       "rootUri": "file:///Users/william/.pub-cache/hosted/pub.dev/fixnum-1.1.1",
       "packageUri": "lib/",

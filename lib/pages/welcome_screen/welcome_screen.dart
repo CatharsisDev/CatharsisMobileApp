@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:profanity_filter/profanity_filter.dart';
@@ -12,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../provider/tutorial_state_provider.dart';
 import '../../provider/user_profile_provider.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/services.dart';
+
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -177,21 +178,37 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     }
   }
 
-  void _finishTutorial() async {
-    await NotificationService.init();
+void _finishTutorial() async {
+  await NotificationService.init();
 
-    if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
-      await ref.read(userProfileProvider.notifier).updateProfile(
-        avatar: _selectedAvatar,
-        username: _usernameController.text.trim(),
-      );
+  if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
+    File? avatarFile;
+    
+    // Convert avatar asset to File if selected
+    if (_selectedAvatar != null) {
+      try {
+        final ByteData data = await rootBundle.load(_selectedAvatar!);
+        final buffer = data.buffer;
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/tutorial_avatar.png');
+        await tempFile.writeAsBytes(buffer.asUint8List());
+        avatarFile = tempFile;
+      } catch (e) {
+        print('Error converting tutorial avatar: $e');
+      }
     }
-
-    await ref.read(tutorialProvider.notifier).setTutorialSeen();
-    if (mounted) {
-      context.go('/home');
-    }
+    
+    await ref.read(userProfileProvider.notifier).updateProfile(
+      avatarFile: avatarFile,
+      username: _usernameController.text.trim(),
+    );
   }
+
+  await ref.read(tutorialProvider.notifier).setTutorialSeen();
+  if (mounted) {
+    context.go('/home');
+  }
+}
 
   @override
   Widget build(BuildContext context) {

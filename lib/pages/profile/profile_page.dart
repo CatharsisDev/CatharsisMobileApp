@@ -125,7 +125,9 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                   'assets/images/avatar6.png',
                 ];
                 final currentAvatar = sheetRef.watch(userAvatarProvider);
-                final hasCustom = currentAvatar != null && !presetAssets.contains(currentAvatar);
+                final hasCustom = currentAvatar != null && 
+                    !presetAssets.contains(currentAvatar) &&
+                    currentAvatar.startsWith('http'); // Custom avatars are URLs now
                 final avatarAssets = [...presetAssets, if (hasCustom) currentAvatar else null];
                 
                 return Padding(
@@ -356,6 +358,25 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     );
   }
 
+  Future<void> _selectPresetAvatar(String assetPath) async {
+    try {
+      // Copy asset to temporary file
+      final ByteData data = await rootBundle.load(assetPath);
+      final buffer = data.buffer;
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_avatar.png');
+      await tempFile.writeAsBytes(buffer.asUint8List());
+      
+      // Upload to Firebase Storage
+      await ref.read(userProfileProvider.notifier).updateProfile(avatarFile: tempFile);
+      
+      // Clean up temp file
+      await tempFile.delete();
+    } catch (e) {
+      print('Error selecting preset avatar: $e');
+    }
+  }
+
   Widget _buildAvatarOption(
     String? avatarPath,
     String? currentAvatar,
@@ -369,6 +390,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     final userProfile = ref.watch(userProfileProvider);
     final bool isFocused = index == _avatarSelectionPage;
     final focusColor = customTheme?.profileAvatarColor?.withOpacity(0.4) ?? Colors.grey.withOpacity(0.4);
+    
     return GestureDetector(
       onTap: () async {
         _avatarSelectionController.animateToPage(
@@ -376,7 +398,12 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
-        await ref.read(userProfileProvider.notifier).updateProfile(avatar: avatarPath);
+        
+        if (avatarPath!.startsWith('assets/')) {
+          // Handle preset avatar - upload to Firebase Storage
+          await _selectPresetAvatar(avatarPath);
+        }
+        // If it's a URL (custom avatar), it's already uploaded, no action needed
       },
       child: Container(
         width: 70,
@@ -418,22 +445,51 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
               )
             : Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: avatarPath!.startsWith('assets/')
-                    ? Image.asset(
-                        avatarPath,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                      )
-                    : Image.file(
-                        File(avatarPath),
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
+                child: _buildAvatarImage(avatarPath!),
               ),
       ),
     );
+  }
+
+  Widget _buildAvatarImage(String avatarPath) {
+    if (avatarPath.startsWith('assets/')) {
+      // Asset image
+      return Image.asset(
+        avatarPath,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    } else if (avatarPath.startsWith('http')) {
+      // Network image (Firebase Storage URL)
+      return Image.network(
+        avatarPath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(Icons.error);
+        },
+      );
+    } else {
+      // Local file (for backward compatibility)
+      return Image.file(
+        File(avatarPath),
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
   }
 
   String _getUserInitial(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
@@ -655,39 +711,37 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
   Future<void> _pickCustomAvatar(StateSetter setModalState) async {
     final XFile? file = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (file != null) {
-      final path = file.path;
-      // Clean up previous custom avatar if exists and not an asset
-      final existingAvatarPath = ref.read(userProfileProvider).maybeWhen(
-        data: (profile) => profile?.avatar,
-        orElse: () => null,
-      );
-      if (existingAvatarPath != null && !existingAvatarPath.startsWith('assets/')) {
-        final existingFile = File(existingAvatarPath);
-        if (await existingFile.exists()) {
-          await existingFile.delete();
-        }
+      try {
+        // Convert XFile to File
+        final imageFile = File(file.path);
+        
+        // Upload to Firebase Storage (service handles everything)
+        await ref.read(userProfileProvider.notifier).updateProfile(avatarFile: imageFile);
+        
+        // Navigate to custom avatar in carousel
+        const presetAssets = [
+          'assets/images/avatar1.png',
+          'assets/images/avatar2.png',
+          'assets/images/avatar3.png',
+          'assets/images/avatar4.png',
+          'assets/images/avatar5.png',
+          'assets/images/avatar6.png',
+        ];
+        final customIndex = presetAssets.length;
+        setModalState(() {
+          _avatarSelectionPage = customIndex;
+        });
+        _avatarSelectionController.animateToPage(
+          customIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } catch (e) {
+        print('Error picking custom avatar: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload avatar')),
+        );
       }
-      final appDir = await getApplicationDocumentsDirectory();
-      final newFile = await File(path).copy('${appDir.path}/custom_avatar.jpg');
-      final savedPath = newFile.path;
-      await ref.read(userProfileProvider.notifier).updateProfile(avatar: savedPath);
-      const presetAssets = [
-        'assets/images/avatar1.png',
-        'assets/images/avatar2.png',
-        'assets/images/avatar3.png',
-        'assets/images/avatar4.png',
-        'assets/images/avatar5.png',
-        'assets/images/avatar6.png',
-      ];
-      final customIndex = presetAssets.length;
-      setModalState(() {
-        _avatarSelectionPage = customIndex;
-      });
-      _avatarSelectionController.animateToPage(
-        customIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
     }
   }
 
@@ -927,19 +981,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                             ),
                                           ),
                                         )
-                                      : selectedAvatar.startsWith('assets/')
-                                          ? Image.asset(
-                                              selectedAvatar,
-                                              fit: BoxFit.cover,
-                                              width: 120,
-                                              height: 120,
-                                            )
-                                          : Image.file(
-                                              File(selectedAvatar),
-                                              fit: BoxFit.cover,
-                                              width: 120,
-                                              height: 120,
-                                            ),
+                                      : _buildAvatarImage(selectedAvatar),
                                 ),
                               ),
                             ),
