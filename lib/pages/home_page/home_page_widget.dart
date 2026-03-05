@@ -24,6 +24,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../provider/promotion_provider.dart';
+import '../../components/promotion_popup.dart';
+import '../../services/promotion_service.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -53,6 +56,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   Offset? _lastTapPos;
   static const _doubleTapMaxDelay = Duration(milliseconds: 300);
   static const _doubleTapMaxDistance = 24.0;
+  bool _hasShownPromotionThisSession = false;
   // Guard: avoid re-prompting within the same app run (e.g., after logout/login)
   static bool _askedNotifThisRun = false;
 
@@ -136,6 +140,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           _promptNotificationsOnce();
         }
       });
+      
+      // Check and show promotion after a delay (let the app settle)
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _checkAndShowPromotion();
+        }
+      });
     });
   }
 
@@ -192,6 +203,47 @@ Future<void> _promptNotificationsOnce() async {
     );
   }
 }
+
+  Future<void> _checkAndShowPromotion() async {
+    if (!mounted || _hasShownPromotionThisSession) return;
+    
+    // Get promotion to show
+    final promotionAsync = await ref.read(shouldShowPromotionProvider.future);
+    
+    if (promotionAsync != null && mounted) {
+      _hasShownPromotionThisSession = true;
+      
+      // Show promotion popup
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return PromotionPopup(
+            promotion: promotionAsync,
+            onDismiss: () {
+              if (Navigator.of(dialogContext).canPop()) {
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            onPurchase: () {
+              // Handle purchase - navigate to subscription page
+              if (Navigator.of(dialogContext).canPop()) {
+                Navigator.of(dialogContext).pop();
+              }
+              // Navigate to profile page (update this to your actual subscription page route)
+              context.push('/profile');
+              // Or if you have a dedicated subscription page:
+              // context.push('/subscription', extra: {
+              //   'discountCode': promotionAsync.discountCode,
+              //   'discountPercentage': promotionAsync.discountPercentage,
+              //   'promotionTitle': promotionAsync.title,
+              // });
+            },
+          );
+        },
+      );
+    }
+  }
 
   @override
   void dispose() {

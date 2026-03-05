@@ -12,6 +12,7 @@ import '../../provider/tutorial_state_provider.dart';
 import '../../provider/user_profile_provider.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -49,7 +50,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   int _currentAvatarIndex = 0;
 
   String? _avatarPath;
-  static const String defaultAvatarPath = 'assets/images/avatar1.jpg';
+  static const String defaultAvatarPath = 'assets/images/avatar1.ppg';
   
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -58,7 +59,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     if (pickedFile != null) {
       try {
         final directory = await getApplicationDocumentsDirectory();
-        final fileName = 'custom_avatar.jpg';
+        final fileName = 'custom_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final newImage = await File(pickedFile.path).copy('${directory.path}/$fileName');
 
         if (_avatarPath != null && _avatarPath != defaultAvatarPath) {
@@ -72,8 +73,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           _avatarPath = newImage.path;
           _selectedAvatar = newImage.path;
         });
+        
+        print('[TUTORIAL] Custom avatar picked: ${newImage.path}');
       } catch (e) {
-        print('Error copying image: $e');
+        print('[TUTORIAL] Error copying image: $e');
       }
     }
   }
@@ -181,27 +184,64 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 void _finishTutorial() async {
   await NotificationService.init();
 
-  if (_selectedAvatar != null || _usernameController.text.isNotEmpty) {
-    File? avatarFile;
+  // Handle username and avatar updates
+  try {
+    final username = _usernameController.text.trim();
     
-    // Convert avatar asset to File if selected
     if (_selectedAvatar != null) {
+      final sel = _selectedAvatar!;
+      File? avatarFile;
+      
       try {
-        final ByteData data = await rootBundle.load(_selectedAvatar!);
-        final buffer = data.buffer;
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/tutorial_avatar.png');
-        await tempFile.writeAsBytes(buffer.asUint8List());
-        avatarFile = tempFile;
+        if (sel.startsWith('assets/')) {
+          // Handle preset avatar from assets
+          final ByteData data = await rootBundle.load(sel);
+          final tempDir = await getTemporaryDirectory();
+          final tempFile = File('${tempDir.path}/tutorial_avatar_${DateTime.now().millisecondsSinceEpoch}.png');
+          await tempFile.writeAsBytes(data.buffer.asUint8List());
+          avatarFile = tempFile;
+          
+          print('[TUTORIAL] Prepared preset avatar from: $sel');
+        } else if (sel.isNotEmpty) {
+          // Handle custom uploaded avatar
+          avatarFile = File(sel);
+          
+          if (!await avatarFile.exists()) {
+            print('[TUTORIAL] Custom avatar file does not exist: $sel');
+            avatarFile = null;
+          } else {
+            print('[TUTORIAL] Using custom avatar from: $sel');
+          }
+        }
       } catch (e) {
-        print('Error converting tutorial avatar: $e');
+        print('[TUTORIAL] Error preparing avatar: $e');
+        avatarFile = null;
       }
+      
+      // Update profile with avatar and/or username
+      if (avatarFile != null || username.isNotEmpty) {
+        print('[TUTORIAL] Updating profile - Username: "$username", Avatar: ${avatarFile?.path}');
+        
+        await ref.read(userProfileProvider.notifier).updateProfile(
+          avatarFile: avatarFile,
+          username: username.isNotEmpty ? username : null,
+        );
+        
+        print('[TUTORIAL] Profile updated successfully');
+      }
+    } else if (username.isNotEmpty) {
+      // Only username, no avatar
+      print('[TUTORIAL] Updating username only: "$username"');
+      
+      await ref.read(userProfileProvider.notifier).updateProfile(
+        username: username,
+      );
+      
+      print('[TUTORIAL] Username updated successfully');
     }
-    
-    await ref.read(userProfileProvider.notifier).updateProfile(
-      avatarFile: avatarFile,
-      username: _usernameController.text.trim(),
-    );
+  } catch (e) {
+    print('[TUTORIAL] Error updating profile: $e');
+    // Continue anyway - user can update profile later
   }
 
   await ref.read(tutorialProvider.notifier).setTutorialSeen();
@@ -1269,38 +1309,38 @@ void _finishTutorial() async {
     );
   }
 
-  Widget _buildAvatar(String imagePath, {BoxFit fit = BoxFit.cover}) {
-    final bool isCustom = _avatarPath != null && imagePath == _avatarPath;
-    final Alignment headBias = isCustom
-        ? const Alignment(0, -0.15)
-        : (_avatarAlignTweak[imagePath] ?? const Alignment(0, -0.55));
+Widget _buildAvatar(String imagePath, {BoxFit fit = BoxFit.cover}) {
+  final bool isCustom = _avatarPath != null && imagePath == _avatarPath;
+  final Alignment headBias = isCustom
+      ? const Alignment(0, -0.15)
+      : (_avatarAlignTweak[imagePath] ?? const Alignment(0, -0.55));
 
-    if (isCustom) {
-      return SizedBox.expand(
-        child: Image.file(
-          File(_avatarPath!),
-          fit: fit,
-          alignment: headBias,
-        ),
-      );
-    } else if (imagePath.startsWith('assets/')) {
-      return SizedBox.expand(
-        child: Image.asset(
-          imagePath,
-          fit: fit,
-          alignment: headBias,
-        ),
-      );
-    } else {
-      return SizedBox.expand(
-        child: Image(
-          image: const AssetImage('assets/images/default_avatar.jpeg'),
-          fit: fit,
-          alignment: headBias,
-        ),
-      );
-    }
+  if (isCustom) {
+    return SizedBox.expand(
+      child: Image.file(
+        File(_avatarPath!),
+        fit: fit,
+        alignment: headBias,
+      ),
+    );
+  } else if (imagePath.startsWith('assets/')) {
+    return SizedBox.expand(
+      child: Image.asset(
+        imagePath,
+        fit: fit,
+        alignment: headBias,
+      ),
+    );
+  } else {
+    return SizedBox.expand(
+      child: Image(
+        image: const AssetImage('assets/images/default_avatar.jpeg'),
+        fit: fit,
+        alignment: headBias,
+      ),
+    );
   }
+}
 
   Widget _buildFeatureItem({
     required IconData icon,

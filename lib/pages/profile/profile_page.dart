@@ -19,6 +19,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -99,7 +100,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     super.dispose();
   }
 
-  void _showAvatarSelectionDialog() {
+ void _showAvatarSelectionDialog() {
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
     final userProfile = ref.read(userProfileProvider);
@@ -125,11 +126,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                   'assets/images/avatar6.png',
                 ];
                 final currentAvatar = sheetRef.watch(userAvatarProvider);
-                final hasCustom = currentAvatar != null && 
-                    !presetAssets.contains(currentAvatar) &&
-                    currentAvatar.startsWith('http'); // Custom avatars are URLs now
-                final avatarAssets = [...presetAssets, if (hasCustom) currentAvatar else null];
-                
+final avatarAssets = [...presetAssets, null]; // Always show upload slot
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -233,6 +230,8 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                 ),
                               ),
                             ),
+                      
+                            const SizedBox(height: 20),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               child: Column(
@@ -451,46 +450,37 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     );
   }
 
-  Widget _buildAvatarImage(String avatarPath) {
-    if (avatarPath.startsWith('assets/')) {
-      // Asset image
-      return Image.asset(
-        avatarPath,
-        fit: BoxFit.contain,
-        width: double.infinity,
-        height: double.infinity,
-      );
-    } else if (avatarPath.startsWith('http')) {
-      // Network image (Firebase Storage URL)
-      return Image.network(
-        avatarPath,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(Icons.error);
-        },
-      );
-    } else {
-      // Local file (for backward compatibility)
-      return Image.file(
-        File(avatarPath),
-        fit: BoxFit.contain,
-        width: double.infinity,
-        height: double.infinity,
-      );
-    }
+Widget _buildAvatarImage(String avatarPath) {
+  if (avatarPath.startsWith('assets/')) {
+    return Image.asset(
+      avatarPath,
+      fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
+    );
+  } else if (avatarPath.startsWith('http')) {
+    // CHANGED: Use cached network image
+    return CachedNetworkImage(
+      imageUrl: avatarPath,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (context, url) => Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      errorWidget: (context, url, error) => Icon(Icons.error),
+      memCacheWidth: 200, // Resize for memory efficiency
+      memCacheHeight: 200,
+    );
+  } else {
+    return Image.file(
+      File(avatarPath),
+      fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
+    );
   }
+}
 
   String _getUserInitial(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
     final username = userProfile.whenOrNull(data: (profile) => profile?.username);
@@ -965,7 +955,7 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: selectedAvatar == null 
+                                  color: selectedAvatar == null
                                       ? (customTheme?.profileAvatarColor ?? const Color(0xFF987554))
                                       : Colors.grey[200],
                                 ),
@@ -981,7 +971,13 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
                                             ),
                                           ),
                                         )
-                                      : _buildAvatarImage(selectedAvatar),
+                                      : Center(
+                                          child: FractionallySizedBox(
+                                            widthFactor: 0.7,
+                                            heightFactor: 0.8,
+                                            child: _buildAvatarImage(selectedAvatar),
+                                          ),
+                                        ),
                                 ),
                               ),
                             ),

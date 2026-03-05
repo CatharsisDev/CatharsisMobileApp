@@ -58,36 +58,73 @@ class UserProfileService {
   // Upload profile picture to Firebase Storage
   static Future<String?> uploadProfilePicture(File imageFile) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    if (user == null) {
+      print('[PROFILE_SERVICE] Error: No authenticated user');
+      throw Exception('No authenticated user');
+    }
 
     try {
+      // Verify file exists before upload
+      if (!await imageFile.exists()) {
+        print('[PROFILE_SERVICE] Error: Image file does not exist at ${imageFile.path}');
+        throw Exception('Image file does not exist');
+      }
+
+      final fileSize = await imageFile.length();
+      print('[PROFILE_SERVICE] Uploading avatar - Size: ${fileSize} bytes, Path: ${imageFile.path}');
+
       final fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref().child('profile_pictures').child(fileName);
       
-      await ref.putFile(imageFile);
+      print('[PROFILE_SERVICE] Storage path: profile_pictures/$fileName');
+      
+      final uploadTask = ref.putFile(imageFile);
+      
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        print('[PROFILE_SERVICE] Upload progress: ${progress.toStringAsFixed(1)}%');
+      });
+      
+      await uploadTask;
       final downloadUrl = await ref.getDownloadURL();
+      
+      print('[PROFILE_SERVICE] Upload successful! URL: $downloadUrl');
       return downloadUrl;
+    } on FirebaseException catch (e) {
+      print('[PROFILE_SERVICE] Firebase error uploading profile picture:');
+      print('  Code: ${e.code}');
+      print('  Message: ${e.message}');
+      print('  Details: ${e.plugin}');
+      throw Exception('Firebase Storage error: ${e.message}');
     } catch (e) {
-      print('Error uploading profile picture: $e');
-      throw Exception('Failed to upload profile picture');
+      print('[PROFILE_SERVICE] Error uploading profile picture: $e');
+      throw Exception('Failed to upload profile picture: $e');
     }
   }
 
   // Get current user's profile
   static Future<UserProfile?> getUserProfile() async {
     final user = _auth.currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      print('[PROFILE_SERVICE] No authenticated user');
+      return null;
+    }
 
     try {
+      print('[PROFILE_SERVICE] Fetching profile for user: ${user.uid}');
       final doc = await _firestore.collection('users').doc(user.uid).get();
 
       if (doc.exists) {
-        return UserProfile.fromMap(doc.data()!);
+        final profile = UserProfile.fromMap(doc.data()!);
+        print('[PROFILE_SERVICE] Profile loaded - Username: ${profile.username}, Avatar: ${profile.avatar != null ? "set" : "not set"}');
+        return profile;
       }
 
+      print('[PROFILE_SERVICE] No profile document exists yet');
       return null;
     } catch (e) {
-      print('Error getting user profile: $e');
+      print('[PROFILE_SERVICE] Error getting user profile: $e');
       return null;
     }
   }
@@ -98,13 +135,22 @@ class UserProfileService {
     String? username,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    if (user == null) {
+      print('[PROFILE_SERVICE] Error: No authenticated user for update');
+      throw Exception('No authenticated user');
+    }
+
+    print('[PROFILE_SERVICE] Updating profile for ${user.uid}');
+    print('[PROFILE_SERVICE] - Avatar file: ${avatarFile != null ? avatarFile.path : "none"}');
+    print('[PROFILE_SERVICE] - Username: ${username ?? "none"}');
 
     String? avatarUrl;
     
     // Upload avatar file if provided
     if (avatarFile != null) {
+      print('[PROFILE_SERVICE] Starting avatar upload...');
       avatarUrl = await uploadProfilePicture(avatarFile);
+      print('[PROFILE_SERVICE] Avatar uploaded successfully: $avatarUrl');
     }
 
     final now = DateTime.now();
@@ -112,45 +158,60 @@ class UserProfileService {
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
 
-      if (doc.exists) {
-        await _firestore.collection('users').doc(user.uid).update({
-          if (avatarUrl != null) 'avatar': avatarUrl,
-          if (username != null) 'username': username,
-          'updatedAt': now.toIso8601String(),
-        });
-      } else {
-        await _firestore.collection('users').doc(user.uid).set({
-          if (avatarUrl != null) 'avatar': avatarUrl,
-          if (username != null) 'username': username,
-          'createdAt': now.toIso8601String(),
-          'updatedAt': now.toIso8601String(),
-        });
+      final Map<String, dynamic> updateData = {
+        'updatedAt': now.toIso8601String(),
+      };
+
+      if (avatarUrl != null) {
+        updateData['avatar'] = avatarUrl;
       }
+      if (username != null) {
+        updateData['username'] = username;
+      }
+
+      if (doc.exists) {
+        print('[PROFILE_SERVICE] Updating existing document');
+        await _firestore.collection('users').doc(user.uid).update(updateData);
+      } else {
+        print('[PROFILE_SERVICE] Creating new document');
+        updateData['createdAt'] = now.toIso8601String();
+        await _firestore.collection('users').doc(user.uid).set(updateData);
+      }
+
+      print('[PROFILE_SERVICE] Profile updated successfully');
     } catch (e) {
-      print('Error updating profile: $e');
-      throw Exception('Failed to save profile');
+      print('[PROFILE_SERVICE] Error updating Firestore: $e');
+      throw Exception('Failed to save profile: $e');
     }
   }
 
   // Clear profile data (kept for compatibility)
   static Future<void> clearProfile() async {
     // No local data to clear since everything is in Firestore
+    print('[PROFILE_SERVICE] Clear profile called (no-op)');
     return;
   }
 
   // Stream user profile changes
   static Stream<UserProfile?> profileStream() {
     final user = _auth.currentUser;
-    if (user == null) return Stream.value(null);
+    if (user == null) {
+      print('[PROFILE_SERVICE] No user for profile stream');
+      return Stream.value(null);
+    }
 
+    print('[PROFILE_SERVICE] Starting profile stream for ${user.uid}');
     return _firestore
         .collection('users')
         .doc(user.uid)
         .snapshots()
         .map((snapshot) {
       if (snapshot.exists) {
-        return UserProfile.fromMap(snapshot.data()!);
+        final profile = UserProfile.fromMap(snapshot.data()!);
+        print('[PROFILE_SERVICE] Profile stream update - Username: ${profile.username}');
+        return profile;
       }
+      print('[PROFILE_SERVICE] Profile stream - no document');
       return null;
     });
   }
