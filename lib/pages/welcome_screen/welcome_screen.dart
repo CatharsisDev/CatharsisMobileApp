@@ -14,7 +14,6 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
 
