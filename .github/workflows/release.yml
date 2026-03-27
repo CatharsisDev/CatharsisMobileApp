@@ -47,6 +47,18 @@ jobs:
           file android/app/release.jks
           keytool -list -keystore android/app/release.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}"
 
+      - name: Create key.properties
+        run: |
+          {
+            echo "storeFile=app/release.jks"
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}"
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
+          } > android/key.properties
+
+      - name: Verify key.properties
+        run: cat android/key.properties
+
       - name: Debug signing config
         run: |
           echo "Keystore exists: $(test -f android/app/release.jks && echo 'YES' || echo 'NO')"
