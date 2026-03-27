@@ -30,9 +30,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Force Flutter upgrade
-        run: flutter upgrade --force
-
       - name: Verify versions
         run: |
           flutter --version
@@ -70,9 +67,6 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Repair pub cache
-        run: flutter pub cache repair
 
       - name: Install dependencies
         run: flutter pub get
