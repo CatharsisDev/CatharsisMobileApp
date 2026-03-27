@@ -27,6 +27,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../provider/promotion_provider.dart';
 import '../../components/promotion_popup.dart';
 import '../../services/promotion_service.dart';
+import '../../components/subscription_offer_popup.dart';
+import '../../provider/subscription_offer_provider.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -57,6 +59,7 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
   static const _doubleTapMaxDelay = Duration(milliseconds: 300);
   static const _doubleTapMaxDistance = 24.0;
   bool _hasShownPromotionThisSession = false;
+  bool _hasShownSubscriptionOfferThisSession = false;
   // Guard: avoid re-prompting within the same app run (e.g., after logout/login)
   static bool _askedNotifThisRun = false;
 
@@ -145,6 +148,14 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           _checkAndShowPromotion();
+        }
+      });
+
+      // Check and show subscription offer for non-premium users.
+      // Offset by 4 s so it doesn't overlap with the promotion popup.
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          _checkAndShowSubscriptionOffer();
         }
       });
     });
@@ -243,6 +254,64 @@ Future<void> _promptNotificationsOnce() async {
         },
       );
     }
+  }
+
+  /// Shows a subscription offer popup to non-premium users once per session,
+  /// respecting a 24-hour cooldown stored in SharedPreferences.
+  Future<void> _checkAndShowSubscriptionOffer() async {
+    if (!mounted || _hasShownSubscriptionOfferThisSession) return;
+
+    // Use the async method so the subscription state is fully loaded.
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    final isPremium = await subscriptionService.isUserSubscribedAsync();
+    debugPrint('[OFFER] isPremium=$isPremium');
+    if (isPremium || !mounted) return;
+
+    // If the swipe-limit popup is currently showing, wait for it to close
+    // and then try again rather than silently bailing.
+    if (ref.read(popUpProvider)) {
+      debugPrint('[OFFER] Swipe-limit popup active — rescheduling in 10 s');
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted) _checkAndShowSubscriptionOffer();
+      });
+      return;
+    }
+
+    // Respect the 24-hour cooldown.
+    final canShow = await SubscriptionOfferNotifier.shouldShow();
+    debugPrint('[OFFER] canShow=$canShow');
+    if (!canShow || !mounted) return;
+
+    _hasShownSubscriptionOfferThisSession = true;
+    await SubscriptionOfferNotifier.markShown();
+
+    // Brief settle delay on iOS.
+    if (Platform.isIOS) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (!mounted) return;
+
+    debugPrint('[OFFER] Showing subscription offer popup');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return SubscriptionOfferPopup(
+          onDismiss: () {
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+          onPurchaseComplete: () {
+            // Dismiss the offer popup — the isPremiumProvider listener in
+            // build() will handle resetting the swipe cooldown automatically.
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+        );
+      },
+    );
   }
 
   @override
