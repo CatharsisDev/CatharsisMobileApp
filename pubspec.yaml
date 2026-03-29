@@ -85,7 +85,7 @@ dependencies:
   url_launcher_windows: ^3.1.4
   
   # Utilities
-  intl: ^0.20.2
+  intl: any
   json_path: ^0.7.6
   timeago: ^3.7.1
   csv: ^6.0.0
