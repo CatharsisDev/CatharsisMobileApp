@@ -47,7 +47,7 @@ jobs:
       - name: Create key.properties
         run: |
           {
-            echo "storeFile=app/release.jks"
+            echo "storeFile=release.jks"
             echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
             echo "keyAlias=${{ secrets.KEY_ALIAS }}"
             echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
