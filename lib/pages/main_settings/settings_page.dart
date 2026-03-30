@@ -390,6 +390,76 @@ class SettingsMenuPage extends ConsumerWidget {
                           }
                         },
                       ),
+
+                      // Social channels
+                      SizedBox(height: 40),
+                      Center(
+                        child: Text(
+                          'Follow us',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 13,
+                            letterSpacing: 1.2,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // TikTok — plain black
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.tiktok,
+                            url: 'https://www.tiktok.com/@findyourcatharsis',
+                            brandColor: const Color(0xFF010101),
+                            context: context,
+                          ),
+                          SizedBox(width: 14),
+                          // Instagram — brand gradient (warm yellow → orange → pink → purple)
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.instagram,
+                            url: 'https://www.instagram.com/catharsisposts/',
+                            gradient: const LinearGradient(
+                              begin: Alignment.bottomLeft,
+                              end: Alignment.topRight,
+                              colors: [
+                                Color(0xFFFEDA77), // yellow
+                                Color(0xFFF58529), // orange
+                                Color(0xFFDD2A7B), // pink
+                                Color(0xFF8134AF), // purple
+                              ],
+                            ),
+                            context: context,
+                          ),
+                          SizedBox(width: 14),
+                          // YouTube — red
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.youtube,
+                            url: 'https://www.youtube.com/@catharsisxyz',
+                            brandColor: const Color(0xFFFF0000),
+                            context: context,
+                          ),
+                          SizedBox(width: 14),
+                          // X — near-black with dim border
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.xTwitter,
+                            url: 'https://x.com/catharsisxyz',
+                            brandColor: const Color(0xFF000000),
+                            border: Border.all(color: const Color(0xFF333333), width: 2),
+                            context: context,
+                          ),
+                          SizedBox(width: 14),
+                          // Pinterest — red
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.pinterest,
+                            url: 'https://au.pinterest.com/findyourcatharsis/',
+                            brandColor: const Color(0xFFE60023),
+                            context: context,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -397,6 +467,55 @@ class SettingsMenuPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String url,
+    required BuildContext context,
+    Color? brandColor,
+    Gradient? gradient,
+    BoxBorder? border,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open link.', style: TextStyle(fontFamily: 'Runtime')),
+            ),
+          );
+        }
+      },
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: gradient == null ? brandColor : null,
+          gradient: gradient,
+          shape: BoxShape.circle,
+          border: border,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Center(
+          child: FaIcon(
+            icon,
+            size: 22,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
