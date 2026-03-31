@@ -29,6 +29,9 @@ import '../../components/promotion_popup.dart';
 import '../../services/promotion_service.dart';
 import '../../components/subscription_offer_popup.dart';
 import '../../provider/subscription_offer_provider.dart';
+import '../../provider/streak_provider.dart';
+import '../../services/streak_service.dart';
+import '../streak_page/streak_page.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -143,7 +146,32 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
           _promptNotificationsOnce();
         }
       });
-      
+
+      // Check streak freezes / loss on every app open (runs at most once per day).
+      // Offset slightly so Riverpod providers are fully initialised.
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          _checkStreakOnAppOpen();
+        }
+      });
+
+      // Schedule engagement notifications (streak reminder + flash sale).
+      // Called on every open — awesome_notifications replaces existing schedules
+      // with the same ID, so this is idempotent.
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          _scheduleEngagementNotifications();
+        }
+      });
+
+      // Check whether the user tapped a flash-sale notification and show the
+      // subscription offer popup immediately (bypasses the 24-h cooldown).
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) {
+          _checkFlashSalePending();
+        }
+      });
+
       // Check and show promotion after a delay (let the app settle)
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -159,6 +187,108 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         }
       });
     });
+  }
+
+  /// Runs the streak freeze / loss check and shows the appropriate screen.
+  Future<void> _checkStreakOnAppOpen() async {
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    final isPremium = subscriptionService.isPremium.value;
+
+    await ref.read(streakProvider.notifier).checkOnAppOpen(isPremium: isPremium);
+    if (!mounted) return;
+
+    final notif = ref.read(streakProvider).pendingNotification;
+    if (notif == null) return;
+
+    // Clear first so re-entering the home page doesn't re-trigger
+    await ref.read(streakProvider.notifier).clearPendingNotification();
+    if (!mounted) return;
+
+    // Small pause so the home screen renders before the overlay appears
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: true,
+      pageBuilder: (_, __, ___) => notif == StreakNotification.freezeUsed
+          ? const StreakFreezePage()
+          : const StreakLostPage(),
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+      transitionDuration: const Duration(milliseconds: 450),
+    ));
+  }
+
+  /// On app open: (re)schedule all engagement notifications.
+  Future<void> _scheduleEngagementNotifications() async {
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    final isPremium = subscriptionService.isPremium.value;
+
+    // Fixed daily reminders at 07:00 and 22:00 — always on.
+    await NotificationService.scheduleFixedStreakReminders();
+
+    // Urgency "last chance" notification — only for unprotected users.
+    final freezes = ref.read(streakProvider).freezesAvailable;
+    final isProtected = isPremium && freezes > 0;
+    final lastSwipeTime = await StreakService.getLastSwipeTime();
+
+    if (!isProtected && lastSwipeTime != null) {
+      // Reschedule from stored timestamp (covers reinstalls).
+      // Silently skipped if fire-time is already in the past.
+      await NotificationService.scheduleStreakUrgencyNotification(
+        lastSwipeTime: lastSwipeTime,
+      );
+    } else {
+      // Protected user — no urgency notification needed.
+      await NotificationService.cancelStreakUrgencyNotification();
+    }
+
+    // Flash-sale — only for non-premium users.
+    if (!isPremium) {
+      await NotificationService.scheduleFlashSaleNotification();
+    } else {
+      await NotificationService.cancelFlashSaleNotification();
+    }
+  }
+
+  /// Checks if the user arrived via a flash-sale notification tap and shows
+  /// the subscription offer popup, bypassing the usual 24-hour cooldown.
+  Future<void> _checkFlashSalePending() async {
+    if (!mounted) return;
+    final pending = await NotificationService.consumeFlashSalePending();
+    if (!pending || !mounted) return;
+
+    // Don't show if user is already premium.
+    final subscriptionService = ref.read(subscriptionServiceProvider);
+    final isPremium = await subscriptionService.isUserSubscribedAsync();
+    if (isPremium || !mounted) return;
+
+    // Small settle delay before showing the popup.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+
+    debugPrint('[OFFER] Flash sale notification tap detected — showing offer');
+    _hasShownSubscriptionOfferThisSession = true;
+    await SubscriptionOfferNotifier.markShown();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return SubscriptionOfferPopup(
+          onDismiss: () {
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+          onPurchaseComplete: () {
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+        );
+      },
+    );
   }
 
 Future<void> _promptNotificationsOnce() async {
@@ -915,6 +1045,8 @@ final isSmallPhone = isVerySmall || isSmall;
     final tutorialState = ref.watch(tutorialProvider);
     final showTutorial = tutorialState.showInAppTutorial;
     final seenCardsCount = ref.watch(seenCardsProvider);
+    final streakData = ref.watch(streakProvider);
+    final streak = streakData.current;
 
     // Get theme data
     final theme = Theme.of(context);
@@ -1172,13 +1304,47 @@ final isSmallPhone = isVerySmall || isSmall;
                           );
 
                           if (actualIndex != -1) {
-
-    notifier.handleCardSwiped(
-      actualIndex,
-      direction: direction.name,
-      velocity: 1.0,
-    );
-  }
+                            notifier.handleCardSwiped(
+                              actualIndex,
+                              direction: direction.name,
+                              velocity: 1.0,
+                            );
+                            // Reschedule the urgency "last chance" notification
+                            // (22 h from now) for users with no streak protection.
+                            // Protected users (premium + freezes > 0) don't need it.
+                            final subSvc = ref.read(subscriptionServiceProvider);
+                            final userIsPremium = subSvc.isPremium.value;
+                            final userFreezes = ref.read(streakProvider).freezesAvailable;
+                            final userIsProtected = userIsPremium && userFreezes > 0;
+                            if (!userIsProtected) {
+                              NotificationService.scheduleStreakUrgencyNotification(
+                                lastSwipeTime: DateTime.now(),
+                              );
+                            } else {
+                              NotificationService.cancelStreakUrgencyNotification();
+                            }
+                            final prevStreak = ref.read(streakProvider).current;
+                            ref.read(streakProvider.notifier).recordSwipe().then((_) {
+                              if (!mounted) return;
+                              final newStreak = ref.read(streakProvider).current;
+                              if (newStreak != prevStreak) {
+                                // Small delay so the card-swipe animation finishes
+                                Future.delayed(const Duration(milliseconds: 350), () {
+                                  if (mounted) {
+                                    Navigator.of(context).push(PageRouteBuilder(
+                                      opaque: true,
+                                      pageBuilder: (_, __, ___) =>
+                                          const StreakCelebrationPage(),
+                                      transitionsBuilder: (_, anim, __, child) =>
+                                          FadeTransition(opacity: anim, child: child),
+                                      transitionDuration:
+                                          const Duration(milliseconds: 450),
+                                    ));
+                                  }
+                                });
+                              }
+                            });
+                          }
 
                           AdService.onSwipeAndMaybeShow(context);
                         }
@@ -1245,28 +1411,72 @@ final isSmallPhone = isVerySmall || isSmall;
                     ),
                   ],
                 ),
-                // Preferences button
-                // Preferences button
-                InkWell(
-                  onTap: _openPreferences,
-                  customBorder: const CircleBorder(),
-                  child: Container(
-                    width: prefButtonSize,
-                    height: prefButtonSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                // Streak flame + Preferences button
+                Row(
+                  children: [
+                    // Flame streak indicator
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StreakPage(),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            color: streak > 0
+                                ? Colors.orange
+                                : (theme.brightness == Brightness.dark
+                                    ? Colors.grey[600]
+                                    : Colors.grey[400]),
+                            size: 28,
+                          ),
+                          Text(
+                            streak > 0 ? '$streak' : '—',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              height: 1.0,
+                              color: streak > 0
+                                  ? Colors.orange
+                                  : (theme.brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : Colors.grey[400]),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.antiAlias, // ensure the icon never paints outside the circle
-                    child: Image.asset(
-                      'assets/images/preferences_icon.png',
-                      width: prefButtonSize * prefIconScale,
-                      height: prefButtonSize * prefIconScale,
-                      fit: BoxFit.contain,
-                      color: customTheme?.iconColor ?? theme.iconTheme.color,
+                    SizedBox(width: 22),
+                    // Preferences button
+                    InkWell(
+                      onTap: _openPreferences,
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: prefButtonSize,
+                        height: prefButtonSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                        ),
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.asset(
+                          'assets/images/preferences_icon.png',
+                          width: prefButtonSize * prefIconScale,
+                          height: prefButtonSize * prefIconScale,
+                          fit: BoxFit.contain,
+                          color: customTheme?.iconColor ?? theme.iconTheme.color,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

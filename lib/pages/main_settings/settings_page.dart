@@ -12,6 +12,7 @@ import '../liked_cards/liked_cards_widget.dart';
 import '../subscription_plans/subscription_plans_page.dart';
 import '../tutorial_page/tutorial_page.dart';
 import 'package:catharsis_cards/services/account_deletion_service.dart';
+import '../../provider/streak_provider.dart';
 
 class SettingsMenuPage extends ConsumerWidget {
   const SettingsMenuPage({Key? key}) : super(key: key);
@@ -74,9 +75,12 @@ class SettingsMenuPage extends ConsumerWidget {
                 
                 // Settings Options
                 Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    children: [
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
                       SizedBox(height: 16),
 
                             
@@ -325,7 +329,10 @@ class SettingsMenuPage extends ConsumerWidget {
                               // Clear user-specific data before invalidating providers
                               final cardStateNotifier = ref.read(cardStateProvider.notifier);
                               await cardStateNotifier.clearUserData();
-                              
+
+                              // Reset streak so a new user starts fresh
+                              await ref.read(streakProvider.notifier).reset();
+
                               // Sign out (this will trigger navigation via router)
                               await authService.signOut();
                               
@@ -391,75 +398,85 @@ class SettingsMenuPage extends ConsumerWidget {
                         },
                       ),
 
-                      // Social channels
-                      SizedBox(height: 40),
-                      Center(
-                        child: Text(
-                          'Follow us',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 13,
-                            letterSpacing: 1.2,
-                            color: Colors.grey[500],
+                          ]),
+                        ),
+                      ),
+
+                      // Social channels — pinned to bottom on large screens,
+                      // scrolls naturally on small/dense screens
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 40, top: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Follow us',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    fontSize: 13,
+                                    letterSpacing: 1.2,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildSocialButton(
+                                      icon: FontAwesomeIcons.tiktok,
+                                      url: 'https://www.tiktok.com/@findyourcatharsis',
+                                      brandColor: const Color(0xFF010101),
+                                      context: context,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    _buildSocialButton(
+                                      icon: FontAwesomeIcons.instagram,
+                                      url: 'https://www.instagram.com/catharsisposts/',
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.bottomLeft,
+                                        end: Alignment.topRight,
+                                        colors: [
+                                          Color(0xFFFEDA77),
+                                          Color(0xFFF58529),
+                                          Color(0xFFDD2A7B),
+                                          Color(0xFF8134AF),
+                                        ],
+                                      ),
+                                      context: context,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    _buildSocialButton(
+                                      icon: FontAwesomeIcons.youtube,
+                                      url: 'https://www.youtube.com/@catharsisxyz',
+                                      brandColor: const Color(0xFFFF0000),
+                                      context: context,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    _buildSocialButton(
+                                      icon: FontAwesomeIcons.xTwitter,
+                                      url: 'https://x.com/catharsisxyz',
+                                      brandColor: const Color(0xFF000000),
+                                      border: Border.all(color: const Color(0xFF333333), width: 2),
+                                      context: context,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    _buildSocialButton(
+                                      icon: FontAwesomeIcons.pinterest,
+                                      url: 'https://au.pinterest.com/findyourcatharsis/',
+                                      brandColor: const Color(0xFFE60023),
+                                      context: context,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // TikTok — plain black
-                          _buildSocialButton(
-                            icon: FontAwesomeIcons.tiktok,
-                            url: 'https://www.tiktok.com/@findyourcatharsis',
-                            brandColor: const Color(0xFF010101),
-                            context: context,
-                          ),
-                          SizedBox(width: 14),
-                          // Instagram — brand gradient (warm yellow → orange → pink → purple)
-                          _buildSocialButton(
-                            icon: FontAwesomeIcons.instagram,
-                            url: 'https://www.instagram.com/catharsisposts/',
-                            gradient: const LinearGradient(
-                              begin: Alignment.bottomLeft,
-                              end: Alignment.topRight,
-                              colors: [
-                                Color(0xFFFEDA77), // yellow
-                                Color(0xFFF58529), // orange
-                                Color(0xFFDD2A7B), // pink
-                                Color(0xFF8134AF), // purple
-                              ],
-                            ),
-                            context: context,
-                          ),
-                          SizedBox(width: 14),
-                          // YouTube — red
-                          _buildSocialButton(
-                            icon: FontAwesomeIcons.youtube,
-                            url: 'https://www.youtube.com/@catharsisxyz',
-                            brandColor: const Color(0xFFFF0000),
-                            context: context,
-                          ),
-                          SizedBox(width: 14),
-                          // X — near-black with dim border
-                          _buildSocialButton(
-                            icon: FontAwesomeIcons.xTwitter,
-                            url: 'https://x.com/catharsisxyz',
-                            brandColor: const Color(0xFF000000),
-                            border: Border.all(color: const Color(0xFF333333), width: 2),
-                            context: context,
-                          ),
-                          SizedBox(width: 14),
-                          // Pinterest — red
-                          _buildSocialButton(
-                            icon: FontAwesomeIcons.pinterest,
-                            url: 'https://au.pinterest.com/findyourcatharsis/',
-                            brandColor: const Color(0xFFE60023),
-                            context: context,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 40),
                     ],
                   ),
                 ),

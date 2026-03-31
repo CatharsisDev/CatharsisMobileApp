@@ -53,6 +53,13 @@ class _ProfilePageWidgetState extends ConsumerState<ProfilePageWidget> {
     // Refresh seen cards count when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(seenCardsProvider.notifier).refreshCount();
+
+      // Precache the user's avatar so it appears instantly
+      final profile = ref.read(userProfileProvider).valueOrNull;
+      final avatar = profile?.avatar;
+      if (avatar != null && avatar.startsWith('http')) {
+        precacheImage(CachedNetworkImageProvider(avatar), context);
+      }
     });
   }
   
@@ -170,7 +177,7 @@ final avatarAssets = [...presetAssets, null]; // Always show upload slot
                             ),
                             const SizedBox(height: 30),
                             SizedBox(
-                              height: 100,
+                              height: 120,
                               child: PageView.builder(
                                 controller: _avatarSelectionController,
                                 itemCount: avatarAssets.length,
@@ -181,8 +188,8 @@ final avatarAssets = [...presetAssets, null]; // Always show upload slot
                                     return GestureDetector(
                                       onTap: () => _pickCustomAvatar(setModalState),
                                       child: Container(
-                                        width: 70,
-                                        height: 70,
+                                        width: 90,
+                                        height: 90,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
@@ -405,8 +412,8 @@ final avatarAssets = [...presetAssets, null]; // Always show upload slot
         // If it's a URL (custom avatar), it's already uploaded, no action needed
       },
       child: Container(
-        width: 70,
-        height: 70,
+        width: 90,
+        height: 90,
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -442,40 +449,39 @@ final avatarAssets = [...presetAssets, null]; // Always show upload slot
                   ),
                 ),
               )
-            : Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: _buildAvatarImage(avatarPath!),
-              ),
+            : _buildAvatarImage(avatarPath!, fit: BoxFit.contain),
       ),
     );
   }
 
-Widget _buildAvatarImage(String avatarPath) {
+Widget _buildAvatarImage(String avatarPath, {BoxFit fit = BoxFit.cover}) {
   if (avatarPath.startsWith('assets/')) {
     return Image.asset(
       avatarPath,
-      fit: BoxFit.contain,
+      fit: fit,
       width: double.infinity,
       height: double.infinity,
     );
   } else if (avatarPath.startsWith('http')) {
-    // CHANGED: Use cached network image
     return CachedNetworkImage(
       imageUrl: avatarPath,
-      fit: BoxFit.cover,
+      fit: fit,
       width: double.infinity,
       height: double.infinity,
-      placeholder: (context, url) => Center(
+      fadeInDuration: const Duration(milliseconds: 150),
+      placeholder: (context, url) => const Center(
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      errorWidget: (context, url, error) => Icon(Icons.error),
-      memCacheWidth: 200, // Resize for memory efficiency
-      memCacheHeight: 200,
+      errorWidget: (context, url, error) => const Icon(Icons.error),
+      memCacheWidth: 300,
+      memCacheHeight: 300,
+      maxWidthDiskCache: 300,
+      maxHeightDiskCache: 300,
     );
   } else {
     return Image.file(
       File(avatarPath),
-      fit: BoxFit.contain,
+      fit: fit,
       width: double.infinity,
       height: double.infinity,
     );
@@ -700,38 +706,43 @@ Widget _buildAvatarImage(String avatarPath) {
 
   Future<void> _pickCustomAvatar(StateSetter setModalState) async {
     final XFile? file = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (file != null) {
-      try {
-        // Convert XFile to File
-        final imageFile = File(file.path);
-        
-        // Upload to Firebase Storage (service handles everything)
-        await ref.read(userProfileProvider.notifier).updateProfile(avatarFile: imageFile);
-        
-        // Navigate to custom avatar in carousel
-        const presetAssets = [
-          'assets/images/avatar1.png',
-          'assets/images/avatar2.png',
-          'assets/images/avatar3.png',
-          'assets/images/avatar4.png',
-          'assets/images/avatar5.png',
-          'assets/images/avatar6.png',
-        ];
-        final customIndex = presetAssets.length;
-        setModalState(() {
-          _avatarSelectionPage = customIndex;
-        });
-        _avatarSelectionController.animateToPage(
-          customIndex,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      } catch (e) {
-        print('Error picking custom avatar: $e');
+    if (file == null) return;
+
+    // --- Upload (errors here are real failures) ---
+    try {
+      final imageFile = File(file.path);
+      await ref.read(userProfileProvider.notifier).updateProfile(avatarFile: imageFile);
+    } catch (e) {
+      print('Error uploading custom avatar: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload avatar')),
+          const SnackBar(content: Text('Failed to upload avatar')),
         );
       }
+      return;
+    }
+
+    // --- Navigate carousel to the custom-upload slot (ignore errors if modal was dismissed) ---
+    const presetAssets = [
+      'assets/images/avatar1.png',
+      'assets/images/avatar2.png',
+      'assets/images/avatar3.png',
+      'assets/images/avatar4.png',
+      'assets/images/avatar5.png',
+      'assets/images/avatar6.png',
+    ];
+    final customIndex = presetAssets.length;
+    try {
+      setModalState(() => _avatarSelectionPage = customIndex);
+    } catch (_) {
+      // Modal was closed during the upload — nothing to update
+    }
+    if (_avatarSelectionController.hasClients) {
+      _avatarSelectionController.animateToPage(
+        customIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -971,13 +982,7 @@ Widget _buildAvatarImage(String avatarPath) {
                                             ),
                                           ),
                                         )
-                                      : Center(
-                                          child: FractionallySizedBox(
-                                            widthFactor: 0.7,
-                                            heightFactor: 0.8,
-                                            child: _buildAvatarImage(selectedAvatar),
-                                          ),
-                                        ),
+                                      : _buildAvatarImage(selectedAvatar),
                                 ),
                               ),
                             ),

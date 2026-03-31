@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:catharsis_cards/provider/auth_provider.dart';
 import 'package:catharsis_cards/provider/theme_provider.dart';
 import 'package:catharsis_cards/provider/user_profile_provider.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
@@ -68,6 +69,13 @@ void main() async {
   );
 
   await NotificationService.init(promptUser: false);
+
+  // Register background/foreground tap handler for all notification actions.
+  // Must be called after AwesomeNotifications().initialize() and before runApp.
+  await AwesomeNotifications().setListeners(
+    onActionReceivedMethod: NotificationService.onNotificationTapMethod,
+  );
+
   await dotenv.load(fileName: ".env");
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());

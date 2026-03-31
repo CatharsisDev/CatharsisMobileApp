@@ -31,16 +31,17 @@ class UserProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
         avatarFile: avatarFile,
         username: username,
       );
-      
+
       // Refresh the profile
       final updatedProfile = await UserProfileService.getUserProfile();
       if (mounted) {
         state = AsyncValue.data(updatedProfile);
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) {
-        state = AsyncValue.error(e, StackTrace.current);
+        state = AsyncValue.error(e, st);
       }
+      rethrow; // Propagate so callers can show the correct error UI
     }
   }
 
