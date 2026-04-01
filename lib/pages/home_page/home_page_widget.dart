@@ -32,6 +32,8 @@ import '../../provider/subscription_offer_provider.dart';
 import '../../provider/streak_provider.dart';
 import '../../services/streak_service.dart';
 import '../streak_page/streak_page.dart';
+import '../../provider/reflection_provider.dart';
+import '../../components/reflection_bottom_sheet.dart';
 
 class HomePageWidget extends ConsumerStatefulWidget {
   const HomePageWidget({Key? key}) : super(key: key);
@@ -1047,6 +1049,11 @@ final isSmallPhone = isVerySmall || isSmall;
     final seenCardsCount = ref.watch(seenCardsProvider);
     final streakData = ref.watch(streakProvider);
     final streak = streakData.current;
+    // True only when the user has already swiped today.
+    final now = DateTime.now();
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final swipedToday = streakData.activeDates.contains(todayStr);
 
     // Get theme data
     final theme = Theme.of(context);
@@ -1409,6 +1416,34 @@ final isSmallPhone = isVerySmall || isSmall;
                       customBorder: const CircleBorder(),
                       child: _buildAnimatedHeart(isCurrentLiked, theme, customTheme),
                     ),
+                    SizedBox(width: 16),
+                    // Reflection button — active only when card is liked
+                    GestureDetector(
+                      onTap: isCurrentLiked && currentQuestion != null
+                          ? () => showReflectionSheet(context, ref, currentQuestion)
+                          : null,
+                      child: Builder(builder: (context) {
+                        final hasNote = currentQuestion != null &&
+                            (ref.watch(reflectionProvider.notifier)
+                                    .noteFor(currentQuestion) ??
+                                '').isNotEmpty;
+                        final active = isCurrentLiked && currentQuestion != null;
+                        return Icon(
+                          hasNote
+                              ? Icons.edit_note_rounded
+                              : Icons.edit_note_outlined,
+                          size: 30,
+                          color: active
+                              ? (hasNote
+                                  ? Colors.orange
+                                  : (customTheme?.likeAndShareIconColor ??
+                                      theme.iconTheme.color))
+                              : (theme.brightness == Brightness.dark
+                                  ? Colors.grey[700]
+                                  : Colors.grey[400]),
+                        );
+                      }),
+                    ),
                   ],
                 ),
                 // Streak flame + Preferences button
@@ -1429,11 +1464,13 @@ final isSmallPhone = isVerySmall || isSmall;
                         children: [
                           Icon(
                             Icons.local_fire_department,
-                            color: streak > 0
+                            color: streak > 0 && swipedToday
                                 ? Colors.orange
-                                : (theme.brightness == Brightness.dark
-                                    ? Colors.grey[600]
-                                    : Colors.grey[400]),
+                                : streak > 0
+                                    ? Colors.orange.withOpacity(0.35)
+                                    : (theme.brightness == Brightness.dark
+                                        ? Colors.grey[600]
+                                        : Colors.grey[400]),
                             size: 28,
                           ),
                           Text(
@@ -1443,11 +1480,13 @@ final isSmallPhone = isVerySmall || isSmall;
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               height: 1.0,
-                              color: streak > 0
+                              color: streak > 0 && swipedToday
                                   ? Colors.orange
-                                  : (theme.brightness == Brightness.dark
-                                      ? Colors.grey[600]
-                                      : Colors.grey[400]),
+                                  : streak > 0
+                                      ? Colors.orange.withOpacity(0.35)
+                                      : (theme.brightness == Brightness.dark
+                                          ? Colors.grey[600]
+                                          : Colors.grey[400]),
                             ),
                           ),
                         ],

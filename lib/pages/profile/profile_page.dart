@@ -14,6 +14,7 @@ import '../../provider/seen_cards_provider.dart';
 import '../../services/user_profile_service.dart';
 import '../../question_categories.dart';
 import '../main_settings/settings_page.dart';
+import '../liked_cards/liked_cards_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -863,7 +864,14 @@ Widget _buildAvatarImage(String avatarPath, {BoxFit fit = BoxFit.cover}) {
                       ),
                       const Spacer(),
                       GestureDetector(
-                        onTap: _showCategoryFilterDialog,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LikedCardsWidget(),
+                            ),
+                          );
+                        },
                         child: Container(
                           width: 44,
                           height: 44,
@@ -873,7 +881,7 @@ Widget _buildAvatarImage(String avatarPath, {BoxFit fit = BoxFit.cover}) {
                           ),
                           child: Center(
                             child: Image.asset(
-                              'assets/images/preferences_icon.png',
+                              'assets/images/saved_icon.png',
                               width: 24,
                               height: 24,
                               color: customTheme?.iconColor ?? theme.iconTheme.color,

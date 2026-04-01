@@ -46,7 +46,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) => GoRou
     ),
     GoRoute(
       name: 'LikedCards',
-      path: '/liked',
+      path: '/liked_cards',
       builder: (context, state) => NavBarPage(initialPage: 'LikedCards'),
     ),
     GoRoute(

@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../provider/streak_provider.dart';
 import '../../provider/theme_provider.dart';
-
-// =============================================================================
-// Shared week-building helper
-// =============================================================================
+import '../../services/subscription_service.dart';
 
 List<_DayInfo> buildWeek(List<String> activeDates) {
   final now = DateTime.now();
@@ -76,8 +73,9 @@ class _StreakPageState extends ConsumerState<StreakPage>
     super.dispose();
   }
 
-  String _message(int streak) {
+  String _message(int streak, {required bool swipedToday}) {
     if (streak == 0) return 'Swipe a card today to start your streak!';
+    if (!swipedToday) return "You haven't swiped yet today — keep your streak alive!";
     if (streak == 1) return 'Day one! Every journey starts somewhere.';
     if (streak < 7) return 'Keep the momentum going!';
     if (streak < 14) return "One week strong! You're building a habit.";
@@ -85,8 +83,9 @@ class _StreakPageState extends ConsumerState<StreakPage>
     return "Incredible dedication — you're unstoppable!";
   }
 
-  String _emoji(int streak) {
+  String _emoji(int streak, {required bool swipedToday}) {
     if (streak == 0) return '🌱';
+    if (!swipedToday) return '⏳';
     if (streak == 1) return '🌟';
     if (streak < 7) return '💪';
     if (streak < 14) return '🎯';
@@ -101,6 +100,8 @@ class _StreakPageState extends ConsumerState<StreakPage>
     final longest = streakData.longest;
     final week = buildWeek(streakData.activeDates);
     final freezes = streakData.freezesAvailable;
+    final swipedToday = week.any((d) => d.isToday && d.active);
+    final isPremium = ref.watch(subscriptionServiceProvider).isPremium.value;
 
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
@@ -186,9 +187,9 @@ class _StreakPageState extends ConsumerState<StreakPage>
                               child: child,
                             ),
                           ),
-                          child: const _FlameIcon(
+                          child: _FlameIcon(
                             size: 80,
-                            brightness: 1.0,
+                            brightness: swipedToday ? 1.0 : 0.3,
                           ),
                         ),
                       ],
@@ -208,12 +209,12 @@ class _StreakPageState extends ConsumerState<StreakPage>
                       ),
                       child: Row(
                         children: [
-                          Text(_emoji(streak),
+                          Text(_emoji(streak, swipedToday: swipedToday),
                               style: const TextStyle(fontSize: 22)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _message(streak),
+                              _message(streak, swipedToday: swipedToday),
                               style: TextStyle(
                                 fontFamily: 'Runtime',
                                 fontSize: 15,
@@ -375,15 +376,26 @@ class _StreakPageState extends ConsumerState<StreakPage>
                           dividerColor: dividerColor,
                           theme: theme,
                         ),
-                        _SummaryRow(
-                          icon: Icons.ac_unit,
-                          iconColor: const Color(0xFF64B5F6),
-                          label: 'Streak freezes',
-                          value: '$freezes / 2 this week',
-                          showDivider: false,
-                          dividerColor: dividerColor,
-                          theme: theme,
-                        ),
+                        if (isPremium)
+                          _SummaryRow(
+                            icon: Icons.ac_unit,
+                            iconColor: const Color(0xFF64B5F6),
+                            label: 'Streak freezes',
+                            value: '$freezes / 2 this week',
+                            showDivider: false,
+                            dividerColor: dividerColor,
+                            theme: theme,
+                          )
+                        else
+                          _SummaryRow(
+                            icon: Icons.ac_unit,
+                            iconColor: Colors.grey,
+                            label: 'Streak freezes',
+                            value: 'Premium only',
+                            showDivider: false,
+                            dividerColor: dividerColor,
+                            theme: theme,
+                          ),
                       ],
                     ),
                   ),
@@ -583,158 +595,144 @@ class _StreakCelebrationPageState extends ConsumerState<StreakCelebrationPage>
               ),
 
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 28),
-
-                      // Animated flame
-                      AnimatedBuilder(
-                        animation:
-                            Listenable.merge([_entryCtrl, _flickerCtrl]),
-                        builder: (context, child) {
-                          final scale = _flameScale.value *
-                              (_flickerCtrl.isAnimating
-                                  ? _flickerScale.value
-                                  : 1.0);
-                          final angle = _flickerCtrl.isAnimating
-                              ? _flickerAngle.value
-                              : 0.0;
-                          return Transform.rotate(
-                            angle: angle,
-                            child: Transform.scale(
-                              scale: scale,
-                              child: _FlameIcon(
-                                size: 150,
-                                brightness: _flameBrightness.value,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Streak number
-                      FadeTransition(
-                        opacity: _contentFade,
-                        child: Text(
-                          '$streak',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 82,
-                            fontWeight: FontWeight.bold,
-                            color: fontColor,
-                            height: 1.0,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      FadeTransition(
-                        opacity: _contentFade,
-                        child: Text(
-                          'Day Streak',
-                          style: TextStyle(
-                            fontFamily: 'Runtime',
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: fontColor,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 36),
-
-                      // Week progress bar
-                      FadeTransition(
-                        opacity: _contentFade,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Container(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                            decoration: BoxDecoration(
-                              color: barContainerBg,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: barContainerBorder),
-                            ),
-                            child: AnimatedBuilder(
-                              animation: _barDraw,
-                              builder: (context, _) => _WeekProgressBar(
-                                days: week,
-                                todayIndex: todayIdx,
-                                progress: _barDraw.value,
-                                labelColor: fontColor,
-                              ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Animated flame
+                    AnimatedBuilder(
+                      animation:
+                          Listenable.merge([_entryCtrl, _flickerCtrl]),
+                      builder: (context, child) {
+                        final scale = _flameScale.value *
+                            (_flickerCtrl.isAnimating
+                                ? _flickerScale.value
+                                : 1.0);
+                        final angle = _flickerCtrl.isAnimating
+                            ? _flickerAngle.value
+                            : 0.0;
+                        return Transform.rotate(
+                          angle: angle,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: _FlameIcon(
+                              size: 140,
+                              brightness: _flameBrightness.value,
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
 
-                      const SizedBox(height: 28),
-
-                      // Motivational message
-                      FadeTransition(
-                        opacity: _contentFade,
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            _message(streak),
-                            textAlign: TextAlign.center,
+                    // Streak number + label
+                    FadeTransition(
+                      opacity: _contentFade,
+                      child: Column(
+                        children: [
+                          Text(
+                            '$streak',
                             style: TextStyle(
                               fontFamily: 'Runtime',
-                              fontSize: 16,
-                              color: mutedColor,
-                              height: 1.5,
+                              fontSize: 82,
+                              fontWeight: FontWeight.bold,
+                              color: fontColor,
+                              height: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Day Streak',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: fontColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Week progress bar
+                    FadeTransition(
+                      opacity: _contentFade,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Container(
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                          decoration: BoxDecoration(
+                            color: barContainerBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: barContainerBorder),
+                          ),
+                          child: AnimatedBuilder(
+                            animation: _barDraw,
+                            builder: (context, _) => _WeekProgressBar(
+                              days: week,
+                              todayIndex: todayIdx,
+                              progress: _barDraw.value,
+                              labelColor: fontColor,
                             ),
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 28),
-
-                      // Stat chips
-                      FadeTransition(
-                        opacity: _contentFade,
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _StatChip(
-                                  label: 'Current streak',
-                                  value: streak,
-                                  icon: Icons.local_fire_department,
-                                  iconColor: const Color(0xFFFF8C00),
-                                  bgColor: chipBg,
-                                  borderColor: chipBorder,
-                                  fontColor: fontColor,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _StatChip(
-                                  label: 'Longest streak',
-                                  value: longest,
-                                  icon: Icons.emoji_events,
-                                  iconColor: const Color(0xFFFFD700),
-                                  bgColor: chipBg,
-                                  borderColor: chipBorder,
-                                  fontColor: fontColor,
-                                ),
-                              ),
-                            ],
+                    // Motivational message
+                    FadeTransition(
+                      opacity: _contentFade,
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          _message(streak),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            color: mutedColor,
+                            height: 1.5,
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                    // Stat chips
+                    FadeTransition(
+                      opacity: _contentFade,
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _StatChip(
+                                label: 'Current streak',
+                                value: streak,
+                                icon: Icons.local_fire_department,
+                                iconColor: const Color(0xFFFF8C00),
+                                bgColor: chipBg,
+                                borderColor: chipBorder,
+                                fontColor: fontColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _StatChip(
+                                label: 'Longest streak',
+                                value: longest,
+                                icon: Icons.emoji_events,
+                                iconColor: const Color(0xFFFFD700),
+                                bgColor: chipBg,
+                                borderColor: chipBorder,
+                                fontColor: fontColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -743,7 +741,7 @@ class _StreakCelebrationPageState extends ConsumerState<StreakCelebrationPage>
                 opacity: _contentFade,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
-                      24, 0, 24, MediaQuery.of(context).padding.bottom + 20),
+                      24, 20, 24, MediaQuery.of(context).padding.bottom + 20),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

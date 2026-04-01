@@ -444,7 +444,7 @@ void _finishTutorial() async {
                     _buildFeatureItem(
                       icon: Icons.favorite,
                       title: 'Double Tap to Like',
-                      description: 'Save your favorite questions for later reflection',
+                      description: 'Save your favorite questions and attach your thoughts on it as a note for later reflection',
                       delay: 400,
                     ),
                     const SizedBox(height: 40),

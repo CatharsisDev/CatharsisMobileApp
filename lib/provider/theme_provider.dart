@@ -1,8 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_provider.dart';
+
+// Keeps the iOS UIWindow background colour in sync with the active theme so
+// the rounded corner areas of the display never show white.
+void _syncWindowColor(Color color) {
+  if (!Platform.isIOS) return;
+  const _channel = MethodChannel('app/window_color');
+  _channel.invokeMethod('setWindowColor', color.value).catchError((_) {});
+}
 
 class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeNotifier(this.ref) : super(ThemeState(
@@ -73,15 +83,18 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     switch (themeName) {
       case 'light':
         state = ThemeState(themeData: AppThemes.lightTheme, themeName: 'light');
+        _syncWindowColor(Colors.white);
         break;
       case 'dark':
         state = ThemeState(themeData: AppThemes.darkTheme, themeName: 'dark');
+        _syncWindowColor(const Color(0xFF100E42));
         break;
       case 'catharsis_signature':
       default:
         state = ThemeState(
             themeData: AppThemes.catharsisSignature,
             themeName: 'catharsis_signature');
+        _syncWindowColor(const Color(0xFFFAF1E1));
         break;
     }
   }

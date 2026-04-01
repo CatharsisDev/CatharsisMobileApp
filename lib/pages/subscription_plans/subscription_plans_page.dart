@@ -390,7 +390,11 @@ final _kAnnualId = Platform.isAndroid
                                 ?.copyWith(fontFamily: 'Runtime', color: fontColor),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 20),
+                          // ── What you get ──────────────────────────────────
+                          if (!_isAlreadySubscribed || planCards.isNotEmpty)
+                            _BenefitsBlock(fontColor: fontColor),
+                          const SizedBox(height: 24),
                           if (planCards.isNotEmpty) ...[
                             SizedBox(
                               height: cardHeight,
@@ -529,7 +533,9 @@ final _kAnnualId = Platform.isAndroid
                         textAlign: TextAlign.center,
                       ),
                     ],
-                    SizedBox(height: 32),
+                    SizedBox(height: 28),
+                    _BenefitsBlock(fontColor: fontColor),
+                    SizedBox(height: 28),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
@@ -725,6 +731,72 @@ class _PlanCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Benefits block — shared across the plans page and already-subscribed view
+// ---------------------------------------------------------------------------
+
+class _BenefitsBlock extends StatelessWidget {
+  final Color fontColor;
+  const _BenefitsBlock({required this.fontColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final benefits = [
+      (Icons.all_inclusive, 'Unlimited swipes every day'),
+      (Icons.ac_unit,       'Streak freezes — miss a day, keep your streak'),
+      if (Platform.isAndroid)
+        (Icons.block,       'Ad-free experience'),
+      (Icons.favorite,      'Support independent development'),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: fontColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: fontColor.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'What you get',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: fontColor.withOpacity(0.55),
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...benefits.map((b) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(b.$1, color: Colors.orange, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    b.$2,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: fontColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
       ),
     );
   }

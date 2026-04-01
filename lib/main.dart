@@ -31,10 +31,12 @@ import 'firebase_options.dart';
 import 'package:go_router/go_router.dart';
 import '/pages/profile/profile_page.dart';
 import '/pages/home_page/home_page_widget.dart';
+import '/pages/liked_cards/liked_cards_widget.dart';
 import 'app_router.dart' as app_router;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
+import 'provider/reflection_provider.dart';
 // import 'package:device_preview/device_preview.dart';
 
 class AppStateNotifier extends ChangeNotifier {
@@ -128,17 +130,22 @@ class _MyAppState extends ConsumerState<MyApp> {
     ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
       final previousUser = previous?.whenOrNull(data: (user) => user);
       final currentUser = next.whenOrNull(data: (user) => user);
-      
+
       if (previousUser != null && currentUser == null) {
+        // Logout — clear all provider state.
         Future.delayed(Duration(milliseconds: 100), () {
           if (mounted) {
             ref.invalidate(userProfileProvider);
             ref.invalidate(cardStateProvider);
             ref.invalidate(tutorialProvider);
+            ref.read(reflectionProvider.notifier).reset();
           }
         });
+      } else if (previousUser == null && currentUser != null) {
+        // Login — load reflections from Firestore.
+        ref.read(reflectionProvider.notifier).load();
       }
-      
+
       _router.refresh();
     });
 
@@ -162,11 +169,16 @@ class _MyAppState extends ConsumerState<MyApp> {
       routerConfig: _router,
       builder: (context, child) {
         // child = DevicePreview.appBuilder(context, child);
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3),
+        // Wrap with a background container so iOS rounded-corner areas and
+        // system edge insets always show the app colour instead of white.
+        return Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3),
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );
@@ -201,6 +213,7 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
     final tabs = {
       'HomePage': HomePageWidget(),
       'ProfilePage': ProfilePageWidget(),
+      'LikedCards': LikedCardsWidget(),
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
 
@@ -209,7 +222,9 @@ class _NavBarPageState extends ConsumerState<NavBarPage> {
             q.text == cardState.currentQuestion!.text &&
             q.category == cardState.currentQuestion!.category);
 
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           _currentPage ?? tabs[_currentPageName]!,

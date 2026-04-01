@@ -303,21 +303,36 @@ class _SubscriptionOfferPopupState
                         ),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
-                      // Subheading
-                      Text(
-                        'Unlock unlimited swipes and remove ads\nwith a premium subscription.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Runtime',
-                          fontSize: 15,
-                          height: 1.45,
-                          color: Colors.white.withOpacity(0.90),
-                        ),
+                      // Benefits list
+                      Column(
+                        children: [
+                          const _OfferBenefitRow(
+                            icon: Icons.all_inclusive,
+                            text: 'Unlimited swipes every day',
+                          ),
+                          const SizedBox(height: 8),
+                          const _OfferBenefitRow(
+                            icon: Icons.ac_unit,
+                            text: 'Streak freezes — miss a day, keep your streak',
+                          ),
+                          if (Platform.isAndroid) ...[
+                            const SizedBox(height: 8),
+                            const _OfferBenefitRow(
+                              icon: Icons.block,
+                              text: 'Ad-free experience',
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          const _OfferBenefitRow(
+                            icon: Icons.favorite,
+                            text: 'Support independent development',
+                          ),
+                        ],
                       ),
 
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
                       // Monthly plan row
                       _PlanRow(
@@ -405,6 +420,38 @@ class _SubscriptionOfferPopupState
                     ),
                   ),
               ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Benefit row used inside the offer popup
+// ---------------------------------------------------------------------------
+
+class _OfferBenefitRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _OfferBenefitRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.orange.shade300, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.92),
+              height: 1.3,
             ),
           ),
         ),

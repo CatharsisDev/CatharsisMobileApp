@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +43,7 @@ class SwipeLimitPopup extends ConsumerWidget {
         Center(
           child: Container(
             width: 400,
-            height: 550,
+            height: 620,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(borderRadiusValue),
               border: Border.all(
@@ -70,7 +71,7 @@ class SwipeLimitPopup extends ConsumerWidget {
                             : 'assets/images/default_mode_background.png',
                     fit: BoxFit.cover,
                     width: 405,
-                    height: 555,
+                    height: 625,
                   ),
                 ),
                 // Close button
@@ -113,7 +114,7 @@ class SwipeLimitPopup extends ConsumerWidget {
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'You have used up your swipes for now. Please wait for the timer to reset or purchase additional swipes.',
+                        'You have used up your swipes for now. Please wait for the timer to reset or purchase a subscription for unlimited swipes.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Runtime',
@@ -131,7 +132,32 @@ class SwipeLimitPopup extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
+                      // Premium benefits strip
+                      Column(
+                        children: [
+                          _BenefitLine(
+                            icon: Icons.all_inclusive,
+                            text: 'Unlimited swipes every day',
+                            fontColor: customTheme?.fontColor ?? Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          _BenefitLine(
+                            icon: Icons.ac_unit,
+                            text: 'Streak freezes — never lose your streak',
+                            fontColor: customTheme?.fontColor ?? Colors.white,
+                          ),
+                          if (Platform.isAndroid) ...[
+                            const SizedBox(height: 8),
+                            _BenefitLine(
+                              icon: Icons.block,
+                              text: 'Ad-free experience',
+                              fontColor: customTheme?.fontColor ?? Colors.white,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                       if (resetTime != null && resetTime!.isAfter(DateTime.now()))
                         CountdownTimer(
                           endTime: resetTime!.millisecondsSinceEpoch,
@@ -227,6 +253,47 @@ class SwipeLimitPopup extends ConsumerWidget {
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small icon + text row used in the benefits strip
+// ---------------------------------------------------------------------------
+
+class _BenefitLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color fontColor;
+
+  const _BenefitLine({
+    required this.icon,
+    required this.text,
+    required this.fontColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: Colors.orange, size: 18),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: fontColor,
+              shadows: const [
+                Shadow(color: Colors.black, offset: Offset(1, 1), blurRadius: 2),
               ],
             ),
           ),
