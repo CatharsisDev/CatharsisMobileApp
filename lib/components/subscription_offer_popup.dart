@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../provider/theme_provider.dart';
 import '../provider/theme_provider.dart' show CustomThemeExtension;
@@ -388,7 +390,31 @@ class _SubscriptionOfferPopupState
                             : () => _buy(annualToBuy.id),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
+
+                      // Reassurance line
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded,
+                              size: 13,
+                              color: Colors.white.withOpacity(0.50)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'No payment due now',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.50),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Legal links — required by App Store
+                      _LegalLinks(),
 
                       // Maybe later link
                       TextButton(
@@ -456,6 +482,64 @@ class _OfferBenefitRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Legal links (Privacy Policy + Terms of Use) — required by App Store
+// ---------------------------------------------------------------------------
+
+const _kPrivacyUrl = 'https://catharsisdev.github.io/CatharsisMobileApp/';
+const _kTermsUrl   = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+
+Future<void> _openUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class _LegalLinks extends StatelessWidget {
+  const _LegalLinks();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text.rich(
+        TextSpan(
+          style: TextStyle(
+            fontFamily: 'Runtime',
+            fontSize: 11,
+            color: Colors.white.withOpacity(0.55),
+          ),
+          children: [
+            const TextSpan(text: 'By subscribing you agree to our '),
+            TextSpan(
+              text: 'Terms of Use',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.80),
+                decoration: TextDecoration.underline,
+              ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => _openUrl(_kTermsUrl),
+            ),
+            const TextSpan(text: ' and '),
+            TextSpan(
+              text: 'Privacy Policy',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.80),
+                decoration: TextDecoration.underline,
+              ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => _openUrl(_kPrivacyUrl),
+            ),
+            const TextSpan(text: '.'),
+          ],
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

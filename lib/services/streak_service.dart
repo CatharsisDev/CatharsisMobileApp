@@ -162,8 +162,10 @@ class StreakService {
       // Not enough freezes (or not premium) — streak lost
       final oldCount = prefs.getInt(_countKey) ?? 0;
       await prefs.setInt(_countKey, 0);
-      // Advance lastDate to today so this check doesn't re-fire tomorrow
-      await prefs.setString(_dateKey, today);
+      // Remove lastDate so the next swipe correctly starts a fresh streak from 1.
+      // (checkAndApplyFreezes won't re-fire because _lastCheckKey is already set
+      // to today, and future days safely return early when lastDate is null.)
+      await prefs.remove(_dateKey);
       // Consume whatever freezes were left (doesn't save the streak but drain them)
       if (isPremium && freezesAvailable > 0) {
         await prefs.setInt(_freezesKey, 0);
@@ -178,7 +180,7 @@ class StreakService {
 
     // Sync to Firestore in background
     final count       = prefs.getInt(_countKey) ?? 0;
-    final newLastDate = prefs.getString(_dateKey) ?? today;
+    final newLastDate = prefs.getString(_dateKey); // null when streak was just lost
     final longest     = prefs.getInt(_longestKey) ?? 0;
     final activeDates = prefs.getStringList(_activeDatesKey) ?? [];
     _syncToFirestore(count, newLastDate, longest, activeDates,
@@ -214,6 +216,9 @@ class StreakService {
       if (diff > 1) {
         localCount = 0;
         await prefs.setInt(_countKey, 0);
+        // Also clear the stale date so Firestore can't restore it on the next
+        // getStreakData() call and so recordSwipe() gets a clean slate.
+        await prefs.remove(_dateKey);
       }
     } else {
       localCount = 0;
@@ -246,7 +251,14 @@ class StreakService {
             }
 
             bool useFirestore = false;
-            if (fsLastDate != null && localLastDate == null) {
+            // Don't let Firestore restore a stale date when the streak was
+            // intentionally cleared on this device today (checkAndApplyFreezes
+            // already ran and set _lastCheckKey to today).
+            final today2 = _todayString();
+            final streakResetToday = localLastDate == null &&
+                localCount == 0 &&
+                (prefs.getString(_lastCheckKey) == today2);
+            if (fsLastDate != null && localLastDate == null && !streakResetToday) {
               useFirestore = true;
             } else if (fsLastDate != null && localLastDate != null) {
               final cmp = fsLastDate.compareTo(localLastDate);
@@ -319,12 +331,20 @@ class StreakService {
   static Future<StreakData> recordSwipe() async {
     final prefs = await SharedPreferences.getInstance();
     final today = _todayString();
-    final lastDate = prefs.getString(_dateKey);
+    String? lastDate = prefs.getString(_dateKey);
     int current = prefs.getInt(_countKey) ?? 0;
     int longest = prefs.getInt(_longestKey) ?? 0;
     List<String> activeDates = prefs.getStringList(_activeDatesKey) ?? [];
     int freezesAvailable = prefs.getInt(_freezesKey) ?? _maxFreezesPerWeek;
     String freezesWeek = prefs.getString(_freezesWeekKey) ?? _currentIsoWeek();
+
+    // Self-heal: lastDate == today but count == 0 is an impossible valid state —
+    // it means the streak was reset today (old bug or edge case). Clear the stale
+    // date so this swipe correctly starts a new streak from 1.
+    if (lastDate == today && current == 0) {
+      await prefs.remove(_dateKey);
+      lastDate = null;
+    }
 
     // Already counted today
     if (lastDate == today) {
@@ -413,7 +433,7 @@ class StreakService {
 
   static void _syncToFirestore(
     int count,
-    String lastDate,
+    String? lastDate,   // null when streak was just lost — field is deleted
     int longest,
     List<String> activeDates, {
     int? freezesAvailable,
@@ -423,10 +443,11 @@ class StreakService {
     if (docRef == null) return;
 
     final Map<String, dynamic> payload = {
-      'streakCount':          count,
-      'streakLastSwipeDate':  lastDate,
-      'streakLongest':        longest,
-      'streakActiveDates':    activeDates,
+      'streakCount':         count,
+      // Delete the field when null so other devices don't restore stale dates
+      'streakLastSwipeDate': lastDate ?? FieldValue.delete(),
+      'streakLongest':       longest,
+      'streakActiveDates':   activeDates,
     };
     if (freezesAvailable != null) {
       payload['streakFreezesAvailable'] = freezesAvailable;
