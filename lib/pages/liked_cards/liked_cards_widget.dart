@@ -5,21 +5,145 @@ import '../../provider/theme_provider.dart';
 import '../../provider/app_state_provider.dart';
 import '../../provider/reflection_provider.dart';
 import '../../components/reflection_bottom_sheet.dart';
+import '../../questions_model.dart';
 
-class LikedCardsWidget extends ConsumerWidget {
+enum _SortOrder { dateAdded, alphabetical, hasReflection }
+
+class LikedCardsWidget extends ConsumerStatefulWidget {
   const LikedCardsWidget({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LikedCardsWidget> createState() => _LikedCardsWidgetState();
+}
+
+class _LikedCardsWidgetState extends ConsumerState<LikedCardsWidget> {
+  _SortOrder _sortOrder = _SortOrder.dateAdded;
+
+  List<Question> _sorted(List<Question> questions, Map<String, String> notes) {
+    final list = List<Question>.from(questions);
+    switch (_sortOrder) {
+      case _SortOrder.dateAdded:
+        // Keep original insertion order — newest liked at the bottom; reverse
+        // so the most recently liked card appears first.
+        return list.reversed.toList();
+      case _SortOrder.alphabetical:
+        list.sort((a, b) => a.text.toLowerCase().compareTo(b.text.toLowerCase()));
+        return list;
+      case _SortOrder.hasReflection:
+        list.sort((a, b) {
+          final aHas = (notes[_noteKey(a)] ?? '').isNotEmpty ? 0 : 1;
+          final bHas = (notes[_noteKey(b)] ?? '').isNotEmpty ? 0 : 1;
+          if (aHas != bHas) return aHas.compareTo(bHas);
+          return a.text.toLowerCase().compareTo(b.text.toLowerCase());
+        });
+        return list;
+    }
+  }
+
+  String _noteKey(Question q) {
+    final key = '${q.category.trim()}|${q.text.trim()}';
+    return key.length > 500 ? key.substring(0, 500) : key;
+  }
+
+  void _showSortSheet(BuildContext context, CustomThemeExtension? customTheme, Color fontColor) {
+    final options = [
+      (_SortOrder.dateAdded,      Icons.access_time_rounded,   'Date added'),
+      (_SortOrder.alphabetical,   Icons.sort_by_alpha_rounded,  'Alphabetical'),
+      (_SortOrder.hasReflection,  Icons.edit_note_rounded,      'Has reflection'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: fontColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sort by',
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: fontColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...options.map((o) {
+              final selected = _sortOrder == o.$1;
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Icon(
+                  o.$2,
+                  color: selected
+                      ? (customTheme?.preferenceButtonColor ?? Colors.orange)
+                      : fontColor.withOpacity(0.55),
+                ),
+                title: Text(
+                  o.$3,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    fontSize: 15,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected
+                        ? (customTheme?.preferenceButtonColor ?? Colors.orange)
+                        : fontColor,
+                  ),
+                ),
+                trailing: selected
+                    ? Icon(Icons.check_rounded,
+                        color: customTheme?.preferenceButtonColor ?? Colors.orange)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOrder = o.$1);
+                  Navigator.of(context).pop();
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cardState = ref.watch(cardStateProvider);
     final likedQuestions = cardState.likedQuestions;
     final notifier = ref.read(cardStateProvider.notifier);
-    // Watch reflections so the note-preview rebuilds when notes change.
-    ref.watch(reflectionProvider);
+    final notes = ref.watch(reflectionProvider);
     final reflectionNotifier = ref.read(reflectionProvider.notifier);
 
     final theme = Theme.of(context);
     final customTheme = theme.extension<CustomThemeExtension>();
+    final fontColor = customTheme?.fontColor ??
+        theme.textTheme.bodyMedium?.color ??
+        theme.primaryColor;
+
+    final sorted = _sorted(likedQuestions, notes);
+
+    final sortLabels = {
+      _SortOrder.dateAdded:     'Date added',
+      _SortOrder.alphabetical:  'Alphabetical',
+      _SortOrder.hasReflection: 'Has reflection',
+    };
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -37,6 +161,24 @@ class LikedCardsWidget extends ConsumerWidget {
         ),
         centerTitle: true,
         iconTheme: IconThemeData(color: theme.iconTheme.color),
+        actions: likedQuestions.isEmpty
+            ? null
+            : [
+                TextButton.icon(
+                  onPressed: () =>
+                      _showSortSheet(context, customTheme, fontColor),
+                  icon: Icon(Icons.sort_rounded,
+                      size: 18, color: theme.iconTheme.color),
+                  label: Text(
+                    sortLabels[_sortOrder]!,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      fontSize: 13,
+                      color: theme.iconTheme.color,
+                    ),
+                  ),
+                ),
+              ],
       ),
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -74,9 +216,9 @@ class LikedCardsWidget extends ConsumerWidget {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: likedQuestions.length,
+                      itemCount: sorted.length,
                       itemBuilder: (context, index) {
-                        final question = likedQuestions[index];
+                        final question = sorted[index];
                         final note = reflectionNotifier.noteFor(question);
                         final hasNote = note != null && note.isNotEmpty;
 

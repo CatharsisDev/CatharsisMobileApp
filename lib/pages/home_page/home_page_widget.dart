@@ -995,9 +995,7 @@ final isSmallPhone = isVerySmall || isSmall;
     final customTheme = theme.extension<CustomThemeExtension>();
     final categoryColor = customTheme?.categoryChipColor ?? theme.primaryColor;
     final themeName = ref.watch(themeProvider).themeName;
-    final chipTextColor = themeName == 'catharsis_signature'
-        ? Colors.white
-        : (customTheme?.buttonFontColor ?? theme.textTheme.bodyMedium?.color);
+    final chipTextColor = (customTheme?.buttonFontColor ?? theme.textTheme.bodyMedium?.color);
 
     return Container(
       decoration: BoxDecoration(

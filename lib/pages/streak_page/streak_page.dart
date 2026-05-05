@@ -77,20 +77,29 @@ class _StreakPageState extends ConsumerState<StreakPage>
     if (streak == 0) return 'Swipe a card today to start your streak!';
     if (!swipedToday) return "You haven't swiped yet today — keep your streak alive!";
     if (streak == 1) return 'Day one! Every journey starts somewhere.';
-    if (streak < 7) return 'Keep the momentum going!';
-    if (streak < 14) return "One week strong! You're building a habit.";
-    if (streak < 30) return "That's another step closer to your goals. Great job!";
-    return "Incredible dedication — you're unstoppable!";
+    if (streak < 7)  return '$streak days in — keep the momentum going!';
+    if (streak == 7) return 'One week strong! You\'re building a habit.';
+    if (streak < 14) return '$streak days strong — you\'re finding your groove!';
+    if (streak == 14) return 'Two weeks! The habit is really forming now.';
+    if (streak < 21) return '$streak days and counting — stay the course!';
+    if (streak == 21) return 'Three weeks strong! This is becoming part of you.';
+    if (streak < 30) return '$streak days — almost a month!';
+    if (streak == 30) return 'One month! Incredible dedication.';
+    if (streak < 60) return '$streak days — you\'re unstoppable!';
+    if (streak == 60) return 'Two months of growth. You\'re extraordinary.';
+    return '$streak days. A true reflection legend.';
   }
 
   String _emoji(int streak, {required bool swipedToday}) {
     if (streak == 0) return '🌱';
     if (!swipedToday) return '⏳';
     if (streak == 1) return '🌟';
-    if (streak < 7) return '💪';
+    if (streak < 7)  return '💪';
     if (streak < 14) return '🎯';
-    if (streak < 30) return '🎉';
-    return '🏆';
+    if (streak < 21) return '🎉';
+    if (streak < 30) return '🔥';
+    if (streak < 60) return '🏆';
+    return '🌠';
   }
 
   @override
@@ -531,12 +540,19 @@ class _StreakCelebrationPageState extends ConsumerState<StreakCelebrationPage>
   }
 
   String _message(int streak) {
-    if (streak == 0) return 'Swipe a card today to\nstart your streak!';
-    if (streak == 1) return 'Day one!\nEvery journey starts somewhere.';
-    if (streak < 7) return 'Keep the\nmomentum going!';
-    if (streak < 14) return "One week strong!\nYou're building a habit.";
-    if (streak < 30) return "That's another step closer\nto your goals. Great job!";
-    return "Incredible dedication —\nyou're unstoppable!";
+    if (streak == 0)  return 'Swipe a card today to\nstart your streak!';
+    if (streak == 1)  return 'Day one!\nEvery journey starts somewhere.';
+    if (streak < 7)   return '$streak days in —\nkeep the momentum going!';
+    if (streak == 7)  return 'One week strong!\nYou\'re building a habit.';
+    if (streak < 14)  return '$streak days strong —\nyou\'re finding your groove!';
+    if (streak == 14) return 'Two weeks!\nThe habit is really forming now.';
+    if (streak < 21)  return '$streak days and counting —\nstay the course!';
+    if (streak == 21) return 'Three weeks strong!\nThis is becoming part of you.';
+    if (streak < 30)  return '$streak days —\nalmost a month!';
+    if (streak == 30) return 'One month!\nIncredible dedication.';
+    if (streak < 60)  return '$streak days —\nyou\'re unstoppable!';
+    if (streak == 60) return 'Two months of growth.\nYou\'re extraordinary.';
+    return '$streak days.\nA true reflection legend.';
   }
 
   @override

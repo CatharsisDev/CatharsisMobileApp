@@ -301,7 +301,7 @@ final _kAnnualId = Platform.isAndroid
           // Content — fixed column, no scroll
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -341,11 +341,11 @@ final _kAnnualId = Platform.isAndroid
                         ?.copyWith(fontFamily: 'Runtime', color: fontColor),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
 
                   // ── Benefits ─────────────────────────────────────────────
                   _BenefitsBlock(fontColor: fontColor),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   // ── Plan cards — side by side, sized to content ──────────
                   IntrinsicHeight(
@@ -782,7 +782,7 @@ class _CompactPlanCard extends StatelessWidget {
               : null,
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+          padding: const EdgeInsets.fromLTRB(14, 20, 14, 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

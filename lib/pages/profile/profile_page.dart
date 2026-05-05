@@ -304,15 +304,10 @@ final avatarAssets = [...presetAssets, null]; // Always show upload slot
                                   SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: (() {
-                                          final themeName = sheetRef.watch(themeProvider).themeName;
-                                          if (themeName == 'dark') return const Color.fromRGBO(232, 213, 255, 1);
-                                          else if (themeName == 'light') return const Color.fromRGBO(252, 102, 77, 1);
-                                          else return const Color(0xFF2A3F2C);
-                                        }()),
-                                        foregroundColor: Colors.white,
-                                      ),
+                                    style: ElevatedButton.styleFrom(
+  backgroundColor: customTheme?.preferenceButtonColor ?? theme.primaryColor,
+  foregroundColor: Colors.white,
+),
                                       onPressed: () async {
                                         final username = _avatarUsernameController.text.trim();
                                         if (_profanityFilter.hasProfanity(username)) {
