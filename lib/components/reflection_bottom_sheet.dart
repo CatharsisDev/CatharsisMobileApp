@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../questions_model.dart';
 import '../provider/reflection_provider.dart';
+import '../provider/app_state_provider.dart';
 import '../provider/theme_provider.dart';
 
 /// Shows a bottom sheet where the user can write or edit a reflection note
@@ -50,9 +51,14 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    final noteText = _ctrl.text;
     await ref
         .read(reflectionProvider.notifier)
-        .saveNote(widget.question, _ctrl.text);
+        .saveNote(widget.question, noteText);
+    // Track reflection signal for category preference algorithm
+    if (noteText.trim().isNotEmpty) {
+      ref.read(cardStateProvider.notifier).recordReflection(widget.question);
+    }
     setState(() => _saving = false);
     if (mounted) Navigator.of(context).pop();
   }

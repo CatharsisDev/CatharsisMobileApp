@@ -10,6 +10,7 @@ import 'package:catharsis_cards/services/questions_service.dart';
 import 'package:catharsis_cards/services/user_behavior_service.dart';
 import 'package:catharsis_cards/services/notification_service.dart';
 import 'package:catharsis_cards/services/subscription_service.dart';
+import 'package:catharsis_cards/services/category_stats_service.dart';
 import 'seen_cards_provider.dart';
 import 'dart:io';
 import 'dart:async';
@@ -164,6 +165,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
   late Box swipeBox;
   late Box<Question> cacheBox;
   late Box<Question> seenBox;
+  final CategoryStatsService _categoryStats = CategoryStatsService();
   DateTime? _currentQuestionStartTime;
   String? _lastTrackedQuestionId;
   DateTime? _lastTrackTime;
@@ -227,7 +229,8 @@ class CardStateNotifier extends StateNotifier<CardState> {
       swipeBox = await Hive.openBox('swipeData_$userId');
       cacheBox = await Hive.openBox<Question>('cachedQuestions_$userId');
       seenBox = await Hive.openBox<Question>('seenQuestions_$userId');
-      
+      await _categoryStats.init(userId);
+
       print('Boxes opened - Liked: ${likedBox.length}, Seen: ${seenBox.length}');
     } else {
       print('No user found, using default boxes');
@@ -235,6 +238,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
       swipeBox = await Hive.openBox('swipeData_default');
       cacheBox = await Hive.openBox<Question>('cachedQuestions_default');
       seenBox = await Hive.openBox<Question>('seenQuestions_default');
+      await _categoryStats.init('default');
     }
 
     // Load persisted swipe count and cooldown
@@ -720,6 +724,9 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       );
     }();
 
+    // Record category swipe for preference algorithm
+    _categoryStats.recordSwipe(_normalizeCategory(currentQuestion.category));
+
     // Add to seen questions for persistence
     final seen = List<Question>.from(state.seenQuestions);
     if (!seen.any((q) => q.text == currentQuestion.text && q.category == currentQuestion.category)) {
@@ -900,7 +907,10 @@ Future<void> _syncSwipeLimitFromFirestore() async {
         swipeVelocity: velocity,
       );
     }();
-    
+
+    // Record category swipe for preference algorithm
+    _categoryStats.recordSwipe(_normalizeCategory(question.category));
+
     // Add to seen questions for persistence
     final seen = List<Question>.from(state.seenQuestions);
     if (!seen.any((q) => q.text == question.text && q.category == question.category)) {
@@ -913,7 +923,7 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       if (mounted) {
         state = state.copyWith(seenQuestions: seen);
       }
-      
+
       // Persist to Hive
       if (Hive.isBoxOpen(seenBox.name)) {
         seenBox.add(seenQuestion);
@@ -921,8 +931,14 @@ Future<void> _syncSwipeLimitFromFirestore() async {
     }
 
     _currentQuestionStartTime = DateTime.now();
-    
+
     _maybeGenerateMore();
+  }
+
+  /// Record that the user saved a reflection for a card in [q]'s category.
+  /// Boosts that category's weight by 1.3× in future deck builds.
+  void recordReflection(Question q) {
+    _categoryStats.recordReflection(_normalizeCategory(q.category));
   }
 
   /// Toggle liked status without changing current card
@@ -949,7 +965,14 @@ Future<void> _syncSwipeLimitFromFirestore() async {
     if (mounted) {
       state = state.copyWith(likedQuestions: updatedLikes);
     }
-    
+
+    // Update category preference stats
+    if (isCurrentlyLiked) {
+      _categoryStats.recordUnlike(normCat);
+    } else {
+      _categoryStats.recordLike(normCat);
+    }
+
     try {
       // Update Firestore first (source of truth)
       await UserBehaviorService.trackQuestionLike(
@@ -1081,7 +1104,7 @@ Future<void> _syncSwipeLimitFromFirestore() async {
   }
 
   void _rebuildSessionQuestions() {
-     if (_isDisposed || !mounted) return;
+    if (_isDisposed || !mounted) return;
 
     var filtered = state.allQuestions;
     if (state.selectedCategories.isNotEmpty) {
@@ -1096,26 +1119,43 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       }).toList();
     }
 
-    // Exclude anything already seen or liked, and also de-duplicate by (category|text) key.
+    // Exclude anything already seen or liked; de-duplicate by (category|text) key.
     final exclude = {...state.seenKeys, ...state.likedKeys};
-    final seen = <String>{};
-    final session = <Question>[];
+    final deduped = <String>{};
+    final buckets = <String, List<Question>>{};
 
     for (final q in filtered) {
       final key = _questionKey(q);
       if (exclude.contains(key)) continue;
-      if (seen.add(key)) {
-        session.add(q);
-      }
+      if (!deduped.add(key)) continue;
+      final cat = _normalizeCategory(q.category);
+      buckets.putIfAbsent(cat, () => []).add(q);
     }
 
-     if (!_isDisposed && mounted) {
-    state = state.copyWith(
-      sessionQuestions: session,
-      currentIndex: 0,
-    );
+    List<Question> session;
+
+    if (buckets.isEmpty) {
+      session = [];
+    } else if (buckets.length == 1) {
+      // Only one category — shuffle it; no interleaving needed.
+      session = List<Question>.from(buckets.values.first)..shuffle(Random());
+    } else {
+      // Weighted interleaving across categories
+      final activeCategories = buckets.keys.toList();
+      final weights = _categoryStats.getWeights(activeCategories);
+      session = CategoryStatsService.weightedInterleave(
+        buckets: buckets,
+        weights: weights,
+      );
+    }
+
+    if (!_isDisposed && mounted) {
+      state = state.copyWith(
+        sessionQuestions: session,
+        currentIndex: 0,
+      );
+    }
   }
-}
   
   @override
   void dispose() {
