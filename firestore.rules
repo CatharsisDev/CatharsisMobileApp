@@ -39,6 +39,27 @@ service cloud.firestore {
       }
     }
     
+    // Duo Sessions
+    // - Any authenticated user can create a session (they become the host)
+    // - Only the host or the guest can read or update the session
+    match /duoSessions/{sessionCode} {
+      allow create: if request.auth != null
+                    && request.resource.data.hostUid == request.auth.uid;
+
+      allow read: if request.auth != null
+                  && (resource.data.hostUid == request.auth.uid
+                      || resource.data.guestUid == request.auth.uid
+                      // Allow any authenticated user to read an open session so
+                      // they can validate the code and join it.
+                      || resource.data.guestUid == null);
+
+      allow update: if request.auth != null
+                    && (resource.data.hostUid == request.auth.uid
+                        || resource.data.guestUid == request.auth.uid
+                        // Allow a new guest to join (guestUid is null until join)
+                        || resource.data.guestUid == null);
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write, delete: if false;

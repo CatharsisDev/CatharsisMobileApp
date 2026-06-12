@@ -489,7 +489,7 @@ class SettingsMenuPage extends ConsumerWidget {
   }
 
   Widget _buildSocialButton({
-    required IconData icon,
+    required FaIconData icon,
     required String url,
     required BuildContext context,
     Color? brandColor,
@@ -540,7 +540,7 @@ class SettingsMenuPage extends ConsumerWidget {
   Widget _buildSettingsItem({
     required BuildContext context,
     required ThemeData theme,
-    required IconData icon,
+    required dynamic icon,
     required String title,
     required VoidCallback onTap,
     bool isRed = false,
@@ -584,14 +584,14 @@ class SettingsMenuPage extends ConsumerWidget {
                         ),
                       ),
                     )
-                  : (icon == FontAwesomeIcons.heart
+                  : (icon is FaIconData
                       ? FaIcon(
                           icon,
                           color: isRed ? Colors.red : theme.iconTheme.color,
                           size: 24,
                         )
                       : Icon(
-                          icon,
+                          icon as IconData,
                           color: isRed ? Colors.red : theme.iconTheme.color,
                           size: 24,
                         )),

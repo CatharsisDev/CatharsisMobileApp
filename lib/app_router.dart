@@ -6,6 +6,9 @@ import '/pages/auth/login_page.dart';
 import 'pages/home_page/home_page_widget.dart';
 import 'pages/profile/profile_page.dart';
 import 'pages/welcome_screen/welcome_screen.dart';
+import 'pages/duo_mode/duo_lobby_page.dart';
+import 'pages/duo_mode/duo_swipe_page.dart';
+import 'pages/duo_mode/duo_summary_page.dart';
 import 'main.dart';
 import 'provider/tutorial_state_provider.dart';
 import 'provider/auth_provider.dart';
@@ -121,6 +124,45 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
             return null; // Wait for state, stay here
           }
           if (!tutorialState.hasSeenWelcome) return '/welcome';
+          return null;
+        },
+      ),
+
+      // ── Duo Mode routes ─────────────────────────────────────────────────────
+      GoRoute(
+        path: '/duo',
+        name: 'DuoLobby',
+        builder: (context, state) => const DuoLobbyPage(),
+        redirect: (context, state) async {
+          final authState = ref.read(authStateProvider);
+          final user = authState.whenOrNull(data: (user) => user);
+          if (user == null) return '/login';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/duo/session/:code',
+        name: 'DuoSwipe',
+        builder: (context, state) => DuoSwipePage(
+          sessionCode: state.pathParameters['code']!,
+        ),
+        redirect: (context, state) async {
+          final authState = ref.read(authStateProvider);
+          final user = authState.whenOrNull(data: (user) => user);
+          if (user == null) return '/login';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/duo/summary/:code',
+        name: 'DuoSummary',
+        builder: (context, state) => DuoSummaryPage(
+          sessionCode: state.pathParameters['code']!,
+        ),
+        redirect: (context, state) async {
+          final authState = ref.read(authStateProvider);
+          final user = authState.whenOrNull(data: (user) => user);
+          if (user == null) return '/login';
           return null;
         },
       ),

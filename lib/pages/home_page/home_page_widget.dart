@@ -1491,6 +1491,26 @@ final isSmallPhone = isVerySmall || isSmall;
                       ),
                     ),
                     SizedBox(width: 22),
+                    // Duo Mode button
+                    InkWell(
+                      onTap: () => context.push('/duo'),
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: prefButtonSize,
+                        height: prefButtonSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.people_alt_rounded,
+                          size: prefButtonSize * prefIconScale,
+                          color: customTheme?.iconColor ?? theme.iconTheme.color,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
                     // Preferences button
                     InkWell(
                       onTap: _openPreferences,
