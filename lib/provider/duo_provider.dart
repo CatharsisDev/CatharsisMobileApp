@@ -14,3 +14,9 @@ final duoSessionStreamProvider =
     StreamProvider.autoDispose.family<DuoSession?, String>(
   (ref, code) => DuoSessionService.streamSession(code),
 );
+
+/// All completed sessions for a given user UID, newest first.
+final duoPastSessionsProvider =
+    FutureProvider.autoDispose.family<List<DuoSession>, String>(
+  (ref, uid) => DuoSessionService.fetchPastSessions(uid),
+);

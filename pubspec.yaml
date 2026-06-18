@@ -170,4 +170,3 @@ flutter:
     - assets/images/light_mode_preference_menu.png
     - assets/images/app_icon_foreground.png
     - assets/images/promotions/
-    - .env

@@ -1,27 +1,28 @@
 import 'dart:async';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/duo_session.dart';
 import '../../provider/duo_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../services/duo_session_service.dart';
+import '../../services/subscription_service.dart';
 
-/// Returns a visible accent color for duo mode.
-/// Dark theme's primaryColor equals the background — use purple instead.
+/// Returns the button accent color for duo mode — mirrors existing app buttons.
 Color _duoAccent(ThemeData t) {
-  if (t.brightness == Brightness.dark) return const Color(0xFFBE89FF);
-  return t.primaryColor;
+  return t.extension<CustomThemeExtension>()?.preferenceButtonColor ?? t.primaryColor;
 }
 
-/// Phases of a single card in the new reflection-first flow.
+/// Phases of a single card in the reflection-first flow.
 enum _CardPhase {
-  writing,          // Player is typing their answer
-  waitingForPartner, // Submitted, waiting for partner to submit
-  choosingMatch,    // Both submitted — overlay shows both answers + choice buttons
-  waitingForChoice, // I chose, waiting for partner's choice
-  showingResult,    // Both chose — overlay shows result briefly then auto-advances
+  writing,            // Player is typing their answer
+  waitingForPartner,  // Submitted, waiting for partner to submit
+  choosingMatch,      // Both submitted — overlay shows both answers + choice buttons
+  waitingForChoice,   // I chose, waiting for partner's choice
+  showingResult,      // Both chose — overlay shows result briefly then auto-advances
 }
 
 class DuoSwipePage extends ConsumerStatefulWidget {
@@ -38,27 +39,31 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
   late AnimationController _overlayController;
   late Animation<double> _overlayFade;
 
+  // ── Card timer & pulse ───────────────────────────────────────────────────
+  static const int _kCardDuration = 45;
+  int _secondsLeft = _kCardDuration;
+  Timer? _cardTimer;
+  bool _timerStarted = false; // guards against starting timer before session is active
+
+  /// Pulse controller — starts repeating when ≤ 5 seconds remain.
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
+
   // ── Card-level state ─────────────────────────────────────────────────────
   _CardPhase _phase = _CardPhase.writing;
-  String? _myMatchChoice;    // 'matched' | 'differed' once chosen locally
-  bool _isSubmitting = false; // true while saveReflection is in flight
+  String? _myMatchChoice;
+  bool _isSubmitting = false;
   bool _partnerLeftDialogShown = false;
 
-  // Tracks which card we are displaying locally.
-  // We manage this ourselves (not session.currentCardIndex) so the reveal
-  // fires correctly even if the stream has already advanced.
   int _displayedCardIndex = 0;
-
-  // Text controller for the player's answer
   late TextEditingController _myReflectionController;
-
-  // Auto-advance timer after showingResult
   Timer? _advanceTimer;
 
   @override
   void initState() {
     super.initState();
     _myReflectionController = TextEditingController();
+
     _overlayController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -67,13 +72,26 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       parent: _overlayController,
       curve: Curves.easeInOut,
     );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _pulseAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    // Timer is started from _onSessionUpdate once the session is active,
+    // so both players always get a full 45 s regardless of waiting time.
   }
 
   @override
   void dispose() {
     _overlayController.dispose();
     _myReflectionController.dispose();
+    _pulseController.dispose();
     _advanceTimer?.cancel();
+    _cardTimer?.cancel();
     super.dispose();
   }
 
@@ -84,12 +102,64 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       _phase == _CardPhase.waitingForChoice ||
       _phase == _CardPhase.showingResult;
 
+  // ── Card timer ───────────────────────────────────────────────────────────
+
+  void _startCardTimer() {
+    _cardTimer?.cancel();
+    _pulseController.stop();
+    _pulseController.reset();
+    if (!mounted) return;
+    setState(() => _secondsLeft = _kCardDuration);
+
+    _cardTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      if (_phase != _CardPhase.writing) { t.cancel(); return; }
+
+      setState(() {
+        _secondsLeft = (_secondsLeft - 1).clamp(0, _kCardDuration);
+      });
+
+      // Tension haptics
+      if (_secondsLeft == 10) HapticFeedback.lightImpact();
+      if (_secondsLeft == 5) {
+        HapticFeedback.mediumImpact();
+        if (!_pulseController.isAnimating) _pulseController.repeat(reverse: true);
+      }
+      if (_secondsLeft == 3 || _secondsLeft == 2 || _secondsLeft == 1) {
+        HapticFeedback.lightImpact();
+      }
+
+      if (_secondsLeft <= 0) {
+        t.cancel();
+        // Auto-submit on timeout — reads session from provider
+        final session = ref.read(duoSessionStreamProvider(widget.sessionCode)).value;
+        if (session != null && mounted) _autoSubmitOnTimeout(session);
+      }
+    });
+  }
+
+  Future<void> _autoSubmitOnTimeout(DuoSession session) async {
+    if (_phase != _CardPhase.writing || _isSubmitting) return;
+    // Submit whatever they typed; fall back to "…" if nothing
+    if (_myReflectionController.text.trim().isEmpty) {
+      _myReflectionController.text = '…';
+    }
+    await _submitReflection(session);
+  }
+
   // ── Session update handler ───────────────────────────────────────────────
 
   void _onSessionUpdate(DuoSession? session) {
     if (session == null) return;
 
-    // Partner left — show dialog once
+    // Start the card timer the very first time the session becomes active.
+    // Doing it here (not in initState) ensures both players get a full 45 s
+    // regardless of how long they waited in the lobby.
+    if (!session.isWaiting && !_timerStarted) {
+      _timerStarted = true;
+      _startCardTimer();
+    }
+
     if (session.status == DuoSessionStatus.cancelled) {
       if (_partnerLeftDialogShown) return;
       _partnerLeftDialogShown = true;
@@ -106,9 +176,18 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
             backgroundColor: alertTheme.cardColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Text('Partner left',
-                style: TextStyle(color: alertFontColor, fontWeight: FontWeight.w700, fontSize: 18)),
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: alertFontColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                )),
             content: Text('Your partner has left the session.',
-                style: TextStyle(color: alertFontColor.withOpacity(0.6), fontSize: 14)),
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: alertFontColor.withOpacity(0.6),
+                  fontSize: 14,
+                )),
             actions: [
               TextButton(
                 onPressed: () {
@@ -116,7 +195,10 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                   context.go('/home');
                 },
                 child: Text('Go home',
-                    style: TextStyle(color: _duoAccent(alertTheme))),
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      color: _duoAccent(alertTheme),
+                    )),
               ),
             ],
           ),
@@ -127,16 +209,12 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
 
     if (_displayedCardIndex >= session.cards.length) return;
     final card = session.cards[_displayedCardIndex];
-    final myReflection =
-        _isHost ? card.hostReflection : card.guestReflection;
-    final partnerReflection =
-        _isHost ? card.guestReflection : card.hostReflection;
-    final partnerChoice =
-        _isHost ? card.guestMatchChoice : card.hostMatchChoice;
+    final myReflection = _isHost ? card.hostReflection : card.guestReflection;
+    final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
+    final partnerChoice = _isHost ? card.guestMatchChoice : card.hostMatchChoice;
 
     switch (_phase) {
       case _CardPhase.writing:
-        // If we reconnected mid-session and I already submitted, restore state
         if (myReflection.isNotEmpty) {
           _myReflectionController.text = myReflection;
           if (partnerReflection.isNotEmpty) {
@@ -154,7 +232,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         }
 
       case _CardPhase.choosingMatch:
-        // Nothing — waiting for user to tap Matched / Differed
         break;
 
       case _CardPhase.waitingForChoice:
@@ -167,7 +244,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         }
 
       case _CardPhase.showingResult:
-        // Timer handles the advance
         break;
     }
   }
@@ -177,6 +253,11 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
   Future<void> _submitReflection(DuoSession session) async {
     final text = _myReflectionController.text.trim();
     if (text.isEmpty || _isSubmitting) return;
+
+    // Stop the card timer
+    _cardTimer?.cancel();
+    _pulseController.stop();
+    _pulseController.reset();
 
     HapticFeedback.lightImpact();
     setState(() => _isSubmitting = true);
@@ -193,8 +274,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       _isSubmitting = false;
       _phase = _CardPhase.waitingForPartner;
     });
-    // _onSessionUpdate will fire via the stream and transition to choosingMatch
-    // if partner already answered.
   }
 
   Future<void> _recordMatchChoice(DuoSession session, String choice) async {
@@ -212,7 +291,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       isHost: _isHost,
       choice: choice,
     );
-    // _onSessionUpdate will transition to showingResult when partner responds.
   }
 
   void _dismissReveal(DuoSession session) {
@@ -228,21 +306,35 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       });
       if (nextIdx >= session.cards.length) {
         _finishSession();
+      } else {
+        _startCardTimer(); // restart for the new card
       }
     });
   }
 
   Future<void> _finishSession() async {
+    // Set 3-hour cooldown for non-premium users
+    final isPremium = ref.read(isPremiumProvider).maybeWhen(
+      data: (v) => v,
+      orElse: () => false,
+    );
+    if (!isPremium) {
+      final prefs = await SharedPreferences.getInstance();
+      final cooldownUntil = DateTime.now().add(const Duration(hours: 3));
+      await prefs.setInt(
+          'duo_cooldown_until_ms', cooldownUntil.millisecondsSinceEpoch);
+    }
+
     await DuoSessionService.completeSession(widget.sessionCode);
-    if (mounted) context.pushReplacement('/duo/summary/${widget.sessionCode}');
+    // Go to the Wrapped recap slides first, then they navigate to the full summary.
+    if (mounted) context.pushReplacement('/duo/wrap/${widget.sessionCode}');
   }
 
   // ── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final sessionAsync =
-        ref.watch(duoSessionStreamProvider(widget.sessionCode));
+    final sessionAsync = ref.watch(duoSessionStreamProvider(widget.sessionCode));
     final appTheme = Theme.of(context);
     final customTheme = appTheme.extension<CustomThemeExtension>();
     final bgColor = appTheme.scaffoldBackgroundColor;
@@ -257,7 +349,8 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       ),
       error: (e, _) => Scaffold(
         backgroundColor: bgColor,
-        body: Center(child: Text('Error: $e')),
+        body: Center(child: Text('Error: $e',
+            style: const TextStyle(fontFamily: 'Runtime'))),
       ),
       data: (session) {
         if (session == null) {
@@ -265,25 +358,26 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
             backgroundColor: bgColor,
             body: Center(
               child: Text('Session not found',
-                  style: TextStyle(color: fontColor.withOpacity(0.5))),
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: fontColor.withOpacity(0.5),
+                  )),
             ),
           );
         }
 
-        // React to live updates after build
         WidgetsBinding.instance.addPostFrameCallback((_) => _onSessionUpdate(session));
 
-        // Waiting screen while partner hasn't joined
         if (session.isWaiting) {
-          return _WaitingForPartnerScreen(sessionCode: widget.sessionCode, hostName: session.hostName);
+          return _WaitingForPartnerScreen(
+              sessionCode: widget.sessionCode, hostName: session.hostName);
         }
 
         final idx = _displayedCardIndex;
 
-        // All done — navigate to summary
         if (session.isComplete || idx >= session.cards.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) context.pushReplacement('/duo/summary/${widget.sessionCode}');
+            if (mounted) context.pushReplacement('/duo/wrap/${widget.sessionCode}');
           });
           return Scaffold(
             backgroundColor: bgColor,
@@ -292,10 +386,8 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         }
 
         final card = session.cards[idx];
-        final partnerReflection =
-            _isHost ? card.guestReflection : card.hostReflection;
-        final partnerName =
-            _isHost ? (session.guestName ?? 'Partner') : session.hostName;
+        final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
+        final partnerName = _isHost ? (session.guestName ?? 'Partner') : session.hostName;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -316,13 +408,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                     ),
                     if (!_isShowingOverlay) ...[
                       _buildAnswerArea(session),
-                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height < 700 ? 16 : 24,
+                      ),
                     ],
                   ],
                 ),
               ),
-
-              // Reveal overlay — fades in when both players have answered
               if (_isShowingOverlay)
                 FadeTransition(
                   opacity: _overlayFade,
@@ -348,9 +440,10 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     final fontColor =
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final iconColor = customTheme?.iconColor ?? fontColor;
+    final isSmall = MediaQuery.of(context).size.height < 700;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: EdgeInsets.fromLTRB(20, isSmall ? 10 : 16, 20, 0),
       child: Row(
         children: [
           IconButton(
@@ -368,6 +461,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                 Text(
                   'Duo Mode',
                   style: TextStyle(
+                    fontFamily: 'Runtime',
                     color: fontColor.withOpacity(0.5),
                     fontWeight: FontWeight.w600,
                     fontSize: 11,
@@ -377,6 +471,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                 Text(
                   'Card ${idx + 1} of ${session.cards.length}',
                   style: TextStyle(
+                    fontFamily: 'Runtime',
                     color: fontColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -385,6 +480,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               ],
             ),
           ),
+          // Countdown ring — visible only during writing phase
+          _TimerRing(
+            secondsLeft: _secondsLeft,
+            totalSeconds: _kCardDuration,
+            isActive: _phase == _CardPhase.writing,
+          ),
+          const SizedBox(width: 10),
           _PartnerChip(
             name: partnerName,
             hasAnswered: partnerHasAnswered,
@@ -401,94 +503,152 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     final customTheme = appTheme.extension<CustomThemeExtension>();
     final fontColor =
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
-    final category = card.questionCategory;
-    final categoryColor = _categoryColor(category);
+    final size = MediaQuery.of(context).size;
+    final isSmall = size.height < 700;
+    final bgImagePath = customTheme?.backgroundImagePath;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: appTheme.cardColor,
-          borderRadius: BorderRadius.circular(28),
-          image: (customTheme?.showBackgroundTexture == true &&
-                  customTheme?.backgroundImagePath != null)
-              ? DecorationImage(
-                  image: AssetImage(customTheme!.backgroundImagePath!),
-                  fit: BoxFit.cover,
-                  opacity: 0.4,
-                )
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: categoryColor.withOpacity(0.15),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          border: Border.all(
-            color: categoryColor.withOpacity(0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: categoryColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+    // Compute tension state
+    final isUrgent  = _phase == _CardPhase.writing && _secondsLeft <= 8;
+    final isWarning = _phase == _CardPhase.writing && _secondsLeft > 8 && _secondsLeft <= 15;
+
+    final borderColor = isUrgent
+        ? const Color(0xFFEF4444)
+        : isWarning
+            ? const Color(0xFFF59E0B)
+            : fontColor.withOpacity(0.1);
+    final borderWidth = isUrgent ? 2.0 : isWarning ? 1.5 : 1.0;
+
+    // Wrap in AnimatedBuilder so the pulse shadow animates at < 5 seconds
+    return AnimatedBuilder(
+      animation: _pulseAnim,
+      builder: (context, _) {
+        final glowOpacity = (isUrgent && _secondsLeft <= 5)
+            ? 0.12 + (_pulseAnim.value * 0.25)
+            : 0.0;
+
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: isSmall ? 6 : 10),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: appTheme.cardColor,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                child: Text(
-                  category,
-                  style: TextStyle(
-                    color: categoryColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
+                if (glowOpacity > 0)
+                  BoxShadow(
+                    color: const Color(0xFFEF4444).withOpacity(glowOpacity),
+                    blurRadius: 28,
+                    spreadRadius: 4,
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                card.questionText,
-                textAlign: TextAlign.center,
-                style: appTheme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  height: 1.45,
-                  fontSize: 20,
-                  color: fontColor,
-                ),
-              ),
-              const Spacer(),
-              // Progress dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  total.clamp(0, 10),
-                  (i) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == idx ? 20 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: i == idx
-                          ? categoryColor
-                          : i < idx
-                              ? categoryColor.withOpacity(0.4)
-                              : fontColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(4),
+              ],
+              border: Border.all(color: borderColor, width: borderWidth),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(27),
+              child: Stack(
+                children: [
+                  if (bgImagePath != null)
+                    Positioned.fill(
+                      child: Image.asset(bgImagePath, fit: BoxFit.cover),
+                    ),
+                  if (bgImagePath != null)
+                    Positioned.fill(
+                      child: Container(color: appTheme.cardColor.withOpacity(0.45)),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.all(isSmall ? 18 : 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Question text
+                        Expanded(
+                          child: Center(
+                            child: AutoSizeText(
+                              card.questionText,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Runtime',
+                                fontWeight: FontWeight.bold,
+                                fontSize: isSmall
+                                    ? size.width * 0.072
+                                    : size.width * 0.075,
+                                height: 1.35,
+                                letterSpacing: 1.2,
+                                color: fontColor,
+                              ),
+                              minFontSize: 15,
+                              maxLines: 8,
+                              overflow: TextOverflow.visible,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: isSmall ? 12 : 16),
+
+                        // Category chip — neutral
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: fontColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: fontColor.withOpacity(0.18), width: 1),
+                          ),
+                          child: Text(
+                            card.questionCategory,
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: fontColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: isSmall ? 12 : 16),
+
+                        // Progress dots — pure neutral (black/white based on brightness)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            total.clamp(0, 10),
+                            (i) => AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              width: i == idx ? 20 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: (() {
+                                  final base = appTheme.brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black;
+                                  return i == idx
+                                      ? base.withOpacity(0.65)
+                                      : i < idx
+                                          ? base.withOpacity(0.30)
+                                          : base.withOpacity(0.13);
+                                })(),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -499,6 +659,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     final fontColor =
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final accentColor = _duoAccent(appTheme);
+    final isSmall = MediaQuery.of(context).size.height < 700;
 
     if (_phase == _CardPhase.waitingForPartner) {
       return Padding(
@@ -522,6 +683,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               Text(
                 'Waiting for partner…',
                 style: TextStyle(
+                  fontFamily: 'Runtime',
                   color: accentColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -533,7 +695,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       );
     }
 
-    // writing phase — text input + submit button
     final dimColor = fontColor.withOpacity(0.3);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -543,6 +704,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
           Text(
             'Your answer',
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: fontColor.withOpacity(0.55),
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -552,13 +714,21 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
           const SizedBox(height: 8),
           TextField(
             controller: _myReflectionController,
-            maxLines: 3,
+            maxLines: isSmall ? 2 : 3,
             minLines: 2,
             textInputAction: TextInputAction.newline,
-            style: TextStyle(color: fontColor, fontSize: 14),
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontSize: 14,
+            ),
             decoration: InputDecoration(
               hintText: 'Write what this question brings up for you…',
-              hintStyle: TextStyle(color: dimColor, fontSize: 14),
+              hintStyle: TextStyle(
+                fontFamily: 'Runtime',
+                color: dimColor,
+                fontSize: 14,
+              ),
               filled: true,
               fillColor: appTheme.cardColor,
               border: OutlineInputBorder(
@@ -599,9 +769,11 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                   : const Text(
                       'Submit Answer',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15),
+                        fontFamily: 'Runtime',
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
             ),
           ),
@@ -610,10 +782,6 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     );
   }
 
-  /// Overlay that shows after both players have answered:
-  /// - choosingMatch   → both answers + Matched / Differed buttons
-  /// - waitingForChoice → both answers + my choice + waiting spinner
-  /// - showingResult    → result icon + label
   Widget _buildRevealOverlay(DuoSession session, int idx, String partnerName) {
     final appTheme = Theme.of(context);
     final customTheme = appTheme.extension<CustomThemeExtension>();
@@ -621,19 +789,23 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final accentColor = _duoAccent(appTheme);
     final card = session.cards[idx];
-    final myReflection =
-        _isHost ? card.hostReflection : card.guestReflection;
-    final partnerReflection =
-        _isHost ? card.guestReflection : card.hostReflection;
+    final myReflection = _isHost ? card.hostReflection : card.guestReflection;
+    final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
 
     Widget overlayContent;
 
     if (_phase == _CardPhase.showingResult) {
-      final resultColor =
-          card.isMatch ? const Color(0xFF4CAF50) : const Color(0xFFF59E0B);
-      final resultIcon = card.isMatch
-          ? Icons.favorite_rounded
-          : Icons.compare_arrows_rounded;
+      // Match → green heart.  Differed → red arrows.  Mixed → amber.
+      final Color resultColor;
+      if (card.isMatch) {
+        resultColor = const Color(0xFF4CAF50);
+      } else if (card.bothDiffered) {
+        resultColor = const Color(0xFFEF4444);
+      } else {
+        resultColor = const Color(0xFFF59E0B);
+      }
+      final resultIcon =
+          card.isMatch ? Icons.favorite_rounded : Icons.compare_arrows_rounded;
       final resultLabel = card.isMatch
           ? 'You connected!'
           : card.bothDiffered
@@ -657,7 +829,9 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
             resultLabel,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: resultColor,
+              fontFamily: 'Runtime',
+              // Heart/icon stays its result color; text uses the theme text color
+              color: fontColor,
               fontWeight: FontWeight.w800,
               fontSize: 22,
             ),
@@ -687,8 +861,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
           ),
           const SizedBox(height: 20),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: choiceColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
@@ -702,6 +875,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                 Text(
                   choiceLabel,
                   style: TextStyle(
+                    fontFamily: 'Runtime',
                     color: choiceColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -724,7 +898,10 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               Text(
                 'Waiting for $partnerName…',
                 style: TextStyle(
-                    color: fontColor.withOpacity(0.5), fontSize: 13),
+                  fontFamily: 'Runtime',
+                  color: fontColor.withOpacity(0.5),
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -738,6 +915,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
           Text(
             'Both answered!',
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: fontColor,
               fontWeight: FontWeight.w800,
               fontSize: 18,
@@ -756,6 +934,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
           Text(
             'Do you feel you connected?',
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: fontColor.withOpacity(0.6),
               fontSize: 14,
             ),
@@ -795,10 +974,11 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       child: Center(
         child: SingleChildScrollView(
           child: Container(
-            margin:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            margin: EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: MediaQuery.of(context).size.height < 700 ? 24 : 40,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
             decoration: BoxDecoration(
               color: appTheme.cardColor,
               borderRadius: BorderRadius.circular(28),
@@ -830,15 +1010,25 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Leave Session?',
             style: TextStyle(
-                color: fontColor, fontWeight: FontWeight.w700, fontSize: 18)),
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            )),
         content: Text('Your progress will be lost.',
             style: TextStyle(
-                color: fontColor.withOpacity(0.6), fontSize: 14)),
+              fontFamily: 'Runtime',
+              color: fontColor.withOpacity(0.6),
+              fontSize: 14,
+            )),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Stay',
-                style: TextStyle(color: fontColor.withOpacity(0.5))),
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: fontColor.withOpacity(0.5),
+                )),
           ),
           TextButton(
             onPressed: () async {
@@ -847,32 +1037,72 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               if (mounted) context.go('/home');
             },
             child: const Text('Leave',
-                style: TextStyle(color: Color(0xFFEF4444))),
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: Color(0xFFEF4444),
+                )),
           ),
         ],
       ),
     );
   }
+}
 
-  Color _categoryColor(String category) {
-    switch (category) {
-      case 'Love and Intimacy':
-        return const Color(0xFFE57373);
-      case 'Spirituality':
-        return const Color(0xFF81C784);
-      case 'Society':
-        return const Color(0xFF64B5F6);
-      case 'Interactions and Relationships':
-        return const Color(0xFFFFB74D);
-      case 'Personal Development':
-        return const Color(0xFFCA4ED1);
-      default:
-        return const Color(0xFF9E9E9E);
+// ── Timer ring widget ─────────────────────────────────────────────────────────
+
+class _TimerRing extends StatelessWidget {
+  final int secondsLeft;
+  final int totalSeconds;
+  final bool isActive;
+
+  const _TimerRing({
+    required this.secondsLeft,
+    required this.totalSeconds,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isActive) return const SizedBox(width: 38, height: 38);
+
+    final progress = (secondsLeft / totalSeconds).clamp(0.0, 1.0);
+    final Color ringColor;
+    if (secondsLeft <= 8) {
+      ringColor = const Color(0xFFEF4444); // red
+    } else if (secondsLeft <= 15) {
+      ringColor = const Color(0xFFF59E0B); // amber
+    } else {
+      ringColor = const Color(0xFF4CAF50); // green
     }
+
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 3.5,
+            backgroundColor: ringColor.withOpacity(0.15),
+            valueColor: AlwaysStoppedAnimation(ringColor),
+          ),
+          Text(
+            '$secondsLeft',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: ringColor,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-// ── Waiting screen (pre-game, partner not joined yet) ────────────────────────
+// ── Waiting screen ────────────────────────────────────────────────────────────
 
 class _WaitingForPartnerScreen extends ConsumerWidget {
   final String sessionCode;
@@ -890,6 +1120,7 @@ class _WaitingForPartnerScreen extends ConsumerWidget {
     final fontColor =
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final accentColor = _duoAccent(appTheme);
+    final isSmall = MediaQuery.of(context).size.height < 700;
 
     return Scaffold(
       backgroundColor: appTheme.scaffoldBackgroundColor,
@@ -910,32 +1141,40 @@ class _WaitingForPartnerScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircularProgressIndicator(color: accentColor),
-                const SizedBox(height: 32),
+                SizedBox(height: isSmall ? 20 : 32),
                 Text(
                   'Waiting for partner…',
                   style: TextStyle(
+                    fontFamily: 'Runtime',
                     color: fontColor,
                     fontWeight: FontWeight.w700,
-                    fontSize: 22,
+                    fontSize: isSmall ? 20 : 22,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: isSmall ? 8 : 12),
                 Text(
                   'Share this code with your partner:',
-                  style: TextStyle(color: fontColor.withOpacity(0.6), fontSize: 14),
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: fontColor.withOpacity(0.6),
+                    fontSize: 14,
+                  ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isSmall ? 14 : 20),
                 _CodeDisplay(
                   code: sessionCode,
                   accentColor: accentColor,
                   fontColor: fontColor,
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: isSmall ? 20 : 32),
                 Text(
                   'The session will start automatically once they join.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: fontColor.withOpacity(0.5), fontSize: 13),
+                    fontFamily: 'Runtime',
+                    color: fontColor.withOpacity(0.5),
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -963,7 +1202,8 @@ class _CodeDisplay extends StatelessWidget {
         Clipboard.setData(ClipboardData(text: code));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Code copied!'),
+            content: Text('Code copied!',
+                style: TextStyle(fontFamily: 'Runtime')),
             duration: Duration(seconds: 2),
           ),
         );
@@ -981,6 +1221,7 @@ class _CodeDisplay extends StatelessWidget {
             Text(
               code,
               style: TextStyle(
+                fontFamily: 'Runtime',
                 fontWeight: FontWeight.w900,
                 letterSpacing: 8,
                 color: accentColor,
@@ -996,9 +1237,8 @@ class _CodeDisplay extends StatelessWidget {
   }
 }
 
-// ── Helper widgets ───────────────────────────────────────────────────────────
+// ── Helper widgets ────────────────────────────────────────────────────────────
 
-/// Shows partner's current status in the header.
 class _PartnerChip extends StatelessWidget {
   final String name;
   final bool hasAnswered;
@@ -1015,10 +1255,8 @@ class _PartnerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const doneColor = Color(0xFF4CAF50);
-    final chipColor =
-        hasAnswered ? doneColor : fontColor.withOpacity(0.12);
-    final textColor =
-        hasAnswered ? doneColor : fontColor.withOpacity(0.45);
+    final chipColor = hasAnswered ? doneColor : fontColor.withOpacity(0.12);
+    final textColor = hasAnswered ? doneColor : fontColor.withOpacity(0.45);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1038,6 +1276,7 @@ class _PartnerChip extends StatelessWidget {
           Text(
             name,
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: textColor,
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -1049,7 +1288,6 @@ class _PartnerChip extends StatelessWidget {
   }
 }
 
-/// Displays both players' answers side-by-side in the reveal overlay.
 class _ReflectionDisplay extends StatelessWidget {
   final String myName;
   final String myText;
@@ -1111,6 +1349,7 @@ class _ReflectionDisplay extends StatelessWidget {
           Text(
             name,
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: nameColor,
               fontWeight: FontWeight.w700,
               fontSize: 11,
@@ -1120,7 +1359,12 @@ class _ReflectionDisplay extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             text.isEmpty ? '…' : text,
-            style: TextStyle(color: fontColor, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -1128,7 +1372,6 @@ class _ReflectionDisplay extends StatelessWidget {
   }
 }
 
-/// Matched / Differed choice button shown in the reveal overlay.
 class _ChoiceButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1164,6 +1407,7 @@ class _ChoiceButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
+                fontFamily: 'Runtime',
                 color: color,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,

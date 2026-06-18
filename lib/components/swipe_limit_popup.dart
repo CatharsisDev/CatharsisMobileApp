@@ -147,6 +147,18 @@ class SwipeLimitPopup extends ConsumerWidget {
                             text: 'Streak freezes — never lose your streak',
                             fontColor: customTheme?.fontColor ?? Colors.white,
                           ),
+                          const SizedBox(height: 8),
+                          _BenefitLine(
+                            icon: Icons.people_rounded,
+                            text: 'Unlimited Duo Mode sessions',
+                            fontColor: customTheme?.fontColor ?? Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          _BenefitLine(
+                            icon: Icons.format_list_numbered_rounded,
+                            text: 'Up to 20 questions per Duo session',
+                            fontColor: customTheme?.fontColor ?? Colors.white,
+                          ),
                           if (Platform.isAndroid) ...[
                             const SizedBox(height: 8),
                             _BenefitLine(

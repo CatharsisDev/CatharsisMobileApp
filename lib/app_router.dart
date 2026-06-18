@@ -8,6 +8,7 @@ import 'pages/profile/profile_page.dart';
 import 'pages/welcome_screen/welcome_screen.dart';
 import 'pages/duo_mode/duo_lobby_page.dart';
 import 'pages/duo_mode/duo_swipe_page.dart';
+import 'pages/duo_mode/duo_wrap_page.dart';
 import 'pages/duo_mode/duo_summary_page.dart';
 import 'main.dart';
 import 'provider/tutorial_state_provider.dart';
@@ -144,6 +145,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier, WidgetRef ref) {
         path: '/duo/session/:code',
         name: 'DuoSwipe',
         builder: (context, state) => DuoSwipePage(
+          sessionCode: state.pathParameters['code']!,
+        ),
+        redirect: (context, state) async {
+          final authState = ref.read(authStateProvider);
+          final user = authState.whenOrNull(data: (user) => user);
+          if (user == null) return '/login';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/duo/wrap/:code',
+        name: 'DuoWrap',
+        builder: (context, state) => DuoWrapPage(
           sessionCode: state.pathParameters['code']!,
         ),
         redirect: (context, state) async {

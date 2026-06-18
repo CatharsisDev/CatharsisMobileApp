@@ -146,6 +146,35 @@ class DuoSessionService {
     await _db.collection(_col).doc(code).update({field: text.trim()});
   }
 
+  // ── Past sessions ───────────────────────────────────────────────────────────
+
+  /// Fetches all completed sessions where [uid] participated (host or guest).
+  /// Runs two queries and merges them client-side to avoid composite indexes.
+  static Future<List<DuoSession>> fetchPastSessions(String uid,
+      {int limit = 30}) async {
+    final hostSnap = await _db
+        .collection(_col)
+        .where('hostUid', isEqualTo: uid)
+        .where('status', isEqualTo: 'complete')
+        .get();
+
+    final guestSnap = await _db
+        .collection(_col)
+        .where('guestUid', isEqualTo: uid)
+        .where('status', isEqualTo: 'complete')
+        .get();
+
+    // Merge + deduplicate by sessionCode (shouldn't overlap, but safe)
+    final map = <String, DuoSession>{};
+    for (final doc in [...hostSnap.docs, ...guestSnap.docs]) {
+      final s = DuoSession.fromDoc(doc);
+      map[s.sessionCode] = s;
+    }
+
+    return map.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
   // ── Match choice ────────────────────────────────────────────────────────────
 
   /// Records a player's explicit match/differ choice for [cardIndex].

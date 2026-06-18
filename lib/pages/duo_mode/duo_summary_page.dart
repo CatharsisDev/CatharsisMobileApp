@@ -6,16 +6,22 @@ import '../../provider/duo_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../services/duo_session_service.dart';
 
-/// Returns a visible accent color for duo mode.
-/// Dark theme's primaryColor equals the background — use purple instead.
+/// Returns the button accent color for duo mode — mirrors existing app buttons.
 Color _duoAccent(ThemeData t) {
-  if (t.brightness == Brightness.dark) return const Color(0xFFBE89FF);
-  return t.primaryColor;
+  return t.extension<CustomThemeExtension>()?.preferenceButtonColor ?? t.primaryColor;
 }
 
 class DuoSummaryPage extends ConsumerStatefulWidget {
   final String sessionCode;
-  const DuoSummaryPage({Key? key, required this.sessionCode}) : super(key: key);
+  /// When opened from past-sessions history, pass the correct value here
+  /// so the page doesn't rely on the ephemeral duoIsHostProvider.
+  final bool? isHostOverride;
+
+  const DuoSummaryPage({
+    Key? key,
+    required this.sessionCode,
+    this.isHostOverride,
+  }) : super(key: key);
 
   @override
   ConsumerState<DuoSummaryPage> createState() => _DuoSummaryPageState();
@@ -25,7 +31,7 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
   final Set<int> _savingIndices = {};
   final Map<int, TextEditingController> _controllers = {};
 
-  bool get _isHost => ref.read(duoIsHostProvider);
+  bool get _isHost => widget.isHostOverride ?? ref.read(duoIsHostProvider);
 
   @override
   void dispose() {
@@ -58,8 +64,7 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
   @override
   Widget build(BuildContext context) {
     final appThemeEarly = Theme.of(context);
-    final sessionAsync =
-        ref.watch(duoSessionStreamProvider(widget.sessionCode));
+    final sessionAsync = ref.watch(duoSessionStreamProvider(widget.sessionCode));
 
     return sessionAsync.when(
       loading: () => Scaffold(
@@ -69,13 +74,17 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
       ),
       error: (e, _) => Scaffold(
         backgroundColor: appThemeEarly.scaffoldBackgroundColor,
-        body: Center(child: Text('Error: $e')),
+        body: Center(child: Text('Error: $e',
+            style: const TextStyle(fontFamily: 'Runtime'))),
       ),
       data: (session) {
         if (session == null) {
           return Scaffold(
             backgroundColor: appThemeEarly.scaffoldBackgroundColor,
-            body: const Center(child: Text('Session not found.')),
+            body: const Center(
+              child: Text('Session not found.',
+                  style: TextStyle(fontFamily: 'Runtime')),
+            ),
           );
         }
 
@@ -109,7 +118,8 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                 centerTitle: true,
                 title: Text(
                   'Session Summary',
-                  style: appTheme.textTheme.titleLarge?.copyWith(
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
                     color: fontColor,
@@ -124,14 +134,16 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _StatsBanner(
-                          matched: matched.length, split: split.length),
+                        matched: matched.length,
+                        split: split.length,
+                      ),
                       const SizedBox(height: 28),
                     ],
                   ),
                 ),
               ),
 
-              // ── Connected cards ─────────────────────────────────────────
+              // ── Connected cards ────────────────────────────────────────────
               if (matched.isNotEmpty) ...[
                 _SectionHeader(
                   icon: Icons.favorite_rounded,
@@ -144,9 +156,8 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                     (context, i) {
                       final card = matched[i];
                       final globalIdx = session.cards.indexOf(card);
-                      final myReflection = _isHost
-                          ? card.hostReflection
-                          : card.guestReflection;
+                      final myReflection =
+                          _isHost ? card.hostReflection : card.guestReflection;
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: _MatchedCardTile(
@@ -170,7 +181,7 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                 ),
               ],
 
-              // ── Split / differed cards ──────────────────────────────────
+              // ── Different perspectives cards ────────────────────────────────
               if (split.isNotEmpty) ...[
                 _SectionHeader(
                   icon: Icons.compare_arrows_rounded,
@@ -183,9 +194,8 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                     (context, i) {
                       final card = split[i];
                       final globalIdx = session.cards.indexOf(card);
-                      final myReflection = _isHost
-                          ? card.hostReflection
-                          : card.guestReflection;
+                      final myReflection =
+                          _isHost ? card.hostReflection : card.guestReflection;
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: _SplitCardTile(
@@ -229,8 +239,14 @@ class _StatsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = _duoAccent(Theme.of(context));
+    final total = matched + split;
+    // Match rate as a percentage of all cards played
+    final matchPercent = total > 0
+        ? ((matched / total) * 100).round()
+        : 0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [primaryColor, primaryColor.withOpacity(0.7)],
@@ -248,7 +264,7 @@ class _StatsBanner extends StatelessWidget {
               icon: Icons.favorite_rounded,
             ),
           ),
-          Container(width: 1, height: 50, color: Colors.white24),
+          Container(width: 1, height: 58, color: Colors.white30),
           Expanded(
             child: _StatItem(
               label: 'Different',
@@ -256,12 +272,13 @@ class _StatsBanner extends StatelessWidget {
               icon: Icons.compare_arrows_rounded,
             ),
           ),
-          Container(width: 1, height: 50, color: Colors.white24),
+          Container(width: 1, height: 58, color: Colors.white30),
+          // Match rate replaces "Total" — more meaningful stat
           Expanded(
             child: _StatItem(
-              label: 'Total',
-              value: (matched + split).toString(),
-              icon: Icons.grid_view_rounded,
+              label: 'Match Rate',
+              value: '$matchPercent%',
+              icon: Icons.bar_chart_rounded,
             ),
           ),
         ],
@@ -282,14 +299,29 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white70, size: 18),
-        const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 2),
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        Icon(icon, color: Colors.white, size: 22),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'Runtime',
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Runtime',
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1,
+          ),
+        ),
       ],
     );
   }
@@ -322,7 +354,11 @@ class _SectionHeader extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                  color: color, fontWeight: FontWeight.w800, fontSize: 15),
+                fontFamily: 'Runtime',
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
             ),
           ],
         ),
@@ -367,7 +403,6 @@ class _MatchedCardTile extends StatefulWidget {
 }
 
 class _MatchedCardTileState extends State<_MatchedCardTile> {
-  // Start collapsed; answers were already written during play
   bool _expanded = false;
 
   @override
@@ -390,6 +425,7 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
               const Text(
                 'Connected',
                 style: TextStyle(
+                  fontFamily: 'Runtime',
                   color: matchColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
@@ -412,6 +448,7 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
           Text(
             widget.card.questionText,
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: widget.fontColor,
               fontWeight: FontWeight.w600,
               fontSize: 14,
@@ -455,7 +492,7 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
   }
 }
 
-// ── Different perspectives card tile ─────────────────────────────────────────
+// ── Different perspectives card tile ──────────────────────────────────────────
 
 class _SplitCardTile extends StatefulWidget {
   final DuoCard card;
@@ -491,7 +528,6 @@ class _SplitCardTile extends StatefulWidget {
 }
 
 class _SplitCardTileState extends State<_SplitCardTile> {
-  // Start expanded to invite reading each other's answers
   bool _expanded = true;
 
   @override
@@ -540,6 +576,7 @@ class _SplitCardTileState extends State<_SplitCardTile> {
           Text(
             widget.card.questionText,
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: widget.fontColor,
               fontWeight: FontWeight.w600,
               fontSize: 14,
@@ -583,7 +620,7 @@ class _SplitCardTileState extends State<_SplitCardTile> {
   }
 }
 
-// ── Shared subwidgets ─────────────────────────────────────────────────────────
+// ── Shared subwidgets ──────────────────────────────────────────────────────────
 
 class _CardContainer extends StatelessWidget {
   final Color accentColor;
@@ -617,10 +654,9 @@ class _CardContainer extends StatelessWidget {
   }
 }
 
-/// Shows a player's vote (either new match choice or legacy swipe) as a tag.
 class _VoteTag extends StatelessWidget {
   final String name;
-  final String? decision; // 'matched'|'differed'|'like'|'pass'|null
+  final String? decision;
   final Color fontColor;
 
   const _VoteTag(
@@ -686,6 +722,7 @@ class _VoteTag extends StatelessWidget {
           Text(
             '$name: $_label',
             style: TextStyle(
+              fontFamily: 'Runtime',
               color: _color,
               fontWeight: FontWeight.w700,
               fontSize: 11,
@@ -697,7 +734,6 @@ class _VoteTag extends StatelessWidget {
   }
 }
 
-/// Reflection bubble (read-only) shown in summary tiles.
 class _ReflectionBubble extends StatelessWidget {
   final String name;
   final String text;
@@ -715,15 +751,10 @@ class _ReflectionBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isMe
-        ? primaryColor.withOpacity(0.08)
-        : fontColor.withOpacity(0.05);
-    final border = isMe
-        ? primaryColor.withOpacity(0.2)
-        : fontColor.withOpacity(0.1);
+    final bg = isMe ? primaryColor.withOpacity(0.08) : fontColor.withOpacity(0.05);
+    final border = isMe ? primaryColor.withOpacity(0.2) : fontColor.withOpacity(0.1);
     final nameColor = isMe ? primaryColor : fontColor.withOpacity(0.6);
-    final nameIcon =
-        isMe ? Icons.edit_rounded : Icons.person_rounded;
+    final nameIcon = isMe ? Icons.edit_rounded : Icons.person_rounded;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -742,6 +773,7 @@ class _ReflectionBubble extends StatelessWidget {
               Text(
                 name,
                 style: TextStyle(
+                  fontFamily: 'Runtime',
                   color: nameColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
@@ -752,8 +784,12 @@ class _ReflectionBubble extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             text,
-            style:
-                TextStyle(color: fontColor, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -791,10 +827,18 @@ class _ReflectionField extends StatelessWidget {
             controller: controller,
             maxLines: 3,
             minLines: 1,
-            style: TextStyle(color: fontColor, fontSize: 14),
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontSize: 14,
+            ),
             decoration: InputDecoration(
               hintText: label,
-              hintStyle: TextStyle(color: dimColor, fontSize: 14),
+              hintStyle: TextStyle(
+                fontFamily: 'Runtime',
+                color: dimColor,
+                fontSize: 14,
+              ),
               filled: true,
               fillColor: bgColor,
               border: OutlineInputBorder(

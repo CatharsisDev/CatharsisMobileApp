@@ -319,6 +319,16 @@ class _SubscriptionOfferPopupState
                             icon: Icons.ac_unit,
                             text: 'Streak freezes — miss a day, keep your streak',
                           ),
+                          const SizedBox(height: 8),
+                          const _OfferBenefitRow(
+                            icon: Icons.people_rounded,
+                            text: 'Unlimited Duo Mode sessions',
+                          ),
+                          const SizedBox(height: 8),
+                          const _OfferBenefitRow(
+                            icon: Icons.format_list_numbered_rounded,
+                            text: 'Up to 20 questions per Duo session',
+                          ),
                           if (Platform.isAndroid) ...[
                             const SizedBox(height: 8),
                             const _OfferBenefitRow(

@@ -25,7 +25,6 @@ import 'provider/app_state_provider.dart';
 import 'provider/pop_up_provider.dart';
 import 'provider/tutorial_state_provider.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:go_router/go_router.dart';
@@ -78,7 +77,6 @@ void main() async {
     onActionReceivedMethod: NotificationService.onNotificationTapMethod,
   );
 
-  await dotenv.load(fileName: ".env");
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
 

@@ -485,30 +485,36 @@ Widget _buildAvatarImage(String avatarPath, {BoxFit fit = BoxFit.cover}) {
 }
 
   String _getUserInitial(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
+    // Don't fall back to email initial while profile is still loading — avoids flash
+    if (userProfile.isLoading) return '';
+
     final username = userProfile.whenOrNull(data: (profile) => profile?.username);
     if (username != null && username.isNotEmpty) {
       return username.substring(0, 1).toUpperCase();
     }
-    
+
     final email = authState.whenOrNull(data: (user) => user?.email);
     if (email != null && email.isNotEmpty) {
       return email.substring(0, 1).toUpperCase();
     }
-    
+
     return 'U';
   }
 
   String _getDisplayName(AsyncValue<User?> authState, AsyncValue<UserProfile?> userProfile) {
+    // Return empty while loading — avoids flashing the email prefix before username arrives
+    if (userProfile.isLoading) return '';
+
     final username = userProfile.whenOrNull(data: (profile) => profile?.username);
     if (username != null && username.isNotEmpty) {
       return username;
     }
-    
+
     final email = authState.whenOrNull(data: (user) => user?.email);
     if (email != null && email.isNotEmpty) {
       return email.split('@')[0];
     }
-    
+
     return 'User';
   }
 
