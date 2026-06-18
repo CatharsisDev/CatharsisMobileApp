@@ -489,7 +489,7 @@ class SettingsMenuPage extends ConsumerWidget {
   }
 
   Widget _buildSocialButton({
-    required FaIconData icon,
+    required dynamic icon,
     required String url,
     required BuildContext context,
     Color? brandColor,
@@ -584,17 +584,20 @@ class SettingsMenuPage extends ConsumerWidget {
                         ),
                       ),
                     )
-                  : (icon is FaIconData
-                      ? FaIcon(
-                          icon,
-                          color: isRed ? Colors.red : theme.iconTheme.color,
-                          size: 24,
-                        )
-                      : Icon(
-                          icon as IconData,
-                          color: isRed ? Colors.red : theme.iconTheme.color,
-                          size: 24,
-                        )),
+                  : ((icon as dynamic)?.fontFamily
+                                  ?.toString()
+                                  .contains('FontAwesome') ==
+                              true
+                          ? FaIcon(
+                              icon,
+                              color: isRed ? Colors.red : theme.iconTheme.color,
+                              size: 24,
+                            )
+                          : Icon(
+                              icon as IconData,
+                              color: isRed ? Colors.red : theme.iconTheme.color,
+                              size: 24,
+                            )),
             ),
             SizedBox(width: 16),
             Text(

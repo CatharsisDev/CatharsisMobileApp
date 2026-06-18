@@ -467,7 +467,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
 class _SignInButton extends StatelessWidget {
   final VoidCallback onPressed;
-  final FaIconData icon;
+  final dynamic icon;
   final String text;
   final Color backgroundColor;
   final Color textColor;
