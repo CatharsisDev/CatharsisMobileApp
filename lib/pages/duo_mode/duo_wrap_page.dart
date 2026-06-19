@@ -1,8 +1,14 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/duo_session.dart';
 import '../../provider/duo_provider.dart';
 
@@ -45,14 +51,24 @@ class _LoadingScaffold extends StatelessWidget {
 //  Slide data
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum _SlideType { opener, connection, matchRate, topCategory, differed, outro }
+enum _SlideType { opener, connection, matchRate, smartFact, topCategory, differed, outro }
+
+/// A single general-knowledge fact shown on the smart fact slide.
+class _Fact {
+  final String headline; // short punchy label (big text)
+  final String body;     // full sentence explaining the fact
+  const _Fact({required this.headline, required this.body});
+}
 
 class _SlideData {
   final _SlideType type;
   final int primaryValue;
   final String headline;
-  final String detail;   // secondary line
-  final String tag;      // small top label
+  final String detail;     // secondary line
+  final String tag;        // small top label
+  final String subDetail;  // optional third line (legacy)
+  final String factHeadline; // inline fact keyword (shown on match-rate slide)
+  final String factBody;     // inline fact sentence
 
   const _SlideData({
     required this.type,
@@ -60,6 +76,9 @@ class _SlideData {
     required this.headline,
     this.detail = '',
     this.tag = '',
+    this.subDetail = '',
+    this.factHeadline = '',
+    this.factBody = '',
   });
 }
 
@@ -86,6 +105,11 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
   late AnimationController _bgCtrl;
   late Animation<double> _bgAnim;
 
+  // Share capture
+  final GlobalKey _repaintKey = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
+  bool _isCapturing = false;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +126,51 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     super.dispose();
   }
 
+  Future<void> _captureAndShare() async {
+    if (_isCapturing) return;
+    setState(() => _isCapturing = true);
+    try {
+      // Let any in-progress frames fully paint before capturing.
+      await Future.delayed(const Duration(milliseconds: 80));
+
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        debugPrint('[DuoWrap] boundary is null — cannot capture');
+        return;
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final Uint8List bytes = byteData.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/catharsis_recap_slide_$_page.png');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+
+      // Compute the share button's screen rect so iOS can anchor the popover.
+      final buttonBox = _shareButtonKey.currentContext?.findRenderObject()
+          as RenderBox?;
+      final Rect? origin = buttonBox != null
+          ? buttonBox.localToGlobal(Offset.zero) & buttonBox.size
+          : null;
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          sharePositionOrigin: origin,
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('[DuoWrap] share error: $e\n$st');
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
+    }
+  }
+
   static List<_SlideData> _buildSlides(DuoSession session) {
     final total    = session.cards.length;
     final matched  = session.matchedCards.length;
@@ -109,6 +178,10 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     final pct      = total > 0 ? ((matched / total) * 100).round() : 0;
     final partner  = session.guestName ?? 'Partner';
     final topCat   = _topCategory(session.matchedCards);
+    // Three distinct facts spread across slides (offsets are coprime with 22)
+    final fact0 = _pickFact(session, offset: 0);   // connection slide
+    final fact1 = _pickFact(session, offset: 7);   // match rate slide
+    final fact2 = _pickFact(session, offset: 14);  // outro slide
 
     return [
       _SlideData(
@@ -128,6 +201,8 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
                 ? 'One connection'
                 : '$matched connections',
         detail: 'out of $total questions',
+        factHeadline: fact0.headline,
+        factBody: fact0.body,
       ),
       _SlideData(
         type: _SlideType.matchRate,
@@ -135,6 +210,8 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
         tag: 'Match rate',
         headline: '$pct%',
         detail: _rateCaption(pct),
+        factHeadline: fact1.headline,
+        factBody: fact1.body,
       ),
       if (topCat != null && matched > 1)
         _SlideData(
@@ -152,13 +229,115 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
           headline: differed == 1 ? '1 difference' : '$differed differences',
           detail: 'Different views deepen real conversation.',
         ),
-      const _SlideData(
+      _SlideData(
         type: _SlideType.outro,
         primaryValue: 0,
         headline: 'Every question\nbrings you\ncloser.',
+        factHeadline: fact2.headline,
+        factBody: fact2.body,
       ),
     ];
   }
+
+  /// Picks a general-knowledge fact about love/relationships, deterministically
+  /// seeded from the session code. [offset] lets three different facts be
+  /// selected for the same session (offsets 0, 7, 14 are coprime with 22,
+  /// so they always yield 3 distinct entries).
+  static _Fact _pickFact(DuoSession session, {int offset = 0}) {
+    final seed = session.sessionCode.codeUnits.fold(0, (a, b) => a + b);
+    return _relationshipFacts[(seed + offset) % _relationshipFacts.length];
+  }
+
+  static const _relationshipFacts = [
+    _Fact(
+      headline: '4 minutes',
+      body: 'Sustained eye contact for just 4 minutes can produce feelings of deep mutual attraction — even between strangers.',
+    ),
+    _Fact(
+      headline: '200 hours',
+      body: 'Research shows it takes around 200 hours of quality time together for two people to develop a close friendship.',
+    ),
+    _Fact(
+      headline: 'oxytocin',
+      body: 'A 20-second hug floods your brain with oxytocin — the bonding hormone — lowering stress and deepening trust between people.',
+    ),
+    _Fact(
+      headline: '7 times',
+      body: 'On average, a person falls in love 7 times before finding a lasting partnership.',
+    ),
+    _Fact(
+      headline: '90 seconds',
+      body: 'Scientists believe initial romantic attraction is determined within 90 seconds, mostly through body language and tone of voice.',
+    ),
+    _Fact(
+      headline: 'mirror neurons',
+      body: 'When you watch someone you care about feel pain, your brain activates the same regions as if you felt it yourself — empathy is neurological.',
+    ),
+    _Fact(
+      headline: '36 questions',
+      body: 'Psychologist Arthur Aron found that answering 36 specific questions — designed to build mutual vulnerability — can make two strangers feel deeply connected in under an hour.',
+    ),
+    _Fact(
+      headline: 'same laugh',
+      body: 'Couples who genuinely laugh together report significantly higher satisfaction and are more likely to stay together long-term.',
+    ),
+    _Fact(
+      headline: 'left side',
+      body: 'People tend to show more emotion on the left side of their face. Partners often unconsciously position themselves to see each other\'s emotional side during deep conversations.',
+    ),
+    _Fact(
+      headline: '3 components',
+      body: 'Psychologist Robert Sternberg\'s Triangle Theory says all forms of love are built from three elements: intimacy, passion, and commitment.',
+    ),
+    _Fact(
+      headline: 'hand holding',
+      body: 'Holding a romantic partner\'s hand during a stressful moment measurably reduces pain perception and lowers blood pressure.',
+    ),
+    _Fact(
+      headline: 'scent memory',
+      body: 'Of all the senses, smell is most directly linked to memory and emotion. The scent of a loved one can instantly reduce anxiety.',
+    ),
+    _Fact(
+      headline: '5:1 ratio',
+      body: 'Relationship researcher John Gottman found that couples who thrive have at least 5 positive interactions for every 1 negative one.',
+    ),
+    _Fact(
+      headline: 'brain in love',
+      body: 'Brain scans show that romantic love activates the same dopamine pathways as addictive substances — being in love is neurologically similar to a natural high.',
+    ),
+    _Fact(
+      headline: 'butterfly effect',
+      body: 'Those butterflies in your stomach are real — they\'re caused by adrenaline released when you see someone you\'re attracted to.',
+    ),
+    _Fact(
+      headline: '12 types',
+      body: 'Ancient Greeks identified 12 distinct types of love — from eros (romantic passion) to pragma (enduring love) to philautia (self-love).',
+    ),
+    _Fact(
+      headline: 'look alike',
+      body: 'Long-term couples gradually start to look more similar to each other — scientists believe this happens because of shared emotions and mirrored facial expressions over time.',
+    ),
+    _Fact(
+      headline: 'vulnerability',
+      body: 'Research by Brené Brown shows that the willingness to be vulnerable is the single greatest predictor of closeness and connection between two people.',
+    ),
+    _Fact(
+      headline: '2 years',
+      body: 'The intense early stage of romantic love — driven by norepinephrine and dopamine — typically lasts 12 to 24 months before transitioning into deeper attachment.',
+    ),
+    _Fact(
+      headline: 'active listening',
+      body: 'Studies show that people who feel genuinely heard by their partner report 40% higher relationship satisfaction than those who don\'t.',
+    ),
+    _Fact(
+      headline: 'slow down',
+      body: 'Couples who take longer to move in together tend to report stronger long-term satisfaction — slowing down builds a more solid foundation.',
+    ),
+    _Fact(
+      headline: 'touch matters',
+      body: 'Non-sexual physical touch — like a pat on the back or a squeeze of the arm — plays a crucial role in maintaining emotional connection between partners.',
+    ),
+  ];
 
   static String? _topCategory(List<DuoCard> matched) {
     if (matched.isEmpty) return null;
@@ -195,6 +374,7 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     _SlideType.opener:      [Color(0xFF07001A), Color(0xFF13003A)],
     _SlideType.connection:  [Color(0xFF001210), Color(0xFF002A1C)],
     _SlideType.matchRate:   [Color(0xFF000A1E), Color(0xFF001040)],
+    _SlideType.smartFact:   [Color(0xFF001A18), Color(0xFF00312C)],
     _SlideType.topCategory: [Color(0xFF100400), Color(0xFF220900)],
     _SlideType.differed:    [Color(0xFF0F0010), Color(0xFF1E0025)],
     _SlideType.outro:       [Color(0xFF030008), Color(0xFF08001C)],
@@ -208,73 +388,112 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     final prevColors = _bgColors[prev.type]!;
     final nextColors = _bgColors[slide.type]!;
 
-    return GestureDetector(
-      onTap: slide.type == _SlideType.outro ? null : _advance,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _bgAnim,
-        builder: (context, _) {
-          final t    = _bgAnim.value;
-          final top  = Color.lerp(prevColors[0], nextColors[0], t)!;
-          final bot  = Color.lerp(prevColors[1], nextColors[1], t)!;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // ── RepaintBoundary at stable level (outside AnimatedBuilder) ──────
+          // This ensures GlobalKey.currentContext is always valid when sharing.
+          RepaintBoundary(
+            key: _repaintKey,
+            child: GestureDetector(
+              onTap: slide.type == _SlideType.outro ? null : _advance,
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedBuilder(
+                animation: _bgAnim,
+                builder: (context, _) {
+                  final t    = _bgAnim.value;
+                  final top  = Color.lerp(prevColors[0], nextColors[0], t)!;
+                  final bot  = Color.lerp(prevColors[1], nextColors[1], t)!;
 
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [top, bot],
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [top, bot],
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // ── Decorative orb layer ─────────────────────────
+                          _OrbLayer(type: slide.type),
+
+                          // ── Progress bar ─────────────────────────────────
+                          Positioned(
+                            top: 16, left: 24, right: 80,
+                            child: _ProgressBar(
+                              count: _slides.length,
+                              current: _page,
+                            ),
+                          ),
+
+                          // ── Slide content (cross-fades on page change) ───
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 400),
+                            transitionBuilder: (child, anim) {
+                              return FadeTransition(
+                                opacity: anim,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0.06, 0),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(
+                                      parent: anim, curve: Curves.easeOutCubic)),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: KeyedSubtree(
+                              key: ValueKey(_page),
+                              child: _buildSlide(slide),
+                            ),
+                          ),
+
+                          // ── Catharsis logo watermark (baked into share) ──
+                          Positioned(
+                            bottom: 6, left: 0, right: 0,
+                            child: Center(
+                              child: Image.asset(
+                                'assets/images/catharsis_word_only.png',
+                                height: 14,
+                                color: Colors.white.withOpacity(0.25),
+                              ),
+                            ),
+                          ),
+
+                          // ── Tap hint ─────────────────────────────────────
+                          if (slide.type != _SlideType.outro)
+                            const Positioned(
+                              bottom: 28, left: 0, right: 0,
+                              child: Center(child: _TapHint()),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-            child: SafeArea(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ── Decorative orb layer ─────────────────────────────────
-                  _OrbLayer(type: slide.type),
+          ),
 
-                  // ── Progress bar ─────────────────────────────────────────
-                  Positioned(
-                    top: 16, left: 24, right: 24,
-                    child: _ProgressBar(
-                      count: _slides.length,
-                      current: _page,
-                    ),
-                  ),
-
-                  // ── Slide content (cross-fades on page change) ───────────
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    transitionBuilder: (child, anim) {
-                      return FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.06, 0),
-                            end: Offset.zero,
-                          ).animate(CurvedAnimation(
-                              parent: anim, curve: Curves.easeOutCubic)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: KeyedSubtree(
-                      key: ValueKey(_page),
-                      child: _buildSlide(slide),
-                    ),
-                  ),
-
-                  // ── Tap hint ─────────────────────────────────────────────
-                  if (slide.type != _SlideType.outro)
-                    const Positioned(
-                      bottom: 28, left: 0, right: 0,
-                      child: Center(child: _TapHint()),
-                    ),
-                ],
+          // ── Share button (outside RepaintBoundary — not in screenshot) ─────
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, right: 16),
+                child: _WrapShareButton(
+                  key: _shareButtonKey,
+                  isCapturing: _isCapturing,
+                  onTap: _captureAndShare,
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -284,6 +503,7 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
       case _SlideType.opener:      return _OpenerSlide(data: d);
       case _SlideType.connection:  return _ConnectionSlide(data: d);
       case _SlideType.matchRate:   return _MatchRateSlide(data: d);
+      case _SlideType.smartFact:   return _SmartFactSlide(data: d);
       case _SlideType.topCategory: return _CategorySlide(data: d);
       case _SlideType.differed:    return _DifferedSlide(data: d);
       case _SlideType.outro:
@@ -336,6 +556,15 @@ class _OrbLayer extends StatelessWidget {
               alignment: const Alignment(1.1, 0.6)),
           _orb(280, const Color(0xFF00AAFF), 0.10,
               alignment: const Alignment(0.3, -0.1)),
+        ];
+      case _SlideType.smartFact:
+        return [
+          _orb(520, const Color(0xFF00FFCC), 0.10,
+              alignment: const Alignment(0.8, -0.9)),
+          _orb(400, const Color(0xFF00CCA3), 0.12,
+              alignment: const Alignment(-1.1, 0.5)),
+          _orb(260, const Color(0xFF00FFE0), 0.07,
+              alignment: const Alignment(0.1, 0.2)),
         ];
       case _SlideType.topCategory:
         return [
@@ -675,6 +904,18 @@ class _ConnectionSlideState extends State<_ConnectionSlide>
               ),
             ),
           ),
+          if (d.factHeadline.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            FadeTransition(
+              opacity: fade(0.72, 0.95),
+              child: SlideTransition(
+                position: rise(0.72, 0.95),
+                child: _InlineFactCard(
+                    headline: d.factHeadline, body: d.factBody),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
         ],
       ),
     );
@@ -779,7 +1020,21 @@ class _MatchRateSlideState extends State<_MatchRateSlide>
               ),
             ),
           ),
-          const Spacer(),
+
+          // ── Inline smart fact ──────────────────────────────────────────
+          if (d.factHeadline.isNotEmpty) ...[
+            const SizedBox(height: 36),
+            FadeTransition(
+              opacity: fade(0.70, 0.95),
+              child: SlideTransition(
+                position: rise(0.70, 0.95),
+                child: _InlineFactCard(
+                    headline: d.factHeadline, body: d.factBody),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ] else
+            const Spacer(),
         ],
       ),
     );
@@ -804,12 +1059,19 @@ class _CategorySlideState extends State<_CategorySlide>
 
   static IconData _icon(String cat) {
     switch (cat) {
-      case 'Love and Intimacy':             return Icons.favorite_rounded;
-      case 'Spirituality':                  return Icons.brightness_3_rounded;
-      case 'Society':                       return Icons.public_rounded;
-      case 'Interactions and Relationships':return Icons.people_rounded;
-      case 'Personal Development':          return Icons.trending_up_rounded;
-      default:                              return Icons.chat_bubble_rounded;
+      // Solo mode categories
+      case 'Love and Intimacy':              return Icons.favorite_rounded;
+      case 'Spirituality':                   return Icons.brightness_3_rounded;
+      case 'Society':                        return Icons.public_rounded;
+      case 'Interactions and Relationships': return Icons.people_rounded;
+      case 'Personal Development':           return Icons.trending_up_rounded;
+      // Duo mode categories
+      case 'Love & Relationships':           return Icons.favorite_rounded;
+      case 'Values & Beliefs':               return Icons.balance_rounded;
+      case 'Family & Future':                return Icons.family_restroom_rounded;
+      case 'Lifestyle & Habits':             return Icons.self_improvement_rounded;
+      case 'Communication & Conflict':       return Icons.chat_bubble_rounded;
+      default:                               return Icons.chat_bubble_rounded;
     }
   }
 
@@ -890,6 +1152,217 @@ class _CategorySlideState extends State<_CategorySlide>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared inline fact card (rendered inside existing slides)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _InlineFactCard extends StatelessWidget {
+  final String headline;
+  final String body;
+  const _InlineFactCard({required this.headline, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    const teal = Color(0xFF00FFCC);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: teal.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: teal.withOpacity(0.18), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb_rounded,
+                  size: 11, color: teal.withOpacity(0.75)),
+              const SizedBox(width: 5),
+              Text(
+                'DID YOU KNOW',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: teal.withOpacity(0.75),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            headline,
+            style: const TextStyle(
+              fontFamily: 'Runtime',
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+              letterSpacing: -0.4,
+              shadows: [Shadow(color: Color(0x4400FFCC), blurRadius: 20)],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: Colors.white.withOpacity(0.55),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Smart fact slide
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SmartFactSlide extends StatefulWidget {
+  final _SlideData data;
+  const _SmartFactSlide({required this.data});
+  @override
+  State<_SmartFactSlide> createState() => _SmartFactSlideState();
+}
+
+class _SmartFactSlideState extends State<_SmartFactSlide>
+    with SingleTickerProviderStateMixin, _StaggerMixin {
+  @override
+  void initState() {
+    super.initState();
+    initStagger(duration: const Duration(milliseconds: 1000));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.data;
+    const teal = Color(0xFF00FFCC);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(36, 70, 36, 80),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // "Did you know" badge
+          FadeTransition(
+            opacity: fade(0.0, 0.35),
+            child: SlideTransition(
+              position: rise(0.0, 0.35),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: teal.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: teal.withOpacity(0.30), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lightbulb_rounded,
+                        size: 12, color: teal.withOpacity(0.85)),
+                    const SizedBox(width: 6),
+                    Text(
+                      d.tag.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: teal.withOpacity(0.85),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Main headline — the fact itself
+          FadeTransition(
+            opacity: fade(0.2, 0.6),
+            child: SlideTransition(
+              position: rise(0.2, 0.6),
+              child: Text(
+                d.headline,
+                style: const TextStyle(
+                  fontFamily: 'Runtime',
+                  color: Colors.white,
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: -1.0,
+                  shadows: [
+                    Shadow(color: Color(0x6600FFCC), blurRadius: 32),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const Spacer(),
+
+          // Divider line
+          FadeTransition(
+            opacity: fade(0.5, 0.75),
+            child: Container(
+              height: 1,
+              width: 48,
+              color: teal.withOpacity(0.30),
+              margin: const EdgeInsets.only(bottom: 18),
+            ),
+          ),
+
+          // Detail
+          FadeTransition(
+            opacity: fade(0.55, 0.82),
+            child: SlideTransition(
+              position: rise(0.55, 0.82),
+              child: Text(
+                d.detail,
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: Colors.white.withOpacity(0.65),
+                  fontSize: 16,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          if (d.subDetail.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            FadeTransition(
+              opacity: fade(0.68, 0.92),
+              child: SlideTransition(
+                position: rise(0.68, 0.92),
+                child: Text(
+                  d.subDetail,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: teal.withOpacity(0.70),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1028,7 +1501,20 @@ class _OutroSlideState extends State<_OutroSlide>
               ),
             ),
           ),
-          const Spacer(),
+          if (widget.data.factHeadline.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            FadeTransition(
+              opacity: fade(0.45, 0.78),
+              child: SlideTransition(
+                position: rise(0.45, 0.78),
+                child: _InlineFactCard(
+                    headline: widget.data.factHeadline,
+                    body: widget.data.factBody),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ] else
+            const Spacer(),
           FadeTransition(
             opacity: fade(0.55, 0.85),
             child: SlideTransition(
@@ -1117,6 +1603,44 @@ class _SpinningSparkleState extends State<_SpinningSparkle>
           child: const Icon(Icons.auto_awesome_rounded,
               size: 38, color: Colors.white),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Share button (overlaid outside the RepaintBoundary)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _WrapShareButton extends StatelessWidget {
+  final bool isCapturing;
+  final VoidCallback onTap;
+  const _WrapShareButton({
+    super.key,
+    required this.isCapturing,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isCapturing ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.10),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.20), width: 1),
+        ),
+        child: isCapturing
+            ? const Padding(
+                padding: EdgeInsets.all(10),
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.5, color: Colors.white),
+              )
+            : const Icon(Icons.ios_share_rounded, size: 18, color: Colors.white),
       ),
     );
   }

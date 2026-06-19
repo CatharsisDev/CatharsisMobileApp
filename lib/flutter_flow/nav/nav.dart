@@ -114,9 +114,7 @@ class LoadingScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: Center(
-        child: CircularProgressIndicator(
-          color: FlutterFlowTheme.of(context).primary,
-        ),
+        child: const CircularProgressIndicator(),
       ),
     );
   }

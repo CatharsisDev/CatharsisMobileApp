@@ -1134,7 +1134,7 @@ final isSmallPhone = isVerySmall || isSmall;
               child: cardState.isLoading
                   ? Center(
                       child: CircularProgressIndicator(
-                          color: customTheme?.categoryChipColor ??
+                          color: customTheme?.preferenceButtonColor ??
                               theme.primaryColor))
                   : FlutterFlowSwipeableStack(
                       key: ValueKey('stack_${_cacheKey ?? 'none'}'),

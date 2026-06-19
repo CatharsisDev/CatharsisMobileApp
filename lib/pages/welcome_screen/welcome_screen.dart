@@ -243,6 +243,7 @@ void _finishTutorial() async {
     // Continue anyway - user can update profile later
   }
 
+  if (!mounted) return;
   await ref.read(tutorialProvider.notifier).setTutorialSeen();
   if (mounted) {
     context.go('/home');

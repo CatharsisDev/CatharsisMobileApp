@@ -8,11 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../provider/theme_provider.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/duo_provider.dart';
-import '../../provider/app_state_provider.dart';
+import '../../provider/user_profile_provider.dart';
 import '../../services/duo_session_service.dart';
 import '../../services/subscription_service.dart';
 import '../subscription_plans/subscription_plans_page.dart';
 import 'duo_past_sessions_page.dart';
+import 'duo_tutorial_page.dart';
 
 class DuoLobbyPage extends ConsumerStatefulWidget {
   const DuoLobbyPage({Key? key}) : super(key: key);
@@ -37,6 +38,10 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
   String? _errorMessage;   // general errors (create session)
   String? _joinError;      // join-specific error shown inline in the card
   int _questionCount = 10;
+  int _maxPlayers = 2;     // 2 = classic duo, 3-4 = group mode
+
+  /// Null means "all categories". Non-null is the set the user has chosen.
+  Set<String>? _selectedCategories;
 
   // Cooldown state
   DateTime? _cooldownUntil;
@@ -75,6 +80,15 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
     }
   }
 
+  /// Debug-only: wipes the cooldown from SharedPreferences so you can create
+  /// another session immediately. Only shown in the UI when a cooldown is active.
+  Future<void> _resetCooldown() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('duo_cooldown_until_ms');
+    if (mounted) setState(() => _cooldownUntil = null);
+    _cooldownRefreshTimer?.cancel();
+  }
+
   void _startCooldownRefreshTimer() {
     _cooldownRefreshTimer?.cancel();
     // Refresh every 30 seconds so the displayed time stays reasonably accurate
@@ -89,10 +103,36 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
 
   // ── Session actions ───────────────────────────────────────────────────────
 
+  /// Shows the tutorial if it hasn't been seen, then runs [onProceed].
+  Future<void> _maybeShowTutorial(VoidCallback onProceed) async {
+    final seen = await isDuoTutorialSeen();
+    if (!mounted) return;
+    if (seen) {
+      onProceed();
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DuoTutorialPage(
+          showDontAskAgain: true,
+          onContinue: () {
+            Navigator.of(context).pop();
+            onProceed();
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _createSession(bool isPremium) async {
     // Guard: non-premium users must wait out their cooldown
     if (!isPremium && _cooldownActive) return;
 
+    // Show tutorial on first run, then proceed
+    await _maybeShowTutorial(() => _doCreateSession(isPremium));
+  }
+
+  Future<void> _doCreateSession(bool isPremium) async {
     setState(() {
       _isCreating = true;
       _errorMessage = null;
@@ -102,24 +142,46 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
       final user = ref.read(authStateProvider).value;
       if (user == null) throw Exception('Not logged in');
 
-      final cardState = ref.read(cardStateProvider);
-      final questions = cardState.sessionQuestions.isNotEmpty
-          ? cardState.sessionQuestions
-          : cardState.allQuestions;
+      // Use Duo-specific compatibility questions
+      var questions = ref.read(duoQuestionsProvider).valueOrNull ?? [];
 
-      if (questions.isEmpty) throw Exception('No cards available. Please wait and try again.');
+      if (questions.isEmpty) {
+        throw Exception('No questions available. Please try again.');
+      }
 
-      final displayName = user.displayName?.isNotEmpty == true
-          ? user.displayName!
-          : user.email?.split('@').first ?? 'Host';
+      // Apply category filter if the user chose specific categories
+      if (_selectedCategories != null && _selectedCategories!.isNotEmpty) {
+        questions = questions
+            .where((q) => _selectedCategories!.contains(q.category))
+            .toList();
+      }
 
-      // Clamp count for non-premium
-      final count = (!isPremium && _questionCount > 10) ? 10 : _questionCount;
+      if (questions.isEmpty) throw Exception('No cards available for the selected categories. Try selecting more categories.');
+
+      final username = ref.read(userUsernameProvider);
+      final displayName = username?.isNotEmpty == true
+          ? username!
+          : (user.displayName?.isNotEmpty == true
+              ? user.displayName!
+              : user.email?.split('@').first ?? 'Host');
+
+      // Shuffle so same categories don't always appear first
+      final shuffled = List.of(questions)..shuffle();
+
+      // First _questionCount questions are the main deck;
+      // up to 6 extras become the reserve pool for skip replacements.
+      final mainQuestions = shuffled.take(_questionCount).toList();
+      final reserveQuestions = shuffled
+          .skip(_questionCount)
+          .take(6)
+          .toList();
 
       final code = await DuoSessionService.createSession(
         hostUid: user.uid,
         hostName: displayName,
-        questions: questions.take(count).toList(),
+        questions: mainQuestions,
+        reserves: reserveQuestions,
+        maxPlayers: _maxPlayers,
       );
 
       ref.read(duoSessionCodeProvider.notifier).state = code;
@@ -134,8 +196,7 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
   }
 
   Future<void> _joinSession(bool isPremium) async {
-    // Guard: non-premium users must wait out their cooldown
-    if (!isPremium && _cooldownActive) return;
+    // Joining is always allowed regardless of premium status or cooldown.
 
     final code = _codeController.text.trim().toUpperCase();
     if (code.length != 6) {
@@ -152,9 +213,12 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
       final user = ref.read(authStateProvider).value;
       if (user == null) throw Exception('Not logged in');
 
-      final displayName = user.displayName?.isNotEmpty == true
-          ? user.displayName!
-          : user.email?.split('@').first ?? 'Guest';
+      final username = ref.read(userUsernameProvider);
+      final displayName = username?.isNotEmpty == true
+          ? username!
+          : (user.displayName?.isNotEmpty == true
+              ? user.displayName!
+              : user.email?.split('@').first ?? 'Guest');
 
       await DuoSessionService.joinSession(
         code: code,
@@ -211,11 +275,159 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
       orElse: () => false,
     );
 
-    // If non-premium and current count is above the limit, reset it
-    if (!isPremium && _questionCount > 10) {
+    // Duo questions async state
+    final questionsAsync = ref.watch(duoQuestionsProvider);
+    final questionsReady = questionsAsync.valueOrNull?.isNotEmpty == true;
+
+    // Clamp question count to the current tier's max
+    final maxQuestions = isPremium ? 50 : 20;
+    if (_questionCount > maxQuestions) {
       Future.microtask(() {
-        if (mounted) setState(() => _questionCount = 10);
+        if (mounted) setState(() => _questionCount = maxQuestions);
       });
+    }
+
+    // Shared AppBar for loading / error states
+    AppBar _simpleAppBar() => AppBar(
+      backgroundColor: appTheme.scaffoldBackgroundColor,
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: fontColor, size: 20),
+        onPressed: () => context.pop(),
+      ),
+      title: Text(
+        'Duo Mode',
+        style: TextStyle(
+          fontFamily: 'Runtime',
+          color: fontColor,
+          fontWeight: FontWeight.w700,
+          fontSize: 22,
+        ),
+      ),
+      centerTitle: true,
+    );
+
+    // ── Full-screen loading state ─────────────────────────────────────────────
+    if (questionsAsync is AsyncLoading) {
+      return Scaffold(
+        backgroundColor: appTheme.scaffoldBackgroundColor,
+        appBar: _simpleAppBar(),
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: accentColor,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Preparing your questions…',
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: fontColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Curating compatibility questions\njust for you.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: fontColor.withOpacity(0.5),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ── Error / empty state ───────────────────────────────────────────────────
+    if (!questionsReady) {
+      return Scaffold(
+        backgroundColor: appTheme.scaffoldBackgroundColor,
+        appBar: _simpleAppBar(),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 36),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.wifi_off_rounded,
+                        size: 34, color: accentColor.withOpacity(0.7)),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Couldn\'t load questions',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      color: fontColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Check your connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      color: fontColor.withOpacity(0.5),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: 180,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () => ref.invalidate(duoQuestionsProvider),
+                      icon: const Icon(Icons.refresh_rounded,
+                          color: Colors.white, size: 18),
+                      label: const Text(
+                        'Try again',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -237,6 +449,23 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.help_outline_rounded,
+                color: fontColor.withOpacity(0.5), size: 22),
+            tooltip: 'How it works',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DuoTutorialPage(
+                    showDontAskAgain: false,
+                    onContinue: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -254,11 +483,14 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
             final innerGapMd = h < 680 ? 10.0  : h < 800 ? 12.0  : 16.0;
             final tfFontSize = h < 680 ? 20.0  : 24.0;
 
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: gapTop),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+            return Column(
+              children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: gapTop),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                   // ── Header ───────────────────────────────────────────────
                   Center(
                     child: Container(
@@ -320,7 +552,9 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                         ),
                         SizedBox(height: innerGapSm),
                         Text(
-                          'Create and share the code with your partner.',
+                          _maxPlayers == 2
+                              ? 'Create and share the code with your partner.'
+                              : 'Create and share the code with your group (up to $_maxPlayers players).',
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             color: fontColor.withOpacity(0.6),
@@ -329,11 +563,12 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                         ),
                         SizedBox(height: innerGapMd),
 
-                        // ── Question count picker ──────────────────────────
-                        Row(
+                        // ── Group size selector ────────────────────────────
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Questions:',
+                              'Players',
                               style: TextStyle(
                                 fontFamily: 'Runtime',
                                 color: fontColor.withOpacity(0.7),
@@ -341,78 +576,188 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [5, 10, 15, 20].map((n) {
-                                  // Non-premium users can only pick 5 or 10
-                                  final isLocked = !isPremium && n > 10;
-                                  final selected = _questionCount == n && !isLocked;
-
-                                  return GestureDetector(
-                                    onTap: () {
-                                      if (isLocked) {
-                                        // Take the user straight to the paywall
-                                        final service = ref.read(subscriptionServiceProvider);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => SubscriptionPlansPage(
-                                              subscriptionService: service,
-                                              onMonthlyPurchase: () => Navigator.pop(context),
-                                              onAnnualPurchase:  () => Navigator.pop(context),
-                                            ),
-                                          ),
-                                        );
-                                        return;
-                                      }
-                                      setState(() => _questionCount = n);
-                                    },
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [2, 3, 4].map((n) {
+                                final isSelected = _maxPlayers == n;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _maxPlayers = n),
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 150),
-                                      width: 44,
-                                      height: 32,
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 18, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: isLocked
-                                            ? fontColor.withOpacity(0.04)
-                                            : selected
-                                                ? accentColor
-                                                : accentColor.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(10),
+                                        color: isSelected
+                                            ? accentColor
+                                            : accentColor.withOpacity(0.07),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: isLocked
-                                              ? fontColor.withOpacity(0.10)
-                                              : selected
-                                                  ? accentColor
-                                                  : accentColor.withOpacity(0.25),
+                                          color: isSelected
+                                              ? accentColor
+                                              : accentColor.withOpacity(0.25),
                                           width: 1.5,
                                         ),
                                       ),
-                                      child: Center(
-                                        child: isLocked
-                                            ? Icon(Icons.lock_rounded,
-                                                size: 14,
-                                                color: fontColor.withOpacity(0.25))
-                                            : Text(
-                                                '$n',
-                                                style: TextStyle(
-                                                  fontFamily: 'Runtime',
-                                                  color: selected
-                                                      ? Colors.white
-                                                      : accentColor,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
+                                      child: Text(
+                                        n == 2 ? '2 (Duo)' : '$n',
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          color: isSelected
+                                              ? Colors.white
+                                              : accentColor,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
-                                  );
-                                }).toList(),
-                              ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
+
+                        SizedBox(height: innerGapMd),
+
+                        // ── Question count slider ──────────────────────────
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Questions',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    color: fontColor.withOpacity(0.7),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '$_questionCount',
+                                    style: const TextStyle(
+                                      fontFamily: 'Runtime',
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SliderTheme(
+                              data: SliderThemeData(
+                                activeTrackColor: accentColor,
+                                inactiveTrackColor: accentColor.withOpacity(0.15),
+                                thumbColor: accentColor,
+                                overlayColor: accentColor.withOpacity(0.12),
+                                trackHeight: 4,
+                                thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 8),
+                                overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 18),
+                              ),
+                              child: Slider(
+                                value: _questionCount.toDouble().clamp(
+                                    5, maxQuestions.toDouble()),
+                                min: 5,
+                                max: maxQuestions.toDouble(),
+                                divisions: maxQuestions - 5,
+                                onChanged: (v) =>
+                                    setState(() => _questionCount = v.round()),
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '5',
+                                  style: TextStyle(
+                                    fontFamily: 'Runtime',
+                                    color: fontColor.withOpacity(0.35),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: isPremium
+                                      ? null
+                                      : () {
+                                          final service = ref.read(
+                                              subscriptionServiceProvider);
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => SubscriptionPlansPage(
+                                                subscriptionService: service,
+                                                onMonthlyPurchase: () =>
+                                                    Navigator.pop(context),
+                                                onAnnualPurchase: () =>
+                                                    Navigator.pop(context),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!isPremium)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 3),
+                                          child: Icon(Icons.lock_rounded,
+                                              size: 10,
+                                              color: fontColor.withOpacity(0.35)),
+                                        ),
+                                      Text(
+                                        isPremium ? '50' : '20 · unlock 50',
+                                        style: TextStyle(
+                                          fontFamily: 'Runtime',
+                                          color: isPremium
+                                              ? fontColor.withOpacity(0.35)
+                                              : accentColor.withOpacity(0.7),
+                                          fontSize: 11,
+                                          fontWeight: isPremium
+                                              ? FontWeight.normal
+                                              : FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: innerGapMd),
+
+                        // ── Category filter ────────────────────────────────
+                        Builder(builder: (_) {
+                          final pool =
+                              ref.watch(duoQuestionsProvider).valueOrNull ?? [];
+                          return _CategoryFilter(
+                            allQuestions: pool,
+                            selectedCategories: _selectedCategories,
+                            accentColor: accentColor,
+                            fontColor: fontColor,
+                            onChanged: (cats) =>
+                                setState(() => _selectedCategories = cats),
+                          );
+                        }),
 
                         SizedBox(height: innerGapMd),
 
@@ -421,6 +766,33 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                           _CooldownWidget(
                             until: _cooldownUntil!,
                             fontColor: fontColor,
+                          ),
+                          const SizedBox(height: 8),
+                          // Debug reset button — only shown when on cooldown
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _resetCooldown,
+                              icon: Icon(Icons.timer_off_rounded,
+                                  size: 14,
+                                  color: fontColor.withOpacity(0.35)),
+                              label: Text(
+                                'Reset cooldown (debug)',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  color: fontColor.withOpacity(0.35),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
                           ),
                         ] else ...[
                           ElevatedButton(
@@ -441,7 +813,9 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                                         strokeWidth: 2, color: Colors.white),
                                   )
                                 : Text(
-                                    'Start with $_questionCount questions',
+                                    _maxPlayers == 2
+                                        ? 'Start with $_questionCount questions'
+                                        : 'Start for $_maxPlayers players · $_questionCount questions',
                                     style: const TextStyle(
                                       fontFamily: 'Runtime',
                                       color: Colors.white,
@@ -491,7 +865,7 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                           controller: _codeController,
                           textCapitalization: TextCapitalization.characters,
                           maxLength: 6,
-                          enabled: isPremium || !_cooldownActive,
+                          enabled: true,
                           style: TextStyle(
                             fontFamily: 'Runtime',
                             color: fontColor,
@@ -563,14 +937,8 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                         ],
                         SizedBox(height: innerGapSm + 2),
 
-                        // Button or cooldown message
-                        if (!isPremium && _cooldownActive) ...[
-                          _CooldownWidget(
-                            until: _cooldownUntil!,
-                            fontColor: fontColor,
-                            message: 'Cooldown active — can\'t join yet',
-                          ),
-                        ] else ...[
+                        // Join button — always available
+                        ...[
                           ElevatedButton(
                             onPressed: _isJoining ? null : () => _joinSession(isPremium),
                             style: ElevatedButton.styleFrom(
@@ -631,44 +999,175 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                     ),
                   ],
 
-                  // ── Past sessions link ────────────────────────────────────
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const DuoPastSessionsPage(),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 16,
-                            color: fontColor.withOpacity(0.45),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'View past sessions',
-                            style: TextStyle(
-                              fontFamily: 'Runtime',
-                              color: fontColor.withOpacity(0.45),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
+              // ── Past sessions link (pinned, never scrolls away) ───────────
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const DuoPastSessionsPage(),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        size: 16,
+                        color: fontColor.withOpacity(0.45),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'View past sessions',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          color: fontColor.withOpacity(0.45),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              ],
             );
           },
         ),
       ),
+    );
+  }
+}
+
+// ── Category filter widget ────────────────────────────────────────────────────
+
+class _CategoryFilter extends StatelessWidget {
+  final List<dynamic> allQuestions;   // List<Question> — typed as dynamic to avoid import
+  final Set<String>? selectedCategories; // null = all
+  final Color accentColor;
+  final Color fontColor;
+  final ValueChanged<Set<String>?> onChanged;
+
+  const _CategoryFilter({
+    required this.allQuestions,
+    required this.selectedCategories,
+    required this.accentColor,
+    required this.fontColor,
+    required this.onChanged,
+  });
+
+  List<String> _uniqueCategories() {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final q in allQuestions) {
+      final cat = (q as dynamic).category as String;
+      if (seen.add(cat)) result.add(cat);
+    }
+    result.sort();
+    return result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _uniqueCategories();
+    if (categories.isEmpty) return const SizedBox.shrink();
+
+    final allSelected = selectedCategories == null || selectedCategories!.isEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Categories:',
+              style: TextStyle(
+                fontFamily: 'Runtime',
+                color: fontColor.withOpacity(0.7),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (!allSelected)
+              GestureDetector(
+                onTap: () => onChanged(null),
+                child: Text(
+                  'All',
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: accentColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                    decorationColor: accentColor,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: categories.map((cat) {
+            final isSelected = allSelected || selectedCategories!.contains(cat);
+            return GestureDetector(
+              onTap: () {
+                // Toggle this category
+                final current = selectedCategories == null
+                    ? Set<String>.from(categories) // start with all
+                    : Set<String>.from(selectedCategories!);
+                if (isSelected) {
+                  current.remove(cat);
+                } else {
+                  current.add(cat);
+                }
+                // If all are selected, collapse back to null (= all)
+                if (current.length == categories.length) {
+                  onChanged(null);
+                } else if (current.isEmpty) {
+                  // Can't have zero — revert
+                  onChanged(null);
+                } else {
+                  onChanged(current);
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? accentColor
+                      : accentColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? accentColor
+                        : accentColor.withOpacity(0.25),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  cat,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color:
+                        isSelected ? Colors.white : accentColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

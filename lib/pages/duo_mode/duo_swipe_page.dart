@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/duo_session.dart';
+import '../../provider/auth_provider.dart';
 import '../../provider/duo_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../services/duo_session_service.dart';
@@ -53,9 +54,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
   _CardPhase _phase = _CardPhase.writing;
   String? _myMatchChoice;
   bool _isSubmitting = false;
+  bool _isSkipping = false;
   bool _partnerLeftDialogShown = false;
 
   int _displayedCardIndex = 0;
+  /// Tracks the question text of the card currently being displayed.
+  /// When the server replaces a skipped card, this changes and we reset local state.
+  String? _trackedQuestionText;
   late TextEditingController _myReflectionController;
   Timer? _advanceTimer;
 
@@ -96,6 +101,59 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
   }
 
   bool get _isHost => ref.read(duoIsHostProvider);
+
+  String? get _myUid => ref.read(authStateProvider).value?.uid;
+
+  // ── Group-mode helpers ───────────────────────────────────────────────────
+
+  String _myReflection(DuoSession session, DuoCard card) {
+    if (session.isGroupMode) {
+      return card.playerReflections[_myUid ?? ''] ?? '';
+    }
+    return _isHost ? card.hostReflection : card.guestReflection;
+  }
+
+  bool _allReflectionsDone(DuoSession session, DuoCard card) {
+    if (session.isGroupMode) {
+      return card.reflectionsCompleteForGroup(session.participantUids);
+    }
+    final partnerReflection =
+        _isHost ? card.guestReflection : card.hostReflection;
+    return partnerReflection.isNotEmpty;
+  }
+
+  bool _allVotesDone(DuoSession session, DuoCard card) {
+    if (session.isGroupMode) {
+      return card.isCompleteForGroup(session.participantUids);
+    }
+    final partnerChoice =
+        _isHost ? card.guestMatchChoice : card.hostMatchChoice;
+    return partnerChoice != null;
+  }
+
+  /// The display label for the "partner" chip in the header.
+  /// For group mode, shows the first other player's name + overflow count.
+  String _partnerDisplayLabel(DuoSession session) {
+    if (session.isGroupMode) {
+      final others = session.participants.entries
+          .where((e) => e.key != _myUid)
+          .map((e) => e.value)
+          .toList();
+      if (others.isEmpty) return 'Group';
+      if (others.length == 1) return others.first;
+      return '${others.first} +${others.length - 1}';
+    }
+    return _isHost ? (session.guestName ?? 'Partner') : session.hostName;
+  }
+
+  /// Whether the current player has already submitted their vote for this card.
+  bool _myVoteSubmitted(DuoSession session, DuoCard card) {
+    if (session.isGroupMode) {
+      return card.playerVotes.containsKey(_myUid ?? '');
+    }
+    final myChoice = _isHost ? card.hostMatchChoice : card.guestMatchChoice;
+    return myChoice != null;
+  }
 
   bool get _isShowingOverlay =>
       _phase == _CardPhase.choosingMatch ||
@@ -160,6 +218,31 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       _startCardTimer();
     }
 
+    // If the question text for the current card changed, a skip replacement
+    // arrived — reset local writing state so both players see the fresh question.
+    if (!session.isWaiting &&
+        _displayedCardIndex < session.cards.length &&
+        _phase == _CardPhase.writing) {
+      final newText = session.cards[_displayedCardIndex].questionText;
+      if (_trackedQuestionText != null && _trackedQuestionText != newText) {
+        _cardTimer?.cancel();
+        _pulseController.stop();
+        _pulseController.reset();
+        setState(() {
+          _isSkipping = false;
+          _myMatchChoice = null;
+          _myReflectionController.clear();
+          _trackedQuestionText = newText;
+        });
+        _startCardTimer();
+        return;
+      }
+      // Initialise tracking on first render of this card.
+      if (_trackedQuestionText == null) {
+        _trackedQuestionText = newText;
+      }
+    }
+
     if (session.status == DuoSessionStatus.cancelled) {
       if (_partnerLeftDialogShown) return;
       _partnerLeftDialogShown = true;
@@ -169,38 +252,85 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         final alertCustom = alertTheme.extension<CustomThemeExtension>();
         final alertFontColor =
             alertCustom?.fontColor ?? alertTheme.textTheme.bodyMedium?.color ?? Colors.black87;
+        final accent = _duoAccent(alertTheme);
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            backgroundColor: alertTheme.cardColor,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('Partner left',
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  color: alertFontColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                )),
-            content: Text('Your partner has left the session.',
-                style: TextStyle(
-                  fontFamily: 'Runtime',
-                  color: alertFontColor.withOpacity(0.6),
-                  fontSize: 14,
-                )),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.go('/home');
-                },
-                child: Text('Go home',
+          barrierColor: Colors.black54,
+          builder: (_) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Container(
+              decoration: BoxDecoration(
+                color: alertTheme.scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: accent.withOpacity(0.15), width: 1.5),
+              ),
+              padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon badge
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.link_off_rounded, color: accent, size: 26),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Session ended',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Runtime',
-                      color: _duoAccent(alertTheme),
-                    )),
+                      color: alertFontColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'The host left and the session\nwas cancelled.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      color: alertFontColor.withOpacity(0.55),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.go('/home');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text(
+                        'Go home',
+                        style: TextStyle(
+                          fontFamily: 'Runtime',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       });
@@ -209,15 +339,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
 
     if (_displayedCardIndex >= session.cards.length) return;
     final card = session.cards[_displayedCardIndex];
-    final myReflection = _isHost ? card.hostReflection : card.guestReflection;
-    final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
-    final partnerChoice = _isHost ? card.guestMatchChoice : card.hostMatchChoice;
+    final myReflection = _myReflection(session, card);
 
     switch (_phase) {
       case _CardPhase.writing:
         if (myReflection.isNotEmpty) {
           _myReflectionController.text = myReflection;
-          if (partnerReflection.isNotEmpty) {
+          if (_allReflectionsDone(session, card)) {
             setState(() => _phase = _CardPhase.choosingMatch);
             _overlayController.forward(from: 0);
           } else {
@@ -226,16 +354,28 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         }
 
       case _CardPhase.waitingForPartner:
-        if (partnerReflection.isNotEmpty) {
+        if (_allReflectionsDone(session, card)) {
           setState(() => _phase = _CardPhase.choosingMatch);
           _overlayController.forward(from: 0);
         }
 
       case _CardPhase.choosingMatch:
-        break;
+        // If we're in group mode and this player already voted (e.g. hot-reload),
+        // jump to waitingForChoice.
+        if (session.isGroupMode && _myVoteSubmitted(session, card)) {
+          if (_allVotesDone(session, card)) {
+            setState(() => _phase = _CardPhase.showingResult);
+            _advanceTimer?.cancel();
+            _advanceTimer = Timer(const Duration(seconds: 2), () {
+              if (mounted) _dismissReveal(session);
+            });
+          } else {
+            setState(() => _phase = _CardPhase.waitingForChoice);
+          }
+        }
 
       case _CardPhase.waitingForChoice:
-        if (partnerChoice != null) {
+        if (_allVotesDone(session, card)) {
           setState(() => _phase = _CardPhase.showingResult);
           _advanceTimer?.cancel();
           _advanceTimer = Timer(const Duration(seconds: 2), () {
@@ -262,12 +402,24 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     HapticFeedback.lightImpact();
     setState(() => _isSubmitting = true);
 
-    await DuoSessionService.saveReflection(
-      code: widget.sessionCode,
-      cardIndex: _displayedCardIndex,
-      isHost: _isHost,
-      text: text,
-    );
+    if (session.isGroupMode) {
+      final uid = _myUid;
+      if (uid != null) {
+        await DuoSessionService.savePlayerReflection(
+          code: widget.sessionCode,
+          cardIndex: _displayedCardIndex,
+          uid: uid,
+          text: text,
+        );
+      }
+    } else {
+      await DuoSessionService.saveReflection(
+        code: widget.sessionCode,
+        cardIndex: _displayedCardIndex,
+        isHost: _isHost,
+        text: text,
+      );
+    }
 
     if (!mounted) return;
     setState(() {
@@ -285,12 +437,56 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       _phase = _CardPhase.waitingForChoice;
     });
 
-    await DuoSessionService.recordMatchChoice(
-      code: widget.sessionCode,
-      cardIndex: _displayedCardIndex,
-      isHost: _isHost,
-      choice: choice,
-    );
+    if (session.isGroupMode) {
+      final uid = _myUid;
+      if (uid != null) {
+        await DuoSessionService.recordPlayerVote(
+          code: widget.sessionCode,
+          cardIndex: _displayedCardIndex,
+          uid: uid,
+          choice: choice,
+        );
+      }
+    } else {
+      await DuoSessionService.recordMatchChoice(
+        code: widget.sessionCode,
+        cardIndex: _displayedCardIndex,
+        isHost: _isHost,
+        choice: choice,
+      );
+    }
+  }
+
+  Future<void> _skipCurrentCard(DuoSession session) async {
+    if (_isSkipping || _isSubmitting) return;
+    // Each group player has their own skip budget; 2-player uses host/guest fields.
+    final mySkipsLeft = session.isGroupMode
+        ? (session.playerSkipsLeft[_myUid ?? ''] ?? 0)
+        : (_isHost ? session.hostSkipsLeft : session.guestSkipsLeft);
+    if (mySkipsLeft <= 0) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _isSkipping = true);
+    _cardTimer?.cancel();
+    _pulseController.stop();
+    _pulseController.reset();
+
+    try {
+      await DuoSessionService.skipCard(
+        code: widget.sessionCode,
+        cardIndex: _displayedCardIndex,
+        isHost: _isHost,
+        // Pass uid for group mode so the correct player's budget is decremented.
+        uid: session.isGroupMode ? _myUid : null,
+      );
+      // Replacement is detected in _onSessionUpdate via question text change.
+    } catch (_) {
+      // If the skip fails, reset state so the button isn't stuck disabled.
+      if (mounted) {
+        setState(() => _isSkipping = false);
+        _startCardTimer();
+      }
+    }
   }
 
   void _dismissReveal(DuoSession session) {
@@ -303,6 +499,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         _myMatchChoice = null;
         _myReflectionController.clear();
         _displayedCardIndex = nextIdx;
+        _trackedQuestionText = null; // reset so next card initialises cleanly
       });
       if (nextIdx >= session.cards.length) {
         _finishSession();
@@ -320,7 +517,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     );
     if (!isPremium) {
       final prefs = await SharedPreferences.getInstance();
-      final cooldownUntil = DateTime.now().add(const Duration(hours: 3));
+      final cooldownUntil = DateTime.now().add(const Duration(hours: 24));
       await prefs.setInt(
           'duo_cooldown_until_ms', cooldownUntil.millisecondsSinceEpoch);
     }
@@ -370,7 +567,10 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
 
         if (session.isWaiting) {
           return _WaitingForPartnerScreen(
-              sessionCode: widget.sessionCode, hostName: session.hostName);
+            sessionCode: widget.sessionCode,
+            session: session,
+            isHost: _isHost,
+          );
         }
 
         final idx = _displayedCardIndex;
@@ -386,8 +586,15 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         }
 
         final card = session.cards[idx];
-        final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
-        final partnerName = _isHost ? (session.guestName ?? 'Partner') : session.hostName;
+        // For group mode: check if any other player has answered
+        final partnerHasAnswered = session.isGroupMode
+            ? session.participants.keys
+                .where((uid) => uid != _myUid)
+                .any((uid) => (card.playerReflections[uid] ?? '').isNotEmpty)
+            : (_isHost
+                ? card.guestReflection.isNotEmpty
+                : card.hostReflection.isNotEmpty);
+        final partnerName = _partnerDisplayLabel(session);
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -401,7 +608,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                       session: session,
                       idx: idx,
                       partnerName: partnerName,
-                      partnerHasAnswered: partnerReflection.isNotEmpty,
+                      partnerHasAnswered: partnerHasAnswered,
                     ),
                     Flexible(
                       child: _buildCard(card, idx, session.cards.length),
@@ -681,7 +888,9 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               ),
               const SizedBox(width: 12),
               Text(
-                'Waiting for partner…',
+                session.isGroupMode
+                    ? 'Waiting for others…'
+                    : 'Waiting for partner…',
                 style: TextStyle(
                   fontFamily: 'Runtime',
                   color: accentColor,
@@ -777,6 +986,45 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                     ),
             ),
           ),
+
+          // Skip button — shown when the player has skips left AND reserves remain.
+          // Group mode: each player has their own budget tracked in playerSkipsLeft.
+          Builder(builder: (_) {
+            final mySkipsLeft = session.isGroupMode
+                ? (session.playerSkipsLeft[_myUid ?? ''] ?? 0)
+                : (_isHost ? session.hostSkipsLeft : session.guestSkipsLeft);
+            if (mySkipsLeft <= 0 || session.reserveCards.isEmpty) return const SizedBox.shrink();
+            return Column(
+              children: [
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed:
+                      (_isSkipping || _isSubmitting)
+                          ? null
+                          : () => _skipCurrentCard(session),
+                  icon: Icon(
+                    Icons.skip_next_rounded,
+                    size: 16,
+                    color: fontColor.withOpacity(0.4),
+                  ),
+                  label: Text(
+                    'Skip ($mySkipsLeft left)',
+                    style: TextStyle(
+                      fontFamily: 'Runtime',
+                      color: fontColor.withOpacity(0.4),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -789,27 +1037,74 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final accentColor = _duoAccent(appTheme);
     final card = session.cards[idx];
-    final myReflection = _isHost ? card.hostReflection : card.guestReflection;
-    final partnerReflection = _isHost ? card.guestReflection : card.hostReflection;
+    final myReflection = _myReflection(session, card);
+
+    // For group mode: collect all players' reflections in order
+    // (my answer first, then others in participant order)
+    List<({String name, String text})> allReflections() {
+      if (!session.isGroupMode) {
+        final partnerReflection =
+            _isHost ? card.guestReflection : card.hostReflection;
+        return [
+          (name: 'You', text: myReflection),
+          (name: partnerName, text: partnerReflection),
+        ];
+      }
+      final result = <({String name, String text})>[];
+      final myUid = _myUid ?? '';
+      // My reflection first
+      result.add((
+        name: 'You',
+        text: card.playerReflections[myUid] ?? '',
+      ));
+      // Then everyone else in participant order
+      for (final entry in session.participants.entries) {
+        if (entry.key == myUid) continue;
+        result.add((
+          name: entry.value,
+          text: card.playerReflections[entry.key] ?? '',
+        ));
+      }
+      return result;
+    }
+
+    // Group-aware result check
+    bool cardIsMatch() {
+      if (session.isGroupMode) {
+        return card.isMatchForGroup(session.participantUids);
+      }
+      return card.isMatch;
+    }
+
+    bool cardAllDiffered() {
+      if (session.isGroupMode) {
+        return card.allDifferedForGroup(session.participantUids);
+      }
+      return card.bothDiffered;
+    }
 
     Widget overlayContent;
 
     if (_phase == _CardPhase.showingResult) {
       // Match → green heart.  Differed → red arrows.  Mixed → amber.
+      final bool isMatch = cardIsMatch();
+      final bool allDiffered = cardAllDiffered();
       final Color resultColor;
-      if (card.isMatch) {
+      if (isMatch) {
         resultColor = const Color(0xFF4CAF50);
-      } else if (card.bothDiffered) {
+      } else if (allDiffered) {
         resultColor = const Color(0xFFEF4444);
       } else {
         resultColor = const Color(0xFFF59E0B);
       }
       final resultIcon =
-          card.isMatch ? Icons.favorite_rounded : Icons.compare_arrows_rounded;
-      final resultLabel = card.isMatch
-          ? 'You connected!'
-          : card.bothDiffered
-              ? 'You both see it differently!'
+          isMatch ? Icons.favorite_rounded : Icons.compare_arrows_rounded;
+      final resultLabel = isMatch
+          ? (session.isGroupMode ? 'Everyone connected!' : 'You connected!')
+          : allDiffered
+              ? (session.isGroupMode
+                  ? 'You all see it differently!'
+                  : 'You both see it differently!')
               : 'Mixed feelings!';
 
       overlayContent = Column(
@@ -830,12 +1125,47 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Runtime',
-              // Heart/icon stays its result color; text uses the theme text color
               color: fontColor,
               fontWeight: FontWeight.w800,
               fontSize: 22,
             ),
           ),
+          // In group mode, show a summary of who voted what
+          if (session.isGroupMode) ...[
+            const SizedBox(height: 12),
+            ...session.participants.entries.map((e) {
+              final vote = card.playerVotes[e.key];
+              final isVoteMatch = vote == 'matched';
+              final voteColor = isVoteMatch
+                  ? const Color(0xFF4CAF50)
+                  : const Color(0xFFF59E0B);
+              final name = e.key == (_myUid ?? '') ? 'You' : e.value;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isVoteMatch
+                          ? Icons.favorite_rounded
+                          : Icons.compare_arrows_rounded,
+                      size: 14,
+                      color: voteColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$name: ${vote ?? '—'}',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: fontColor.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         ],
       );
     } else if (_phase == _CardPhase.waitingForChoice) {
@@ -848,17 +1178,26 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       final choiceLabel =
           _myMatchChoice == 'matched' ? 'You chose: Matched' : 'You chose: Differed';
 
+      final reflections = allReflections();
+
       overlayContent = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ReflectionDisplay(
-            myName: 'You',
-            myText: myReflection,
-            partnerName: partnerName,
-            partnerText: partnerReflection,
-            fontColor: fontColor,
-            accentColor: accentColor,
-          ),
+          if (session.isGroupMode)
+            _GroupReflectionDisplay(
+              reflections: reflections,
+              fontColor: fontColor,
+              accentColor: accentColor,
+            )
+          else
+            _ReflectionDisplay(
+              myName: 'You',
+              myText: myReflection,
+              partnerName: partnerName,
+              partnerText: reflections.length > 1 ? reflections[1].text : '',
+              fontColor: fontColor,
+              accentColor: accentColor,
+            ),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -896,7 +1235,9 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               ),
               const SizedBox(width: 10),
               Text(
-                'Waiting for $partnerName…',
+                session.isGroupMode
+                    ? 'Waiting for others…'
+                    : 'Waiting for $partnerName…',
                 style: TextStyle(
                   fontFamily: 'Runtime',
                   color: fontColor.withOpacity(0.5),
@@ -908,12 +1249,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
         ],
       );
     } else {
-      // choosingMatch — show both answers and choice buttons
+      // choosingMatch — show all answers and choice buttons
+      final reflections = allReflections();
       overlayContent = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Both answered!',
+            session.isGroupMode ? 'Everyone answered!' : 'Both answered!',
             style: TextStyle(
               fontFamily: 'Runtime',
               color: fontColor,
@@ -922,14 +1264,21 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
             ),
           ),
           const SizedBox(height: 16),
-          _ReflectionDisplay(
-            myName: 'You',
-            myText: myReflection,
-            partnerName: partnerName,
-            partnerText: partnerReflection,
-            fontColor: fontColor,
-            accentColor: accentColor,
-          ),
+          if (session.isGroupMode)
+            _GroupReflectionDisplay(
+              reflections: reflections,
+              fontColor: fontColor,
+              accentColor: accentColor,
+            )
+          else
+            _ReflectionDisplay(
+              myName: 'You',
+              myText: myReflection,
+              partnerName: partnerName,
+              partnerText: reflections.length > 1 ? reflections[1].text : '',
+              fontColor: fontColor,
+              accentColor: accentColor,
+            ),
           const SizedBox(height: 20),
           Text(
             'Do you feel you connected?',
@@ -1104,72 +1453,370 @@ class _TimerRing extends StatelessWidget {
 
 // ── Waiting screen ────────────────────────────────────────────────────────────
 
-class _WaitingForPartnerScreen extends ConsumerWidget {
+class _WaitingForPartnerScreen extends ConsumerStatefulWidget {
   final String sessionCode;
-  final String hostName;
+  final DuoSession session;
+  final bool isHost;
 
   const _WaitingForPartnerScreen({
     required this.sessionCode,
-    required this.hostName,
+    required this.session,
+    required this.isHost,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WaitingForPartnerScreen> createState() =>
+      _WaitingForPartnerScreenState();
+}
+
+class _WaitingForPartnerScreenState
+    extends ConsumerState<_WaitingForPartnerScreen> {
+  bool _isStarting = false;
+  bool _isLeaving = false;
+
+  Future<void> _startGame() async {
+    if (_isStarting) return;
+    setState(() => _isStarting = true);
+    try {
+      await DuoSessionService.startSession(widget.sessionCode);
+    } finally {
+      if (mounted) setState(() => _isStarting = false);
+    }
+  }
+
+  /// Called when the user presses the back button in the waiting room.
+  /// Host: shows a confirmation dialog, then cancels the session for everyone.
+  /// Non-host: silently removes themselves from [participants] and goes home.
+  Future<void> _onLeave() async {
+    if (_isLeaving) return;
+    if (widget.isHost) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          final t = Theme.of(ctx);
+          final c = t.extension<CustomThemeExtension>();
+          final fc = c?.fontColor ?? t.textTheme.bodyMedium?.color ?? Colors.black87;
+          return AlertDialog(
+            backgroundColor: t.cardColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('Cancel session?',
+                style: TextStyle(
+                    fontFamily: 'Runtime', color: fc, fontWeight: FontWeight.w700)),
+            content: Text(
+              'Leaving will cancel the session for everyone in the lobby.',
+              style: TextStyle(
+                  fontFamily: 'Runtime', color: fc.withOpacity(0.65), fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('Stay',
+                    style: TextStyle(
+                        fontFamily: 'Runtime', color: _duoAccent(t))),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text('Cancel session',
+                    style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: Colors.red.shade400,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirm != true) return;
+    }
+
+    setState(() => _isLeaving = true);
+    try {
+      final uid = ref.read(authStateProvider).value?.uid ?? '';
+      await DuoSessionService.leaveSession(
+        code: widget.sessionCode,
+        uid: uid,
+        isHost: widget.isHost,
+      );
+    } catch (_) {
+      // Best-effort — navigate away regardless.
+    }
+    if (mounted) context.go('/home');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final appTheme = Theme.of(context);
     final customTheme = appTheme.extension<CustomThemeExtension>();
     final fontColor =
         customTheme?.fontColor ?? appTheme.textTheme.bodyMedium?.color ?? Colors.black87;
     final accentColor = _duoAccent(appTheme);
     final isSmall = MediaQuery.of(context).size.height < 700;
+    final session = widget.session;
 
-    return Scaffold(
-      backgroundColor: appTheme.scaffoldBackgroundColor,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onLeave();
+      },
+      child: Scaffold(
         backgroundColor: appTheme.scaffoldBackgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: fontColor, size: 20),
-          onPressed: () => context.go('/home'),
+        appBar: AppBar(
+          backgroundColor: appTheme.scaffoldBackgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: fontColor, size: 20),
+            onPressed: _onLeave,
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: session.isGroupMode
+                  ? _buildGroupWaiting(
+                      context, session, fontColor, accentColor, isSmall)
+                  : _buildDuoWaiting(
+                      context, session, fontColor, accentColor, isSmall),
+            ),
+          ),
         ),
       ),
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+    );
+  }
+
+  Widget _buildDuoWaiting(
+    BuildContext context,
+    DuoSession session,
+    Color fontColor,
+    Color accentColor,
+    bool isSmall,
+  ) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(color: accentColor),
+        SizedBox(height: isSmall ? 20 : 32),
+        Text(
+          'Waiting for partner…',
+          style: TextStyle(
+            fontFamily: 'Runtime',
+            color: fontColor,
+            fontWeight: FontWeight.w700,
+            fontSize: isSmall ? 20 : 22,
+          ),
+        ),
+        SizedBox(height: isSmall ? 8 : 12),
+        Text(
+          'Share this code with your partner:',
+          style: TextStyle(
+            fontFamily: 'Runtime',
+            color: fontColor.withOpacity(0.6),
+            fontSize: 14,
+          ),
+        ),
+        SizedBox(height: isSmall ? 14 : 20),
+        _CodeDisplay(
+          code: session.sessionCode,
+          accentColor: accentColor,
+          fontColor: fontColor,
+        ),
+        SizedBox(height: isSmall ? 20 : 32),
+        Text(
+          'The session will start automatically once they join.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'Runtime',
+            color: fontColor.withOpacity(0.5),
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupWaiting(
+    BuildContext context,
+    DuoSession session,
+    Color fontColor,
+    Color accentColor,
+    bool isSmall,
+  ) {
+    final joined = session.joinedCount;
+    final max = session.maxPlayers;
+    final canStart = joined >= 2 && widget.isHost;
+
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Header
+          Text(
+            'Group Session',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor,
+              fontWeight: FontWeight.w800,
+              fontSize: isSmall ? 20 : 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$joined of $max players joined',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: accentColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          SizedBox(height: isSmall ? 16 : 24),
+
+          // Session code
+          Text(
+            'Share this code:',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              color: fontColor.withOpacity(0.6),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _CodeDisplay(
+            code: session.sessionCode,
+            accentColor: accentColor,
+            fontColor: fontColor,
+          ),
+
+          SizedBox(height: isSmall ? 16 : 24),
+
+          // Player list
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accentColor.withOpacity(0.15)),
+            ),
             child: Column(
+              children: [
+                // Connected players
+                ...session.participants.values.map((name) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4CAF50),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            name,
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: fontColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                // Empty slots
+                ...List.generate(max - joined, (_) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: fontColor.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Waiting for player…',
+                            style: TextStyle(
+                              fontFamily: 'Runtime',
+                              color: fontColor.withOpacity(0.35),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+
+          SizedBox(height: isSmall ? 16 : 24),
+
+          // Start button (host) or waiting text (others)
+          if (widget.isHost) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: canStart ? _startGame : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  disabledBackgroundColor: accentColor.withOpacity(0.3),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _isStarting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        joined >= max
+                            ? 'Start Game'
+                            : 'Start Now ($joined/$max joined)',
+                        style: const TextStyle(
+                          fontFamily: 'Runtime',
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+              ),
+            ),
+            if (!canStart) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Need at least 2 players to start.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: fontColor.withOpacity(0.4),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ] else ...[
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: accentColor),
-                SizedBox(height: isSmall ? 20 : 32),
-                Text(
-                  'Waiting for partner…',
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    color: fontColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: isSmall ? 20 : 22,
-                  ),
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: accentColor),
                 ),
-                SizedBox(height: isSmall ? 8 : 12),
+                const SizedBox(width: 10),
                 Text(
-                  'Share this code with your partner:',
-                  style: TextStyle(
-                    fontFamily: 'Runtime',
-                    color: fontColor.withOpacity(0.6),
-                    fontSize: 14,
-                  ),
-                ),
-                SizedBox(height: isSmall ? 14 : 20),
-                _CodeDisplay(
-                  code: sessionCode,
-                  accentColor: accentColor,
-                  fontColor: fontColor,
-                ),
-                SizedBox(height: isSmall ? 20 : 32),
-                Text(
-                  'The session will start automatically once they join.',
-                  textAlign: TextAlign.center,
+                  'Waiting for host to start…',
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     color: fontColor.withOpacity(0.5),
@@ -1178,8 +1825,8 @@ class _WaitingForPartnerScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
@@ -1200,11 +1847,40 @@ class _CodeDisplay extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Clipboard.setData(ClipboardData(text: code));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Code copied!',
-                style: TextStyle(fontFamily: 'Runtime')),
-            duration: Duration(seconds: 2),
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            duration: const Duration(seconds: 2),
+            content: Container(
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Code copied!',
+                    style: const TextStyle(
+                      fontFamily: 'Runtime',
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -1368,6 +2044,71 @@ class _ReflectionDisplay extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Like [_ReflectionDisplay] but for 3-4 player group mode.
+/// Shows each player's reflection as a stacked bubble.
+class _GroupReflectionDisplay extends StatelessWidget {
+  final List<({String name, String text})> reflections;
+  final Color fontColor;
+  final Color accentColor;
+
+  const _GroupReflectionDisplay({
+    required this.reflections,
+    required this.fontColor,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: reflections.asMap().entries.map((e) {
+        final idx = e.key;
+        final r = e.value;
+        final isMe = idx == 0;
+        final nameColor = isMe ? accentColor : fontColor.withOpacity(0.55);
+        final bgColor = isMe ? accentColor.withOpacity(0.08) : fontColor.withOpacity(0.06);
+        final borderColor = isMe ? accentColor.withOpacity(0.2) : fontColor.withOpacity(0.1);
+        return Padding(
+          padding: EdgeInsets.only(bottom: idx < reflections.length - 1 ? 8 : 0),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r.name,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: nameColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  r.text.isEmpty ? '…' : r.text,
+                  style: TextStyle(
+                    fontFamily: 'Runtime',
+                    color: fontColor,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

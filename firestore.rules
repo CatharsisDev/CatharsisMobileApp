@@ -41,7 +41,11 @@ service cloud.firestore {
     
     // Duo Sessions
     // - Any authenticated user can create a session (they become the host)
-    // - Only the host or the guest can read or update the session
+    // - The host, the first guest (guestUid), or any existing participant can
+    //   read and update the session at any time.
+    // - For group sessions (maxPlayers > 2) that are still in the waiting room
+    //   with open slots, any authenticated user may also read and update so they
+    //   can join the lobby (even before their UID is recorded as a participant).
     match /duoSessions/{sessionCode} {
       allow create: if request.auth != null
                     && request.resource.data.hostUid == request.auth.uid;
@@ -51,13 +55,29 @@ service cloud.firestore {
                       || resource.data.guestUid == request.auth.uid
                       // Allow any authenticated user to read an open session so
                       // they can validate the code and join it.
-                      || resource.data.guestUid == null);
+                      || resource.data.guestUid == null
+                      // Allow participants already in a group session to read.
+                      || (resource.data.participants is map
+                          && request.auth.uid in resource.data.participants)
+                      // Allow reading any open group-mode waiting session
+                      // (needed to render the lobby / validate the join code).
+                      || (resource.data.maxPlayers > 2
+                          && resource.data.status == 'waiting'));
 
       allow update: if request.auth != null
                     && (resource.data.hostUid == request.auth.uid
                         || resource.data.guestUid == request.auth.uid
                         // Allow a new guest to join (guestUid is null until join)
-                        || resource.data.guestUid == null);
+                        || resource.data.guestUid == null
+                        // Allow existing participants to update (e.g. submit
+                        // reflections, votes, or leave the group session).
+                        || (resource.data.participants is map
+                            && request.auth.uid in resource.data.participants)
+                        // Allow a new player to claim an open slot in a group
+                        // session that hasn't started yet.
+                        || (resource.data.maxPlayers > 2
+                            && resource.data.status == 'waiting'
+                            && resource.data.participants.size() < resource.data.maxPlayers));
     }
 
     // Default deny

@@ -19,15 +19,25 @@ exports.generateQuestions = onCall(
       throw new HttpsError('unauthenticated', 'You must be signed in to generate questions.');
     }
 
-    const { category, count = 5 } = request.data;
+    const { category, count = 5, mode = 'solo' } = request.data;
 
     if (!category || typeof category !== 'string' || category.trim().length === 0) {
       throw new HttpsError('invalid-argument', 'category must be a non-empty string.');
     }
 
     const safeCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
+    const cat = category.trim();
 
-    const prompt = `Generate ${safeCount} thought-provoking conversation questions for "${category.trim()}".
+    // Duo mode: questions must reveal values/preferences two people can compare.
+    // Solo mode: open-ended personal reflection questions.
+    const prompt = mode === 'duo'
+      ? `Generate ${safeCount} compatibility questions for the category "${cat}" to be used in a couples or friends matching game.
+Each question must reveal a personal value, preference, or belief that two people can meaningfully compare.
+The question should be answerable by anyone (not require specific life experience).
+Keep each question under 15 words, open-ended, and thought-provoking.
+Do NOT ask about past specific events (e.g. "what was your first...").
+Return only the questions, one per line, with no numbering or extra text.`
+      : `Generate ${safeCount} thought-provoking personal reflection questions for "${cat}".
 Make them open-ended, deep, and under 12 words each.
 Return only the questions, one per line.`;
 

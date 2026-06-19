@@ -353,9 +353,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       ],
                                       SizedBox(height: MediaQuery.of(context).size.height < 700 ? 12 : 20),
                                       _isLoading
-                                          ? CircularProgressIndicator(
-                                              color: Color.fromRGBO(42, 63, 44, 1),
-                                            )
+                                          ? const CircularProgressIndicator()
                                           : ElevatedButton(
                                               onPressed: _submitForm,
                                               style: ElevatedButton.styleFrom(

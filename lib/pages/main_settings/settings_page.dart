@@ -320,7 +320,7 @@ class SettingsMenuPage extends ConsumerWidget {
                                   onWillPop: () async => false,
                                   child: Center(
                                     child: CircularProgressIndicator(
-                                      color: theme.primaryColor,
+                                      color: theme.extension<CustomThemeExtension>()?.preferenceButtonColor ?? theme.primaryColor,
                                     ),
                                   ),
                                 ),

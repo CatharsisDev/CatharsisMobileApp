@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/duo_session.dart';
+import '../../provider/auth_provider.dart';
 import '../../provider/duo_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../../services/duo_session_service.dart';
@@ -32,6 +33,7 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
   final Map<int, TextEditingController> _controllers = {};
 
   bool get _isHost => widget.isHostOverride ?? ref.read(duoIsHostProvider);
+  String get _myUid => ref.read(authStateProvider).value?.uid ?? '';
 
   @override
   void dispose() {
@@ -156,8 +158,9 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                     (context, i) {
                       final card = matched[i];
                       final globalIdx = session.cards.indexOf(card);
-                      final myReflection =
-                          _isHost ? card.hostReflection : card.guestReflection;
+                      final myReflection = session.isGroupMode
+                          ? (card.playerReflections[_myUid] ?? '')
+                          : (_isHost ? card.hostReflection : card.guestReflection);
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: _MatchedCardTile(
@@ -173,6 +176,11 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                           fontColor: fontColor,
                           cardColor: appTheme.cardColor,
                           primaryColor: accentColor,
+                          playerReflections: session.isGroupMode
+                              ? card.playerReflections : null,
+                          participants: session.isGroupMode
+                              ? session.participants : null,
+                          myUid: session.isGroupMode ? _myUid : null,
                         ),
                       );
                     },
@@ -194,8 +202,9 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                     (context, i) {
                       final card = split[i];
                       final globalIdx = session.cards.indexOf(card);
-                      final myReflection =
-                          _isHost ? card.hostReflection : card.guestReflection;
+                      final myReflection = session.isGroupMode
+                          ? (card.playerReflections[_myUid] ?? '')
+                          : (_isHost ? card.hostReflection : card.guestReflection);
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: _SplitCardTile(
@@ -211,6 +220,11 @@ class _DuoSummaryPageState extends ConsumerState<DuoSummaryPage> {
                           fontColor: fontColor,
                           cardColor: appTheme.cardColor,
                           primaryColor: accentColor,
+                          playerReflections: session.isGroupMode
+                              ? card.playerReflections : null,
+                          participants: session.isGroupMode
+                              ? session.participants : null,
+                          myUid: session.isGroupMode ? _myUid : null,
                         ),
                       );
                     },
@@ -382,6 +396,10 @@ class _MatchedCardTile extends StatefulWidget {
   final Color fontColor;
   final Color cardColor;
   final Color primaryColor;
+  // Group mode: when non-null, reflections are read from playerReflections.
+  final Map<String, String>? playerReflections;
+  final Map<String, String>? participants;
+  final String? myUid;
 
   const _MatchedCardTile({
     required this.card,
@@ -396,6 +414,9 @@ class _MatchedCardTile extends StatefulWidget {
     required this.fontColor,
     required this.cardColor,
     required this.primaryColor,
+    this.playerReflections,
+    this.participants,
+    this.myUid,
   });
 
   @override
@@ -408,9 +429,14 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
   @override
   Widget build(BuildContext context) {
     const matchColor = Color(0xFF4CAF50);
-    final partnerReflection = widget.isHost
-        ? widget.card.guestReflection
-        : widget.card.hostReflection;
+    final isGroupMode = widget.playerReflections != null;
+
+    // 2-player partner reflection (unused in group mode).
+    final partnerReflection = isGroupMode
+        ? ''
+        : (widget.isHost
+            ? widget.card.guestReflection
+            : widget.card.hostReflection);
 
     return _CardContainer(
       accentColor: matchColor,
@@ -457,6 +483,7 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
           ),
           if (_expanded) ...[
             const SizedBox(height: 14),
+            // My reflection
             if (widget.myReflection.isNotEmpty)
               _ReflectionBubble(
                 name: widget.myName,
@@ -475,15 +502,32 @@ class _MatchedCardTileState extends State<_MatchedCardTile> {
                 fontColor: widget.fontColor,
                 bgColor: widget.cardColor,
               ),
-            if (partnerReflection.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _ReflectionBubble(
-                name: widget.partnerName,
-                text: partnerReflection,
-                primaryColor: widget.primaryColor,
-                fontColor: widget.fontColor,
-                isMe: false,
-              ),
+            // Group mode: show every other participant's reflection.
+            if (isGroupMode) ...[
+              for (final entry
+                  in (widget.playerReflections ?? {}).entries)
+                if (entry.key != widget.myUid && entry.value.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _ReflectionBubble(
+                    name: widget.participants?[entry.key] ?? 'Player',
+                    text: entry.value,
+                    primaryColor: widget.primaryColor,
+                    fontColor: widget.fontColor,
+                    isMe: false,
+                  ),
+                ],
+            ] else ...[
+              // 2-player mode: show single partner reflection.
+              if (partnerReflection.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _ReflectionBubble(
+                  name: widget.partnerName,
+                  text: partnerReflection,
+                  primaryColor: widget.primaryColor,
+                  fontColor: widget.fontColor,
+                  isMe: false,
+                ),
+              ],
             ],
           ],
         ],
@@ -507,6 +551,10 @@ class _SplitCardTile extends StatefulWidget {
   final Color fontColor;
   final Color cardColor;
   final Color primaryColor;
+  // Group mode: when non-null, reflections are read from playerReflections.
+  final Map<String, String>? playerReflections;
+  final Map<String, String>? participants;
+  final String? myUid;
 
   const _SplitCardTile({
     required this.card,
@@ -521,6 +569,9 @@ class _SplitCardTile extends StatefulWidget {
     required this.fontColor,
     required this.cardColor,
     required this.primaryColor,
+    this.playerReflections,
+    this.participants,
+    this.myUid,
   });
 
   @override
@@ -532,15 +583,19 @@ class _SplitCardTileState extends State<_SplitCardTile> {
 
   @override
   Widget build(BuildContext context) {
+    final isGroupMode = widget.playerReflections != null;
+
     final myDecision = widget.isHost
         ? widget.card.hostDecision
         : widget.card.guestDecision;
     final partnerDecision = widget.isHost
         ? widget.card.guestDecision
         : widget.card.hostDecision;
-    final partnerReflection = widget.isHost
-        ? widget.card.guestReflection
-        : widget.card.hostReflection;
+    final partnerReflection = isGroupMode
+        ? ''
+        : (widget.isHost
+            ? widget.card.guestReflection
+            : widget.card.hostReflection);
 
     return _CardContainer(
       accentColor: const Color(0xFFF59E0B),
@@ -549,17 +604,34 @@ class _SplitCardTileState extends State<_SplitCardTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _VoteTag(
-                  name: 'You',
-                  decision: myDecision,
-                  fontColor: widget.fontColor),
+              // Vote tags — wrapped so multiple players never overflow
+              Flexible(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (isGroupMode)
+                      ...widget.card.playerVotes.entries.map((e) => _VoteTag(
+                            name: widget.participants?[e.key] ?? 'Player',
+                            decision: e.value,
+                            fontColor: widget.fontColor,
+                          ))
+                    else ...[
+                      _VoteTag(
+                          name: 'You',
+                          decision: myDecision,
+                          fontColor: widget.fontColor),
+                      _VoteTag(
+                          name: widget.partnerName,
+                          decision: partnerDecision,
+                          fontColor: widget.fontColor),
+                    ],
+                  ],
+                ),
+              ),
               const SizedBox(width: 8),
-              _VoteTag(
-                  name: widget.partnerName,
-                  decision: partnerDecision,
-                  fontColor: widget.fontColor),
-              const Spacer(),
               GestureDetector(
                 onTap: () => setState(() => _expanded = !_expanded),
                 child: Icon(
@@ -585,6 +657,7 @@ class _SplitCardTileState extends State<_SplitCardTile> {
           ),
           if (_expanded) ...[
             const SizedBox(height: 14),
+            // My reflection
             if (widget.myReflection.isNotEmpty)
               _ReflectionBubble(
                 name: widget.myName,
@@ -603,15 +676,32 @@ class _SplitCardTileState extends State<_SplitCardTile> {
                 fontColor: widget.fontColor,
                 bgColor: widget.cardColor,
               ),
-            if (partnerReflection.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _ReflectionBubble(
-                name: widget.partnerName,
-                text: partnerReflection,
-                primaryColor: widget.primaryColor,
-                fontColor: widget.fontColor,
-                isMe: false,
-              ),
+            // Group mode: show every other participant's reflection.
+            if (isGroupMode) ...[
+              for (final entry
+                  in (widget.playerReflections ?? {}).entries)
+                if (entry.key != widget.myUid && entry.value.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _ReflectionBubble(
+                    name: widget.participants?[entry.key] ?? 'Player',
+                    text: entry.value,
+                    primaryColor: widget.primaryColor,
+                    fontColor: widget.fontColor,
+                    isMe: false,
+                  ),
+                ],
+            ] else ...[
+              // 2-player mode: show single partner reflection.
+              if (partnerReflection.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _ReflectionBubble(
+                  name: widget.partnerName,
+                  text: partnerReflection,
+                  primaryColor: widget.primaryColor,
+                  fontColor: widget.fontColor,
+                  isMe: false,
+                ),
+              ],
             ],
           ],
         ],

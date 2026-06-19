@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum DuoSessionStatus { waiting, active, complete, cancelled }
 
-/// A single card in a duo session.
+/// A single card in a duo/group session.
 /// New flow: players write reflections, then explicitly choose 'matched'/'differed'.
 /// Legacy flow (old sessions): match was inferred from hostSwipe == guestSwipe.
 class DuoCard {
@@ -13,11 +13,20 @@ class DuoCard {
   final String? hostSwipe;   // 'like' | 'pass' | null
   final String? guestSwipe;
 
-  // ── New flow fields ──────────────────────────────────────────────────────
+  // ── Duo (2-player) flow fields ──────────────────────────────────────────
   final String hostReflection;
   final String guestReflection;
   final String? hostMatchChoice;  // 'matched' | 'differed' | null
   final String? guestMatchChoice;
+
+  // ── Group (3-4 player) flow fields ──────────────────────────────────────
+  /// uid → reflection text (used in group sessions, maxPlayers > 2)
+  final Map<String, String> playerReflections;
+  /// uid → 'matched' | 'differed' (used in group sessions)
+  final Map<String, String> playerVotes;
+
+  /// True when either player has tapped Skip — card is skipped for both.
+  final bool isSkipped;
 
   const DuoCard({
     required this.questionText,
@@ -28,27 +37,27 @@ class DuoCard {
     this.guestReflection = '',
     this.hostMatchChoice,
     this.guestMatchChoice,
+    this.isSkipped = false,
+    this.playerReflections = const {},
+    this.playerVotes = const {},
   });
 
-  // ── Derived state ────────────────────────────────────────────────────────
+  // ── Duo (2-player) derived state ─────────────────────────────────────────
 
   bool get reflectionsComplete =>
       hostReflection.isNotEmpty && guestReflection.isNotEmpty;
 
-  /// Card fully done. New sessions need reflections + choices; legacy only swipes.
+  /// Card fully done for duo mode. Skipped cards are always complete.
   bool get isComplete {
-    // If either player has recorded a match choice, use new-flow logic
+    if (isSkipped) return true;
     if (hostMatchChoice != null || guestMatchChoice != null) {
       return reflectionsComplete &&
           hostMatchChoice != null &&
           guestMatchChoice != null;
     }
-    // Legacy: both swipes present
     return hostSwipe != null && guestSwipe != null;
   }
 
-  /// Both players explicitly chose 'matched' (new flow),
-  /// or both chose the same swipe (legacy).
   bool get isMatch {
     if (hostMatchChoice != null || guestMatchChoice != null) {
       return isComplete &&
@@ -58,23 +67,45 @@ class DuoCard {
     return isComplete && hostSwipe == guestSwipe;
   }
 
-  /// Both players explicitly chose 'differed'.
   bool get bothDiffered =>
       isComplete &&
       hostMatchChoice == 'differed' &&
       guestMatchChoice == 'differed';
 
-  /// Players disagreed on their choice (one matched, one differed).
   bool get hasMixedVote =>
       isComplete && !isMatch && !bothDiffered && hostMatchChoice != null;
 
-  /// Not a clean match.
   bool get isSplit => isComplete && !isMatch;
 
-  /// The "effective decision" for each player — prefers match choice, falls
-  /// back to legacy swipe so summary tiles can render consistently.
   String? get hostDecision => hostMatchChoice ?? hostSwipe;
   String? get guestDecision => guestMatchChoice ?? guestSwipe;
+
+  // ── Group (3-4 player) derived state ────────────────────────────────────
+
+  bool reflectionsCompleteForGroup(List<String> uids) =>
+      uids.isNotEmpty &&
+      uids.every((uid) => (playerReflections[uid] ?? '').isNotEmpty);
+
+  bool isCompleteForGroup(List<String> uids) {
+    if (isSkipped) return true;
+    if (uids.isEmpty) return false;
+    return uids.every((uid) => playerVotes.containsKey(uid));
+  }
+
+  bool isMatchForGroup(List<String> uids) =>
+      isCompleteForGroup(uids) &&
+      uids.every((uid) => playerVotes[uid] == 'matched');
+
+  bool allDifferedForGroup(List<String> uids) =>
+      isCompleteForGroup(uids) &&
+      uids.every((uid) => playerVotes[uid] == 'differed');
+
+  bool hasMixedVoteForGroup(List<String> uids) =>
+      isCompleteForGroup(uids) &&
+      !isMatchForGroup(uids) &&
+      !allDifferedForGroup(uids);
+
+  // ── Serialization ────────────────────────────────────────────────────────
 
   DuoCard copyWith({
     String? hostSwipe,
@@ -83,6 +114,9 @@ class DuoCard {
     String? guestReflection,
     String? hostMatchChoice,
     String? guestMatchChoice,
+    bool? isSkipped,
+    Map<String, String>? playerReflections,
+    Map<String, String>? playerVotes,
   }) =>
       DuoCard(
         questionText: questionText,
@@ -93,6 +127,9 @@ class DuoCard {
         guestReflection: guestReflection ?? this.guestReflection,
         hostMatchChoice: hostMatchChoice ?? this.hostMatchChoice,
         guestMatchChoice: guestMatchChoice ?? this.guestMatchChoice,
+        isSkipped: isSkipped ?? this.isSkipped,
+        playerReflections: playerReflections ?? this.playerReflections,
+        playerVotes: playerVotes ?? this.playerVotes,
       );
 
   Map<String, dynamic> toMap() => {
@@ -104,6 +141,9 @@ class DuoCard {
         'guestReflection': guestReflection,
         'hostMatchChoice': hostMatchChoice,
         'guestMatchChoice': guestMatchChoice,
+        'isSkipped': isSkipped,
+        'playerReflections': playerReflections,
+        'playerVotes': playerVotes,
       };
 
   factory DuoCard.fromMap(Map<String, dynamic> m) => DuoCard(
@@ -115,10 +155,22 @@ class DuoCard {
         guestReflection: m['guestReflection'] as String? ?? '',
         hostMatchChoice: m['hostMatchChoice'] as String?,
         guestMatchChoice: m['guestMatchChoice'] as String?,
+        isSkipped: m['isSkipped'] as bool? ?? false,
+        playerReflections: _parseStringMap(m['playerReflections']),
+        playerVotes: _parseStringMap(m['playerVotes']),
       );
+
+  static Map<String, String> _parseStringMap(dynamic raw) {
+    if (raw is! Map) return const {};
+    return Map<String, String>.fromEntries(
+      raw.entries
+          .where((e) => e.value is String)
+          .map((e) => MapEntry(e.key.toString(), e.value as String)),
+    );
+  }
 }
 
-/// The full duo session document stored in Firestore at duoSessions/{sessionCode}.
+/// The full duo/group session document stored in Firestore at duoSessions/{sessionCode}.
 class DuoSession {
   final String sessionCode;
   final String hostUid;
@@ -128,6 +180,24 @@ class DuoSession {
   final DuoSessionStatus status;
   final List<DuoCard> cards;
   final DateTime createdAt;
+  /// UIDs of users who have hidden this session from their own history.
+  final List<String> hiddenBy;
+  /// Skips remaining for each player. Each player starts with 3.
+  final int hostSkipsLeft;
+  final int guestSkipsLeft;
+  /// Pool of spare questions used to replace skipped cards.
+  final List<Map<String, String>> reserveCards;
+
+  // ── Group mode fields ────────────────────────────────────────────────────
+  /// Maximum number of players for this session (2, 3, or 4).
+  final int maxPlayers;
+  /// uid → display name for all participants (including host).
+  /// Populated for all new sessions; empty for legacy sessions.
+  final Map<String, String> participants;
+  /// uid → skips remaining. Used in group sessions so each player
+  /// has their own independent skip budget (default 3 each).
+  /// Empty for classic 2-player sessions (those use hostSkipsLeft/guestSkipsLeft).
+  final Map<String, int> playerSkipsLeft;
 
   const DuoSession({
     required this.sessionCode,
@@ -138,32 +208,86 @@ class DuoSession {
     required this.status,
     required this.cards,
     required this.createdAt,
+    this.hiddenBy = const [],
+    this.hostSkipsLeft = 3,
+    this.guestSkipsLeft = 3,
+    this.reserveCards = const [],
+    this.maxPlayers = 2,
+    this.participants = const {},
+    this.playerSkipsLeft = const {},
   });
+
+  // ── Basic derived state ──────────────────────────────────────────────────
 
   bool get hasGuest => guestUid != null && guestUid!.isNotEmpty;
   bool get isWaiting => status == DuoSessionStatus.waiting;
   bool get isActive => status == DuoSessionStatus.active;
   bool get isComplete => status == DuoSessionStatus.complete;
 
-  /// Index of the first card not yet fully completed by both players.
+  // ── Group mode ───────────────────────────────────────────────────────────
+
+  bool get isGroupMode => maxPlayers > 2;
+
+  List<String> get participantUids => participants.keys.toList();
+
+  /// Returns the number of players who have currently joined.
+  int get joinedCount => isGroupMode ? participants.length : (hasGuest ? 2 : 1);
+
+  /// True when all expected players have joined (for group sessions).
+  bool get groupIsFull => participants.length >= maxPlayers;
+
+  // ── Card completion (group-aware) ────────────────────────────────────────
+
+  bool cardIsComplete(int cardIdx) {
+    if (cardIdx < 0 || cardIdx >= cards.length) return true;
+    final card = cards[cardIdx];
+    if (isGroupMode) return card.isCompleteForGroup(participantUids);
+    return card.isComplete;
+  }
+
+  /// Index of the first card not yet fully completed by all players.
   /// Returns -1 when all cards are done.
   int get currentCardIndex {
     for (int i = 0; i < cards.length; i++) {
-      if (!cards[i].isComplete) return i;
+      if (!cardIsComplete(i)) return i;
     }
     return -1;
   }
 
   bool get allCardsComplete => currentCardIndex == -1;
 
-  List<DuoCard> get matchedCards => cards.where((c) => c.isMatch).toList();
-  List<DuoCard> get splitCards => cards.where((c) => c.isSplit).toList();
+  List<DuoCard> get matchedCards {
+    if (isGroupMode) {
+      final uids = participantUids;
+      return cards.where((c) => c.isMatchForGroup(uids)).toList();
+    }
+    return cards.where((c) => c.isMatch).toList();
+  }
+
+  List<DuoCard> get splitCards {
+    if (isGroupMode) {
+      final uids = participantUids;
+      return cards
+          .where((c) => c.isCompleteForGroup(uids) && !c.isMatchForGroup(uids))
+          .toList();
+    }
+    return cards.where((c) => c.isSplit).toList();
+  }
+
+  // ── Serialization ────────────────────────────────────────────────────────
 
   DuoSession copyWith({
     String? guestUid,
     String? guestName,
     DuoSessionStatus? status,
     List<DuoCard>? cards,
+    List<String>? hiddenBy,
+    int? hostSkipsLeft,
+    int? guestSkipsLeft,
+    List<Map<String, String>>? reserveCards,
+    int? maxPlayers,
+    Map<String, String>? participants,
+    Map<String, int>? playerSkipsLeft,
   }) =>
       DuoSession(
         sessionCode: sessionCode,
@@ -174,6 +298,13 @@ class DuoSession {
         status: status ?? this.status,
         cards: cards ?? this.cards,
         createdAt: createdAt,
+        hiddenBy: hiddenBy ?? this.hiddenBy,
+        hostSkipsLeft: hostSkipsLeft ?? this.hostSkipsLeft,
+        guestSkipsLeft: guestSkipsLeft ?? this.guestSkipsLeft,
+        reserveCards: reserveCards ?? this.reserveCards,
+        maxPlayers: maxPlayers ?? this.maxPlayers,
+        participants: participants ?? this.participants,
+        playerSkipsLeft: playerSkipsLeft ?? this.playerSkipsLeft,
       );
 
   Map<String, dynamic> toMap() => {
@@ -182,6 +313,13 @@ class DuoSession {
         'guestUid': guestUid,
         'guestName': guestName,
         'status': status.name,
+        'hiddenBy': hiddenBy,
+        'hostSkipsLeft': hostSkipsLeft,
+        'guestSkipsLeft': guestSkipsLeft,
+        'reserveCards': reserveCards,
+        'maxPlayers': maxPlayers,
+        'participants': participants,
+        'playerSkipsLeft': playerSkipsLeft,
         // Store as a map keyed by string index so Firestore dot-notation
         // field updates (e.g. "cards.2.hostMatchChoice") work correctly.
         'cards': {
@@ -210,6 +348,11 @@ class DuoSession {
     }
 
     final statusStr = m['status'] as String? ?? 'waiting';
+    final hiddenByRaw = m['hiddenBy'];
+    final hiddenBy = hiddenByRaw is List
+        ? hiddenByRaw.map((e) => e as String).toList()
+        : <String>[];
+
     return DuoSession(
       sessionCode: doc.id,
       hostUid: m['hostUid'] as String? ?? '',
@@ -222,6 +365,43 @@ class DuoSession {
       ),
       cards: rawCards,
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      hiddenBy: hiddenBy,
+      hostSkipsLeft: m['hostSkipsLeft'] as int? ?? 3,
+      guestSkipsLeft: m['guestSkipsLeft'] as int? ?? 3,
+      reserveCards: _parseReserves(m['reserveCards']),
+      maxPlayers: m['maxPlayers'] as int? ?? 2,
+      participants: _parseParticipants(m['participants']),
+      playerSkipsLeft: _parsePlayerSkips(m['playerSkipsLeft']),
+    );
+  }
+
+  static List<Map<String, String>> _parseReserves(dynamic raw) {
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map>()
+        .map((e) => {
+              'text': (e['text'] ?? '') as String,
+              'category': (e['category'] ?? '') as String,
+            })
+        .where((e) => e['text']!.isNotEmpty)
+        .toList();
+  }
+
+  static Map<String, String> _parseParticipants(dynamic raw) {
+    if (raw is! Map) return const {};
+    return Map<String, String>.fromEntries(
+      raw.entries
+          .where((e) => e.value is String)
+          .map((e) => MapEntry(e.key.toString(), e.value as String)),
+    );
+  }
+
+  static Map<String, int> _parsePlayerSkips(dynamic raw) {
+    if (raw is! Map) return const {};
+    return Map<String, int>.fromEntries(
+      raw.entries
+          .where((e) => e.value is int)
+          .map((e) => MapEntry(e.key.toString(), e.value as int)),
     );
   }
 }

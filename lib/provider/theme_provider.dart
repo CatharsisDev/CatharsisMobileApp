@@ -113,6 +113,9 @@ class AppThemes {
     primaryColor: const Color(0xFFE35F42),
     scaffoldBackgroundColor: const Color(0xFFFAF1E1),
     cardColor: const Color(0xFFFAF1E1),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Color.fromARGB(255, 44, 91, 49),
+    ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
         fontFamily: 'Runtime',
@@ -163,6 +166,9 @@ class AppThemes {
     primaryColor: Colors.blue,
     scaffoldBackgroundColor: Colors.white,
     cardColor: Colors.white,
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Color.fromRGBO(252, 103, 77, 1),
+    ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
         fontFamily: 'Runtime',
@@ -213,6 +219,9 @@ class AppThemes {
     primaryColor: const Color(0xFF100E42),
     scaffoldBackgroundColor: const Color(0xFF100E42),
     cardColor: const Color(0xFF1A1654),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Color.fromRGBO(190, 137, 255, 1),
+    ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(
         fontFamily: 'Runtime',
