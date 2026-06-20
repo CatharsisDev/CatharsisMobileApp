@@ -380,18 +380,22 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
   Future<void> _loadCache() async {
     if (!mounted) return;
-    
+
     final cached = Hive.isBoxOpen(cacheBox.name) ? cacheBox.values.toList() : [];
     if (cached.isNotEmpty) {
+      // Serve cached questions immediately so the UI is responsive.
       if (mounted) {
         final List<Question> shuffled = cached.cast<Question>()..shuffle();
         state = state.copyWith(allQuestions: shuffled);
         _rebuildSessionQuestions();
       }
+      // Then refresh AI questions in the background so they are included
+      // on the next session (or appended to the current pool if still swiping).
+      _refreshAIQuestionsInBackground();
     } else {
       final qs = await QuestionsService.loadQuestionsWithAI();
       if (!mounted) return;
-      
+
       if (Hive.isBoxOpen(cacheBox.name)) {
         await cacheBox.clear();
         await cacheBox.addAll(qs);
@@ -403,6 +407,39 @@ Future<void> _syncSwipeLimitFromFirestore() async {
     }
   }
 
+  /// Returns only the questions from [candidates] whose text does not already
+  /// appear in the Hive cache (case-insensitive, whitespace-normalised).
+  List<Question> _dedupeAgainstCache(List<Question> candidates) {
+    final existingTexts = cacheBox.values
+        .map((q) => (q as Question).text.toLowerCase().trim())
+        .toSet();
+    return candidates
+        .where((q) => !existingTexts.contains(q.text.toLowerCase().trim()))
+        .toList();
+  }
+
+  /// Generates fresh AI questions in the background and merges them into the
+  /// cache and the live question pool, deduplicating by question text.
+  void _refreshAIQuestionsInBackground() {
+    QuestionsService.generateAdditionalQuestions().then((aiQuestions) {
+      if (!mounted || aiQuestions.isEmpty) return;
+
+      final fresh = _dedupeAgainstCache(aiQuestions);
+      if (fresh.isEmpty) return;
+
+      if (Hive.isBoxOpen(cacheBox.name)) {
+        cacheBox.addAll(fresh);
+      }
+      if (mounted) {
+        state = state.copyWith(
+          allQuestions: [...state.allQuestions, ...fresh]..shuffle(),
+        );
+      }
+    }).catchError((_) {
+      // AI refresh is best-effort — ignore failures silently.
+    });
+  }
+
   Future<void> _loadPersonalizedQuestions() async {
     if (!mounted) return;
     
@@ -412,11 +449,13 @@ Future<void> _syncSwipeLimitFromFirestore() async {
       List<Question> allQuestions;
       
       if (cached.isNotEmpty) {
-        allQuestions = cached;
+        allQuestions = cached.cast<Question>();
+        // Background-refresh AI questions so they appear in future sessions.
+        _refreshAIQuestionsInBackground();
       } else {
         allQuestions = await QuestionsService.loadQuestionsWithAI();
         if (!mounted) return;
-        
+
         await cacheBox.clear();
         await cacheBox.addAll(allQuestions);
       }
@@ -440,16 +479,21 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
   void _maybeGenerateMore() {
     if (!mounted) return;
-    
+
     if (state.allQuestions.isEmpty) return;
     final pct = state.seenQuestions.length / state.allQuestions.length;
     if (pct > 0.8) {
-      QuestionsService.loadQuestionsWithAI().then((newQs) {
-        if (!mounted) return;
-        
-        cacheBox.addAll(newQs);
+      // Only generate AI questions — never reload CSV (already in cache).
+      QuestionsService.generateAdditionalQuestions().then((newQs) {
+        if (!mounted || newQs.isEmpty) return;
+
+        final fresh = _dedupeAgainstCache(newQs);
+        if (fresh.isEmpty) return;
+
+        if (Hive.isBoxOpen(cacheBox.name)) cacheBox.addAll(fresh);
         if (mounted) {
-          state = state.copyWith(allQuestions: [...state.allQuestions, ...newQs]);
+          state = state.copyWith(
+              allQuestions: [...state.allQuestions, ...fresh]);
         }
       }).catchError((_) {});
     }
@@ -1018,16 +1062,19 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
   Future<void> loadMoreQuestions() async {
     if (!mounted) return;
-    
-    final newQs = await QuestionsService.loadQuestionsWithAI();
+
+    // Generate AI questions only — CSV is already in the cache.
+    final newQs = await QuestionsService.generateAdditionalQuestions();
     if (!mounted) return;
-    
-    final updatedQuestions = [...state.allQuestions, ...newQs];
+
+    final fresh = _dedupeAgainstCache(newQs);
+    if (fresh.isEmpty) return;
+
     if (Hive.isBoxOpen(cacheBox.name)) {
-      await cacheBox.addAll(newQs);
+      await cacheBox.addAll(fresh);
     }
     if (mounted) {
-      state = state.copyWith(allQuestions: updatedQuestions);
+      state = state.copyWith(allQuestions: [...state.allQuestions, ...fresh]);
     }
   }
 
