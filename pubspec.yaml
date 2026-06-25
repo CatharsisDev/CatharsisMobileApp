@@ -2,7 +2,7 @@ name: catharsis_cards
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 3.0.0+47
+version: 3.0.0+53
 
 environment:
   sdk: ">=3.7.0<4.0.0"
@@ -20,6 +20,7 @@ dependencies:
   flutter_animate: ^4.5.2
   flutter_card_swiper: ^7.0.2
   font_awesome_flutter: any
+  
   from_css_color: 2.0.0
   page_transition: ^2.2.1
   google_fonts: any

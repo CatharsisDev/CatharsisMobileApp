@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/duo_session.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/duo_provider.dart';
@@ -21,51 +22,124 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
   // onDismissed fires, before the async Firestore write completes.
   final Set<String> _hiddenCodes = {};
 
-  Future<bool> _confirmDelete(BuildContext context, Color fontColor) async {
+  static const String _kSkipDeleteConfirmKey = 'duo_skip_delete_confirm';
+  bool _skipDeleteConfirm = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeletePreference();
+  }
+
+  Future<void> _loadDeletePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _skipDeleteConfirm = prefs.getBool(_kSkipDeleteConfirmKey) ?? false;
+      });
+    }
+  }
+
+  Future<bool> _confirmDelete(
+      BuildContext context, Color fontColor, Color accentColor) async {
+    // If the user previously chose "Don't ask again", skip the dialog entirely.
+    if (_skipDeleteConfirm) return true;
+
+    bool dontAskAgain = false;
+
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Remove session?',
-          style: TextStyle(
-            fontFamily: 'Runtime',
-            fontWeight: FontWeight.w700,
-            color: fontColor,
-          ),
-        ),
-        content: Text(
-          'This session will be removed from your history. Your partner\'s view is not affected.',
-          style: TextStyle(
-            fontFamily: 'Runtime',
-            color: fontColor.withOpacity(0.7),
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontFamily: 'Runtime',
-                color: fontColor.withOpacity(0.5),
-                fontWeight: FontWeight.w600,
-              ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Remove session?',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              fontWeight: FontWeight.w700,
+              color: fontColor,
             ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Remove',
-              style: TextStyle(
-                fontFamily: 'Runtime',
-                color: Color(0xFFEF4444),
-                fontWeight: FontWeight.w700,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This session will be removed from your history. Your partner\'s view is not affected.',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: fontColor.withOpacity(0.7),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () =>
+                    setDialogState(() => dontAskAgain = !dontAskAgain),
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Checkbox(
+                        value: dontAskAgain,
+                        activeColor: accentColor,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        onChanged: (v) => setDialogState(
+                            () => dontAskAgain = v ?? false),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Don\'t ask again',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        color: fontColor.withOpacity(0.55),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: fontColor.withOpacity(0.5),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ],
+            TextButton(
+              onPressed: () async {
+                if (dontAskAgain) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool(_kSkipDeleteConfirmKey, true);
+                  if (mounted) setState(() => _skipDeleteConfirm = true);
+                }
+                if (ctx.mounted) Navigator.of(ctx).pop(true);
+              },
+              child: const Text(
+                'Remove',
+                style: TextStyle(
+                  fontFamily: 'Runtime',
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     return result ?? false;
@@ -158,7 +232,7 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people_outline_rounded,
+                    Icon(Icons.radio_button_unchecked,
                         size: 64, color: accentColor.withOpacity(0.35)),
                     const SizedBox(height: 20),
                     Text(
@@ -172,7 +246,7 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Start a duo session and your history will appear here.',
+                      'Start a Circle session and your history will appear here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Runtime',
@@ -198,7 +272,7 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people_outline_rounded,
+                    Icon(Icons.radio_button_unchecked,
                         size: 64, color: accentColor.withOpacity(0.35)),
                     const SizedBox(height: 20),
                     Text(
@@ -212,7 +286,7 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Start a duo session and your history will appear here.',
+                      'Start a Circle session and your history will appear here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Runtime',
@@ -270,7 +344,7 @@ class _DuoPastSessionsPageState extends ConsumerState<DuoPastSessionsPage> {
                       key: ValueKey(session.sessionCode),
                       direction: DismissDirection.endToStart,
                       confirmDismiss: (_) =>
-                          _confirmDelete(context, fontColor),
+                          _confirmDelete(context, fontColor, accentColor),
                       onDismissed: (_) {
                         // Add to hidden set synchronously so the item is gone
                         // from the list before Flutter does the next build.
@@ -420,7 +494,7 @@ class _SessionTile extends StatelessWidget {
                   // Partner name + date
                   Row(
                     children: [
-                      const Icon(Icons.people_rounded,
+                      const Icon(Icons.radio_button_unchecked,
                           size: 14, color: Color(0xFF9E9E9E)),
                       const SizedBox(width: 5),
                       Expanded(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../provider/theme_provider.dart';
+import '../../components/circle_mode_icon.dart';
 
 const _kTutorialSeenKey = 'duo_tutorial_seen';
 
@@ -131,19 +132,16 @@ class _DuoTutorialPageState extends State<DuoTutorialPage> {
                     child: Column(
                       children: [
                         // ── Header ────────────────────────────────────────
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.people_rounded,
-                              size: 36, color: accentColor),
+                        CircleModeIcon(
+                          size: 72,
+                          bgColor: accentColor,
+                          textColor: accentColor.computeLuminance() > 0.4
+                              ? const Color(0xFF100E42)
+                              : Colors.white,
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'How Duo Mode Works',
+                          'How Circle Works',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Runtime',

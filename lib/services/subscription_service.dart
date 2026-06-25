@@ -67,12 +67,17 @@ class SubscriptionService {
       if (DateTime.now().isBefore(expiryDate)) {
         isPremium.value = true;
         await _prefs?.setBool(_kPremiumKey, true);
+        // Emit to the stream so isPremiumProvider transitions out of AsyncLoading
+        _premiumStatusController.add(true);
       } else {
         // Subscription expired
         await _revokeSubscription();
       }
     } else {
-      isPremium.value = _prefs?.getBool(_kPremiumKey) ?? false;
+      final cached = _prefs?.getBool(_kPremiumKey) ?? false;
+      isPremium.value = cached;
+      // Always emit so the provider resolves immediately with the correct value
+      _premiumStatusController.add(cached);
     }
   }
 
@@ -201,8 +206,14 @@ final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
   return service;
 });
 
-// Provider to watch premium status
-final isPremiumProvider = StreamProvider<bool>((ref) {
+// Provider to watch premium status.
+// Uses an async* generator so it can yield the already-known value from the
+// ValueNotifier immediately (preventing an AsyncLoading flash that would
+// default to non-premium), then yield further updates from the broadcast stream.
+final isPremiumProvider = StreamProvider<bool>((ref) async* {
   final service = ref.watch(subscriptionServiceProvider);
-  return service.premiumStatusStream.asBroadcastStream();
+  // Emit the currently cached value right away — no waiting for the stream.
+  yield service.isPremium.value;
+  // Then yield all future updates (purchases, restores, revocations).
+  yield* service.premiumStatusStream;
 });

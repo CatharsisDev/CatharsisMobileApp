@@ -36,6 +36,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
 import 'provider/reflection_provider.dart';
+import 'services/duo_questions_service.dart';
 // import 'package:device_preview/device_preview.dart';
 
 class AppStateNotifier extends ChangeNotifier {
@@ -79,6 +80,8 @@ void main() async {
 
   await Hive.initFlutter();
   Hive.registerAdapter(QuestionAdapter());
+  // Pre-open the duo questions cache box so it's ready when Duo Mode is entered.
+  await Hive.openBox<Question>(DuoQuestionsService.duoCacheBoxName);
 
   if (Platform.isAndroid) {
     await _initAdsAndroid();

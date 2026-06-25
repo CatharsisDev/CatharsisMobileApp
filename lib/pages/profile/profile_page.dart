@@ -21,6 +21,10 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:catharsis_cards/services/ad_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../announcements/announcements_page.dart';
+import '../../provider/announcements_provider.dart';
+import '../../components/announcement_popup.dart';
+import '../../models/announcement.dart';
 
 class ProfilePageWidget extends ConsumerStatefulWidget {
   const ProfilePageWidget({super.key});
@@ -887,6 +891,98 @@ Widget _buildAvatarImage(String avatarPath, {BoxFit fit = BoxFit.cover}) {
                               height: 24,
                               color: customTheme?.iconColor ?? theme.iconTheme.color,
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      // What's New / announcements button
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (_, __, ___) =>
+                                  const AnnouncementsPage(),
+                              transitionsBuilder:
+                                  (context, animation, _, child) {
+                                const begin = Offset(1.0, 0.0);
+                                const end = Offset.zero;
+                                final tween = Tween(begin: begin, end: end)
+                                    .chain(CurveTween(curve: Curves.ease));
+                                return SlideTransition(
+                                  position: animation.drive(tween),
+                                  child: child,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: customTheme?.iconCircleColor ??
+                                      Colors.white.withOpacity(0.1),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.mail_outline_rounded,
+                                    size: 22,
+                                    color: customTheme?.iconColor ??
+                                        theme.iconTheme.color,
+                                  ),
+                                ),
+                              ),
+                              // Unread badge
+                              ref
+                                  .watch(unseenAnnouncementCountProvider)
+                                  .maybeWhen(
+                                    data: (count) {
+                                      if (count == 0) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: customTheme
+                                                    ?.preferenceButtonColor ??
+                                                Colors.red,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: theme
+                                                  .scaffoldBackgroundColor,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '$count',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: customTheme
+                                                      ?.buttonFontColor ??
+                                                  Colors.white,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    orElse: () => const SizedBox.shrink(),
+                                  ),
+                            ],
                           ),
                         ),
                       ),

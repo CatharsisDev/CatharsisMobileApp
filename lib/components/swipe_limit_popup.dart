@@ -149,14 +149,14 @@ class SwipeLimitPopup extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           _BenefitLine(
-                            icon: Icons.people_rounded,
-                            text: 'Unlimited Duo Mode sessions',
+                            icon: Icons.radio_button_unchecked,
+                            text: 'Unlimited Circle sessions',
                             fontColor: customTheme?.fontColor ?? Colors.white,
                           ),
                           const SizedBox(height: 8),
                           _BenefitLine(
                             icon: Icons.format_list_numbered_rounded,
-                            text: 'Up to 20 questions per Duo session',
+                            text: 'Up to 50 questions per Circle session',
                             fontColor: customTheme?.fontColor ?? Colors.white,
                           ),
                           if (Platform.isAndroid) ...[

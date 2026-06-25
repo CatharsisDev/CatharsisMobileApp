@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../questions_model.dart';
 
 class OpenAIService {
@@ -6,6 +7,13 @@ class OpenAIService {
     required String category,
     int count = 5,
   }) async {
+    // Backstop auth check — callers should already have waited for auth,
+    // but guard here too to make the error message more useful.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('[OpenAI] Cannot call function: no authenticated user.');
+    }
+
     try {
       final callable = FirebaseFunctions.instance
           .httpsCallable('generateQuestions');
@@ -18,7 +26,17 @@ class OpenAIService {
       final rawList = result.data['questions'] as List<dynamic>? ?? [];
       return rawList
           .cast<String>()
-          .map((text) => Question(text: text, category: category))
+          .map((raw) {
+            // Strip leading bullets/dashes in case the model included them
+            // despite instructions ("- Do you..." → "Do you...")
+            final text = raw
+                .trim()
+                .replaceFirst(RegExp(r'^[\d]+\.?\s*'), '')
+                .replaceFirst(RegExp(r'^[-–—•*]\s*'), '')
+                .trim();
+            return Question(text: text, category: category);
+          })
+          .where((q) => q.text.isNotEmpty)
           .toList();
     } on FirebaseFunctionsException catch (e) {
       throw Exception('[OpenAI] Function error (${e.code}): ${e.message}');

@@ -14,6 +14,7 @@ import '../../services/subscription_service.dart';
 import '../subscription_plans/subscription_plans_page.dart';
 import 'duo_past_sessions_page.dart';
 import 'duo_tutorial_page.dart';
+import '../../components/circle_mode_icon.dart';
 
 class DuoLobbyPage extends ConsumerStatefulWidget {
   const DuoLobbyPage({Key? key}) : super(key: key);
@@ -296,7 +297,7 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
         onPressed: () => context.pop(),
       ),
       title: Text(
-        'Duo Mode',
+        'Circle',
         style: TextStyle(
           fontFamily: 'Runtime',
           color: fontColor,
@@ -440,7 +441,7 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Duo Mode',
+          'Circle',
           style: TextStyle(
             fontFamily: 'Runtime',
             color: fontColor,
@@ -493,19 +494,17 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                     children: [
                   // ── Header ───────────────────────────────────────────────
                   Center(
-                    child: Container(
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.people_rounded, size: iconIcon, color: accentColor),
+                    child: CircleModeIcon(
+                      size: iconSize,
+                      bgColor: accentColor,
+                      textColor: accentColor.computeLuminance() > 0.4
+                          ? const Color(0xFF100E42)
+                          : Colors.white,
                     ),
                   ),
                   SizedBox(height: gapTop),
                   Text(
-                    'Duo Mode',
+                    'Circle',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Runtime',
@@ -766,33 +765,6 @@ class _DuoLobbyPageState extends ConsumerState<DuoLobbyPage> {
                           _CooldownWidget(
                             until: _cooldownUntil!,
                             fontColor: fontColor,
-                          ),
-                          const SizedBox(height: 8),
-                          // Debug reset button — only shown when on cooldown
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _resetCooldown,
-                              icon: Icon(Icons.timer_off_rounded,
-                                  size: 14,
-                                  color: fontColor.withOpacity(0.35)),
-                              label: Text(
-                                'Reset cooldown (debug)',
-                                style: TextStyle(
-                                  fontFamily: 'Runtime',
-                                  color: fontColor.withOpacity(0.35),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
-                                minimumSize: Size.zero,
-                                tapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ),
                           ),
                         ] else ...[
                           ElevatedButton(
@@ -1195,7 +1167,7 @@ class _CooldownWidget extends StatelessWidget {
     const amberColor = Color(0xFFF59E0B);
     final displayMsg = message.isNotEmpty
         ? '$message — available in $timeText'
-        : 'Duo Mode on cooldown — available in $timeText';
+        : 'Circle on cooldown — available in $timeText';
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
@@ -1224,7 +1196,7 @@ class _CooldownWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Upgrade to premium for unlimited duo sessions',
+                  'Upgrade to premium for unlimited Circle sessions',
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     color: fontColor.withOpacity(0.45),

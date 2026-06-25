@@ -25,7 +25,7 @@ String _normalizeCategory(String s) => s
     .trim();
 
 String _questionKey(Question q) =>
-    '${_normalizeCategory(q.category)}|${q.text.trim()}';
+    '${_normalizeCategory(q.category).toLowerCase()}|${q.text.trim().toLowerCase()}';
 
 class CardState {
   final List<Question> allQuestions;
@@ -261,6 +261,7 @@ class CardStateNotifier extends StateNotifier<CardState> {
     await _loadLiked();
     await _loadLikedFromFirestore();
     await _loadSeenQuestions();
+    await _deduplicateCache();   // one-time cleanup of any duplicate questions
     await _loadPersonalizedQuestions();
     _rebuildSessionQuestions();
     await _checkReset();
@@ -404,6 +405,24 @@ Future<void> _syncSwipeLimitFromFirestore() async {
         state = state.copyWith(allQuestions: qs..shuffle());
         _rebuildSessionQuestions();
       }
+    }
+  }
+
+  /// One-time cleanup: removes duplicate questions from the Hive cache.
+  /// Runs on every startup but is cheap — it's a simple in-memory pass.
+  Future<void> _deduplicateCache() async {
+    if (!Hive.isBoxOpen(cacheBox.name)) return;
+    final all = cacheBox.values.toList().cast<Question>();
+    final seen = <String>{};
+    final unique = <Question>[];
+    for (final q in all) {
+      final key = '${_normalizeCategory(q.category).toLowerCase()}|${q.text.trim().toLowerCase()}';
+      if (seen.add(key)) unique.add(q);
+    }
+    if (unique.length < all.length) {
+      await cacheBox.clear();
+      await cacheBox.addAll(unique);
+      print('[Cache] Deduped ${all.length - unique.length} duplicate questions');
     }
   }
 
@@ -1062,19 +1081,22 @@ Future<void> _syncSwipeLimitFromFirestore() async {
 
   Future<void> loadMoreQuestions() async {
     if (!mounted) return;
+    try {
+      // Generate AI questions only — CSV is already in the cache.
+      final newQs = await QuestionsService.generateAdditionalQuestions();
+      if (!mounted) return;
 
-    // Generate AI questions only — CSV is already in the cache.
-    final newQs = await QuestionsService.generateAdditionalQuestions();
-    if (!mounted) return;
+      final fresh = _dedupeAgainstCache(newQs);
+      if (fresh.isEmpty) return;
 
-    final fresh = _dedupeAgainstCache(newQs);
-    if (fresh.isEmpty) return;
-
-    if (Hive.isBoxOpen(cacheBox.name)) {
-      await cacheBox.addAll(fresh);
-    }
-    if (mounted) {
-      state = state.copyWith(allQuestions: [...state.allQuestions, ...fresh]);
+      if (Hive.isBoxOpen(cacheBox.name)) {
+        await cacheBox.addAll(fresh);
+      }
+      if (mounted) {
+        state = state.copyWith(allQuestions: [...state.allQuestions, ...fresh]);
+      }
+    } catch (e) {
+      print('[loadMoreQuestions] failed: $e');
     }
   }
 

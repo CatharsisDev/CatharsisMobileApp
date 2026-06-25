@@ -64,6 +64,13 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
   late TextEditingController _myReflectionController;
   Timer? _advanceTimer;
 
+  // ── Skip toast banner ────────────────────────────────────────────────────
+  late AnimationController _skipBannerCtrl;
+  late Animation<double> _skipBannerSlide;
+  late Animation<double> _skipBannerFade;
+  Timer? _skipBannerTimer;
+  String _skipBannerText = '';
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +93,17 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
+    _skipBannerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _skipBannerSlide = Tween<double>(begin: -1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _skipBannerCtrl, curve: Curves.easeOutCubic),
+    );
+    _skipBannerFade = CurvedAnimation(
+      parent: _skipBannerCtrl, curve: Curves.easeOut,
+    );
+
     // Timer is started from _onSessionUpdate once the session is active,
     // so both players always get a full 45 s regardless of waiting time.
   }
@@ -95,6 +113,8 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     _overlayController.dispose();
     _myReflectionController.dispose();
     _pulseController.dispose();
+    _skipBannerCtrl.dispose();
+    _skipBannerTimer?.cancel();
     _advanceTimer?.cancel();
     _cardTimer?.cancel();
     super.dispose();
@@ -219,21 +239,34 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     }
 
     // If the question text for the current card changed, a skip replacement
-    // arrived — reset local writing state so both players see the fresh question.
+    // arrived — reset local state so both players see the fresh question.
+    // This must also handle waitingForPartner: if Device B already submitted
+    // but Device A skips, the card is replaced in Firestore and Device B
+    // would be stuck waiting forever without this check.
     if (!session.isWaiting &&
         _displayedCardIndex < session.cards.length &&
-        _phase == _CardPhase.writing) {
+        (_phase == _CardPhase.writing ||
+         _phase == _CardPhase.waitingForPartner)) {
       final newText = session.cards[_displayedCardIndex].questionText;
       if (_trackedQuestionText != null && _trackedQuestionText != newText) {
         _cardTimer?.cancel();
         _pulseController.stop();
         _pulseController.reset();
+        // Capture skip origin before resetting _isSkipping
+        final iWasSkipping = _isSkipping;
         setState(() {
           _isSkipping = false;
           _myMatchChoice = null;
           _myReflectionController.clear();
           _trackedQuestionText = newText;
+          _phase = _CardPhase.writing; // force back to writing for both phases
         });
+        final partnerName = iWasSkipping
+            ? null
+            : _partnerDisplayLabel(session);
+        _showSkipBanner(iWasSkipping
+            ? 'You skipped this card'
+            : '${partnerName ?? 'Partner'} skipped this card');
         _startCardTimer();
         return;
       }
@@ -489,6 +522,16 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
     }
   }
 
+  void _showSkipBanner(String text) {
+    _skipBannerTimer?.cancel();
+    setState(() => _skipBannerText = text);
+    _skipBannerCtrl.forward(from: 0);
+    _skipBannerTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      _skipBannerCtrl.reverse();
+    });
+  }
+
   void _dismissReveal(DuoSession session) {
     _advanceTimer?.cancel();
     _overlayController.reverse().then((_) {
@@ -627,6 +670,60 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
                   opacity: _overlayFade,
                   child: _buildRevealOverlay(session, idx, partnerName),
                 ),
+
+              // ── Skip toast banner ────────────────────────────────────────
+              AnimatedBuilder(
+                animation: _skipBannerCtrl,
+                builder: (_, __) {
+                  if (_skipBannerCtrl.isDismissed) return const SizedBox.shrink();
+                  final accentColor = _duoAccent(Theme.of(context));
+                  return Positioned(
+                    left: 20,
+                    right: 20,
+                    top: MediaQuery.of(context).padding.top + 64,
+                    child: FractionalTranslation(
+                      translation: Offset(0, _skipBannerSlide.value),
+                      child: Opacity(
+                        opacity: _skipBannerFade.value.clamp(0.0, 1.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.13),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: accentColor.withOpacity(0.30), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.10),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.skip_next_rounded,
+                                  size: 16, color: accentColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                _skipBannerText,
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  color: accentColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -666,7 +763,7 @@ class _DuoSwipePageState extends ConsumerState<DuoSwipePage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Duo Mode',
+                  'Circle',
                   style: TextStyle(
                     fontFamily: 'Runtime',
                     color: fontColor.withOpacity(0.5),

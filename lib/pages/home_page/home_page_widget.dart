@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -27,6 +28,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../provider/promotion_provider.dart';
 import '../../components/promotion_popup.dart';
 import '../../services/promotion_service.dart';
+import '../../services/announcements_service.dart';
+import '../../components/announcement_popup.dart';
+import '../../provider/announcements_provider.dart';
+import '../../components/circle_mode_icon.dart';
 import '../../components/subscription_offer_popup.dart';
 import '../../provider/subscription_offer_provider.dart';
 import '../../provider/streak_provider.dart';
@@ -181,12 +186,13 @@ class _HomePageWidgetState extends ConsumerState<HomePageWidget>
         }
       });
 
-      // Check and show subscription offer for non-premium users.
-      // Offset by 4 s so it doesn't overlap with the promotion popup.
-      Future.delayed(const Duration(seconds: 4), () {
-        if (mounted) {
-          _checkAndShowSubscriptionOffer();
-        }
+      // Announcement popup first, subscription offer only after it closes.
+      Future.delayed(const Duration(milliseconds: 1500), () async {
+        if (!mounted) return;
+        await _showUnseenAnnouncementIfAny();
+        if (!mounted) return;
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) _checkAndShowSubscriptionOffer();
       });
     });
   }
@@ -346,6 +352,14 @@ Future<void> _promptNotificationsOnce() async {
     );
   }
 }
+
+  Future<void> _showUnseenAnnouncementIfAny() async {
+    final service = ref.read(announcementsServiceProvider);
+    final unseen = await service.unseenAnnouncements();
+    if (unseen.isEmpty || !mounted) return;
+    // Show the most recent unseen announcement
+    await showAnnouncementPopup(context, ref, unseen.first);
+  }
 
   Future<void> _checkAndShowPromotion() async {
     if (!mounted || _hasShownPromotionThisSession) return;
@@ -773,7 +787,9 @@ final isSmallPhone = isVerySmall || isSmall;
                         ),
                       ),
                     ),
-                  Column(
+                  SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Column(
                     children: [
                       const SizedBox(height: 12),
                       Container(
@@ -976,7 +992,8 @@ final isSmallPhone = isVerySmall || isSmall;
                         ),
                       ),
                     ],
-                  ),
+                  ),   // Column
+                  ), // SingleChildScrollView
                 ],
               ),
             );
@@ -1491,25 +1508,32 @@ final isSmallPhone = isVerySmall || isSmall;
                       ),
                     ),
                     SizedBox(width: 22),
-                    // Duo Mode button
-                    InkWell(
-                      onTap: () => context.push('/duo'),
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: prefButtonSize,
+                    // Circle button (animated orbiting text)
+                    Builder(builder: (ctx) {
+                      final circleBtnBg =
+                          customTheme?.preferenceButtonColor ?? Colors.green;
+                      final circleIconColor =
+                          customTheme?.buttonFontColor ?? theme.iconTheme.color;
+                      final circleTextColor =
+                          (customTheme?.buttonFontColor ?? Colors.white).withOpacity(0.90);
+                      // OverflowBox keeps the Row height at 44px while
+                      // letting the 60px Circle button render without clipping.
+                      return SizedBox(
+                        width: 60,
                         height: prefButtonSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: customTheme?.iconCircleColor ?? Colors.white.withOpacity(0.1),
+                        child: OverflowBox(
+                          maxWidth: 60,
+                          maxHeight: 60,
+                          alignment: Alignment.center,
+                          child: _CircleButton(
+                            bgColor: circleBtnBg,
+                            iconColor: circleIconColor ?? Colors.white,
+                            textColor: circleTextColor,
+                            onTap: () => context.push('/duo'),
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.people_alt_rounded,
-                          size: prefButtonSize * prefIconScale,
-                          color: customTheme?.iconColor ?? theme.iconTheme.color,
-                        ),
-                      ),
-                    ),
+                      );
+                    }),
                     SizedBox(width: 12),
                     // Preferences button
                     InkWell(
@@ -1610,3 +1634,86 @@ final isSmallPhone = isVerySmall || isSmall;
     );
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Circle button: coloured background + orbiting "Circle" text animation
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _CircleButton extends StatefulWidget {
+  final Color bgColor;
+  final Color iconColor;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _CircleButton({
+    required this.bgColor,
+    required this.iconColor,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_CircleButton> createState() => _CircleButtonState();
+}
+
+class _CircleButtonState extends State<_CircleButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double size = 60.0;
+    return InkWell(
+      onTap: widget.onTap,
+      customBorder: const CircleBorder(),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Coloured background circle
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.bgColor,
+              ),
+            ),
+            // Orbiting text (shared painter)
+            AnimatedBuilder(
+              animation: _spin,
+              builder: (_, __) => CustomPaint(
+                size: const Size(size, size),
+                painter: CircleOrbitPainter(
+                  text: 'Circle',
+                  fontSize: 14.0,
+                  textColor: widget.textColor,
+                  angleOffset: _spin.value * 2 * math.pi,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Painter lives in lib/components/circle_mode_icon.dart as CircleOrbitPainter

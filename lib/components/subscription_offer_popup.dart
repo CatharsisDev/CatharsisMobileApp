@@ -321,13 +321,13 @@ class _SubscriptionOfferPopupState
                           ),
                           const SizedBox(height: 8),
                           const _OfferBenefitRow(
-                            icon: Icons.people_rounded,
-                            text: 'Unlimited Duo Mode sessions',
+                            icon: Icons.radio_button_unchecked,
+                            text: 'Unlimited Circle sessions',
                           ),
                           const SizedBox(height: 8),
                           const _OfferBenefitRow(
                             icon: Icons.format_list_numbered_rounded,
-                            text: 'Up to 20 questions per Duo session',
+                            text: 'Up to 50 questions per Circle session',
                           ),
                           if (Platform.isAndroid) ...[
                             const SizedBox(height: 8),

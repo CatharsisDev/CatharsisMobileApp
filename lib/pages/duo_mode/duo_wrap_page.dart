@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/duo_session.dart';
 import '../../provider/duo_provider.dart';
+import '../../components/circle_mode_icon.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Entry point
@@ -99,6 +100,7 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     with SingleTickerProviderStateMixin {
   int _page = 0;
   int _prevPage = 0;
+  bool _forward = true; // tracks direction for slide animation
   late List<_SlideData> _slides;
 
   // Background cross-fade controller
@@ -363,8 +365,20 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
     }
     HapticFeedback.lightImpact();
     setState(() {
+      _forward = true;
       _prevPage = _page;
       _page++;
+    });
+    _bgCtrl.forward(from: 0);
+  }
+
+  void _goBack() {
+    if (_page <= 0) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      _forward = false;
+      _prevPage = _page;
+      _page--;
     });
     _bgCtrl.forward(from: 0);
   }
@@ -398,6 +412,14 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
             key: _repaintKey,
             child: GestureDetector(
               onTap: slide.type == _SlideType.outro ? null : _advance,
+              onHorizontalDragEnd: (details) {
+                final v = details.primaryVelocity ?? 0;
+                if (v > 200) {
+                  _goBack();
+                } else if (v < -200 && slide.type != _SlideType.outro) {
+                  _advance();
+                }
+              },
               behavior: HitTestBehavior.opaque,
               child: AnimatedBuilder(
                 animation: _bgAnim,
@@ -438,7 +460,9 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
                                 opacity: anim,
                                 child: SlideTransition(
                                   position: Tween<Offset>(
-                                    begin: const Offset(0.06, 0),
+                                    begin: _forward
+                                        ? const Offset(0.06, 0)
+                                        : const Offset(-0.06, 0),
                                     end: Offset.zero,
                                   ).animate(CurvedAnimation(
                                       parent: anim, curve: Curves.easeOutCubic)),
@@ -493,6 +517,30 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
               ),
             ),
           ),
+
+          // ── Back button (top left, outside screenshot boundary) ──────────
+          if (_page > 0)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 16),
+                  child: GestureDetector(
+                    onTap: _goBack,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chevron_left_rounded,
+                          color: Colors.white54, size: 22),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -747,17 +795,10 @@ class _OpenerSlideState extends State<_OpenerSlide>
             opacity: fade(0.0, 0.4),
             child: ScaleTransition(
               scale: pop(0.0, 0.5),
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.08),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.15), width: 1),
-                ),
-                child: const Icon(Icons.people_rounded,
-                    size: 38, color: Colors.white),
+              child: const CircleModeIcon(
+                size: 72,
+                bgColor: Colors.white12,
+                textColor: Colors.white,
               ),
             ),
           ),
@@ -1167,6 +1208,10 @@ class _InlineFactCard extends StatelessWidget {
   final String body;
   const _InlineFactCard({required this.headline, required this.body});
 
+  /// Capitalises the first character of [s], leaving the rest unchanged.
+  static String _cap(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   @override
   Widget build(BuildContext context) {
     const teal = Color(0xFF00FFCC);
@@ -1199,7 +1244,7 @@ class _InlineFactCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            headline,
+            _cap(headline),
             style: const TextStyle(
               fontFamily: 'Runtime',
               color: Colors.white,
@@ -1212,7 +1257,7 @@ class _InlineFactCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            body,
+            _cap(body),
             style: TextStyle(
               fontFamily: 'Runtime',
               color: Colors.white.withOpacity(0.55),

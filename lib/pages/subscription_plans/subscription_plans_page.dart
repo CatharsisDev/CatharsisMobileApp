@@ -1006,8 +1006,8 @@ class _BenefitsBlock extends StatelessWidget {
     final benefits = [
       (Icons.all_inclusive,                'Unlimited swipes every day'),
       (Icons.ac_unit,                      'Streak freezes — miss a day, keep your streak'),
-      (Icons.people_rounded,               'Unlimited Duo Mode sessions'),
-      (Icons.format_list_numbered_rounded, 'Up to 20 questions per Duo session'),
+      (Icons.radio_button_unchecked,               'Unlimited Circle sessions'),
+      (Icons.format_list_numbered_rounded, 'Up to 20 questions per Circle session'),
       if (Platform.isAndroid)
         (Icons.block,                      'Ad-free experience'),
       (Icons.favorite,                     'Support independent development'),

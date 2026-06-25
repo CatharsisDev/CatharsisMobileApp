@@ -23,6 +23,232 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  // ── Forgot password ────────────────────────────────────────────────────────
+
+  void _showForgotPassword() {
+    final resetEmailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+    bool isSending = false;
+    String? resultMessage;
+    bool isSuccess = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Reset Password',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromRGBO(32, 28, 17, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter your email and we\'ll send you a link to reset your password.',
+                      style: TextStyle(
+                        fontFamily: 'Runtime',
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    if (resultMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSuccess
+                              ? const Color(0xFF22C55E).withOpacity(0.1)
+                              : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSuccess
+                                ? const Color(0xFF22C55E).withOpacity(0.4)
+                                : Colors.red.withOpacity(0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSuccess
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.error_outline_rounded,
+                              size: 16,
+                              color: isSuccess
+                                  ? const Color(0xFF22C55E)
+                                  : Colors.red,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                resultMessage!,
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  fontSize: 13,
+                                  color: isSuccess
+                                      ? const Color(0xFF22C55E)
+                                      : Colors.red,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (!isSuccess) ...[
+                      TextField(
+                        controller: resetEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          prefixIcon:
+                              Icon(Icons.email, color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                                color: Color.fromRGBO(42, 63, 44, 1), width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        style: const TextStyle(
+                          fontFamily: 'Runtime',
+                          color: Colors.black87,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: isSending
+                            ? null
+                            : () async {
+                                final email =
+                                    resetEmailController.text.trim();
+                                if (email.isEmpty || !email.contains('@')) {
+                                  setSheetState(() {
+                                    resultMessage =
+                                        'Please enter a valid email address.';
+                                    isSuccess = false;
+                                  });
+                                  return;
+                                }
+                                setSheetState(() => isSending = true);
+                                try {
+                                  await FirebaseAuth.instance
+                                      .sendPasswordResetEmail(email: email);
+                                  setSheetState(() {
+                                    isSending = false;
+                                    isSuccess = true;
+                                    resultMessage =
+                                        'Reset link sent! Check your inbox (and spam folder).';
+                                  });
+                                } on FirebaseAuthException catch (e) {
+                                  setSheetState(() {
+                                    isSending = false;
+                                    isSuccess = false;
+                                    resultMessage = e.code == 'user-not-found'
+                                        ? 'No account found with that email.'
+                                        : 'Something went wrong. Please try again.';
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromRGBO(42, 63, 44, 1),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        child: isSending
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                'Send Reset Link',
+                                style: TextStyle(
+                                  fontFamily: 'Runtime',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ] else ...[
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromRGBO(42, 63, 44, 1),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Back to Sign In',
+                          style: TextStyle(
+                            fontFamily: 'Runtime',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -340,6 +566,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                           return null;
                                         },
                                       ),
+                                      // Forgot password — login mode only
+                                      if (_isLogin) ...[
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: _showForgotPassword,
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 0, vertical: 4),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                            child: const Text(
+                                              'Forgot password?',
+                                              style: TextStyle(
+                                                fontFamily: 'Runtime',
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color.fromRGBO(42, 63, 44, 1),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                       if (_errorMessage != null) ...[
                                         SizedBox(height: 16),
                                         Text(
