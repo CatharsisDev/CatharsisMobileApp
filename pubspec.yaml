@@ -2,7 +2,7 @@ name: catharsis_cards
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 3.0.0+53
+version: 3.0.1+54
 
 environment:
   sdk: ">=3.7.0<4.0.0"
@@ -103,7 +103,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Purchasing & Payments 
-  in_app_purchase: ^3.0.8
+  in_app_purchase: ^3.2.0
   in_app_purchase_storekit: ^0.4.3
   profanity_filter: ^2.0.0
   awesome_notifications: ^0.10.1
@@ -135,6 +135,7 @@ flutter:
         - asset: assets/fonts/Runtime.otf
   
   assets:
+    - assets/images/circle_icon.png
     - assets/images/heart_icon.png
     - assets/images/home_icon.png
     - assets/images/profile_icon.png

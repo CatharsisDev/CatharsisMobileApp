@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.catharsis.cards"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -32,7 +32,7 @@ android {
     defaultConfig {
         applicationId = "com.catharsis.cards"
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -71,4 +71,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Force Google Play Billing Library to 8.x — required by Google Play from Aug 2026.
+    // This overrides whatever version in_app_purchase_android bundles transitively.
+    implementation("com.android.billingclient:billing:8.0.0")
 }

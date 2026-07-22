@@ -1007,7 +1007,7 @@ class _BenefitsBlock extends StatelessWidget {
       (Icons.all_inclusive,                'Unlimited swipes every day'),
       (Icons.ac_unit,                      'Streak freezes — miss a day, keep your streak'),
       (Icons.radio_button_unchecked,               'Unlimited Circle sessions'),
-      (Icons.format_list_numbered_rounded, 'Up to 20 questions per Circle session'),
+      (Icons.format_list_numbered_rounded, 'Up to 50 questions per Circle session'),
       if (Platform.isAndroid)
         (Icons.block,                      'Ad-free experience'),
       (Icons.favorite,                     'Support independent development'),

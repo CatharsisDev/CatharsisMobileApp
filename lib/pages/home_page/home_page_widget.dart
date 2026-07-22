@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -31,7 +30,6 @@ import '../../services/promotion_service.dart';
 import '../../services/announcements_service.dart';
 import '../../components/announcement_popup.dart';
 import '../../provider/announcements_provider.dart';
-import '../../components/circle_mode_icon.dart';
 import '../../components/subscription_offer_popup.dart';
 import '../../provider/subscription_offer_provider.dart';
 import '../../provider/streak_provider.dart';
@@ -1519,11 +1517,11 @@ final isSmallPhone = isVerySmall || isSmall;
                       // OverflowBox keeps the Row height at 44px while
                       // letting the 60px Circle button render without clipping.
                       return SizedBox(
-                        width: 60,
+                        width: 50,
                         height: prefButtonSize,
                         child: OverflowBox(
-                          maxWidth: 60,
-                          maxHeight: 60,
+                          maxWidth: 50,
+                          maxHeight: 50,
                           alignment: Alignment.center,
                           child: _CircleButton(
                             bgColor: circleBtnBg,
@@ -1639,7 +1637,7 @@ final isSmallPhone = isVerySmall || isSmall;
 // Circle button: coloured background + orbiting "Circle" text animation
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _CircleButton extends StatefulWidget {
+class _CircleButton extends StatelessWidget {
   final Color bgColor;
   final Color iconColor;
   final Color textColor;
@@ -1653,67 +1651,40 @@ class _CircleButton extends StatefulWidget {
   });
 
   @override
-  State<_CircleButton> createState() => _CircleButtonState();
-}
-
-class _CircleButtonState extends State<_CircleButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _spin;
-
-  @override
-  void initState() {
-    super.initState();
-    _spin = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    const double size = 60.0;
+    const double size = 50.0;
     return InkWell(
-      onTap: widget.onTap,
+      onTap: onTap,
       customBorder: const CircleBorder(),
-      child: SizedBox(
+      child: Container(
         width: size,
         height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Coloured background circle
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.bgColor,
-              ),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: bgColor,
+          boxShadow: [
+            BoxShadow(
+              color: bgColor.withOpacity(0.55),
+              blurRadius: 14,
+              spreadRadius: 1,
             ),
-            // Orbiting text (shared painter)
-            AnimatedBuilder(
-              animation: _spin,
-              builder: (_, __) => CustomPaint(
-                size: const Size(size, size),
-                painter: CircleOrbitPainter(
-                  text: 'Circle',
-                  fontSize: 14.0,
-                  textColor: widget.textColor,
-                  angleOffset: _spin.value * 2 * math.pi,
-                ),
-              ),
+            BoxShadow(
+              color: bgColor.withOpacity(0.25),
+              blurRadius: 28,
+              spreadRadius: 2,
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(size * 0.24),
+          child: Image.asset(
+            'assets/images/circle_icon.png',
+            fit: BoxFit.contain,
+            color: iconColor,
+            colorBlendMode: BlendMode.srcIn,
+          ),
         ),
       ),
     );
   }
 }
-
-// Painter lives in lib/components/circle_mode_icon.dart as CircleOrbitPainter

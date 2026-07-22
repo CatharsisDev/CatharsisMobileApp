@@ -225,52 +225,51 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
   }
 
   Widget _buildHowItWorksPage(_Palette p) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenHeight < 700;
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 40,
-          vertical: isSmallScreen ? 24 : 40,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: isSmallScreen ? 20 : 40),
-            Text(
-              'How It Works',
-              style: TextStyle(
-                fontFamily: 'Runtime',
-                fontSize: isSmallScreen ? 26 : 32,
-                fontWeight: FontWeight.bold,
-                color: p.text,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 32),
+          Text(
+            'How It Works',
+            style: TextStyle(
+              fontFamily: 'Runtime',
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: p.text,
             ),
-            SizedBox(height: isSmallScreen ? 32 : 60),
-            _featureItem(
-              p: p,
-              icon: Icons.swipe,
-              title: 'Swipe Through Cards',
-              description: 'Swipe left or right to explore thought-provoking questions. Left swipes will show you less of that category in the future',
-            ),
-            SizedBox(height: isSmallScreen ? 24 : 40),
-            _featureItem(
-              p: p,
-              icon: Icons.favorite,
-              title: 'Double Tap to Like',
-              description: 'Save your favorite questions and attach your thoughts on it as a note for later reflection',
-            ),
-            SizedBox(height: isSmallScreen ? 24 : 40),
-            _featureItem(
-              p: p,
-              icon: Icons.category,
-              title: 'Choose Categories',
-              description: 'Filter questions by topics that resonate with you',
-            ),
-            SizedBox(height: isSmallScreen ? 24 : 40),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+          _featureItem(
+            p: p,
+            icon: Icons.swipe,
+            title: 'Swipe Through Cards',
+            description: 'Swipe left or right to explore questions. Left swipes show you less of that category.',
+          ),
+          const SizedBox(height: 16),
+          _featureItem(
+            p: p,
+            icon: Icons.favorite,
+            title: 'Double Tap to Like',
+            description: 'Save favourite questions and add a personal reflection to any liked card to revisit later.',
+          ),
+          const SizedBox(height: 16),
+          _featureItem(
+            p: p,
+            icon: Icons.category,
+            title: 'Choose Categories',
+            description: 'Filter questions by topics that resonate with you.',
+          ),
+          const SizedBox(height: 16),
+          _featureItem(
+            p: p,
+            imagePath: 'assets/images/circle_icon.png',
+            title: 'Reflect Together with Circle',
+            description: 'Invite someone into Circle mode: answer the same prompt independently, then reveal your answers together.',
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }
@@ -332,22 +331,38 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     );
   }
 
-  Widget _featureItem({required _Palette p, required IconData icon, required String title, required String description}) {
+  Widget _featureItem({
+    required _Palette p,
+    IconData? icon,
+    String? imagePath,
+    required String title,
+    required String description,
+  }) {
+    final iconWidget = imagePath != null
+        ? Image.asset(
+            imagePath,
+            width: 28,
+            height: 28,
+            color: p.text.withOpacity(0.8),
+            colorBlendMode: BlendMode.srcIn,
+          )
+        : Icon(icon!, color: p.text.withOpacity(0.8), size: 24);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.2),
             ),
-            child: Icon(icon, color: p.text.withOpacity(0.8), size: 30),
+            child: Center(child: iconWidget),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,18 +371,19 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                   title,
                   style: TextStyle(
                     fontFamily: 'Runtime',
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: p.text,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   description,
                   style: TextStyle(
                     fontFamily: 'Runtime',
-                    fontSize: 14,
+                    fontSize: 13,
                     color: p.subText,
+                    height: 1.4,
                   ),
                 ),
               ],
