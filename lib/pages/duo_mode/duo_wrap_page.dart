@@ -190,7 +190,7 @@ class _WrapSlideShowState extends State<_WrapSlideShow>
         type: _SlideType.opener,
         primaryValue: total,
         tag: '${session.hostName} & $partner',
-        headline: 'Your\nDuo Recap',
+        headline: 'Your\nCircle Recap',
         detail: total == 1 ? 'question explored' : 'questions explored',
       ),
       _SlideData(
