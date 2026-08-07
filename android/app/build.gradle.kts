@@ -71,7 +71,4 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    // Force Google Play Billing Library to 8.x — required by Google Play from Aug 2026.
-    // This overrides whatever version in_app_purchase_android bundles transitively.
-    implementation("com.android.billingclient:billing:8.0.0")
 }
