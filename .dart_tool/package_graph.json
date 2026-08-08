@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "catharsis_cards",
-      "version": "3.0.2+55c",
+      "version": "3.0.2+56",
       "dependencies": [
         "auto_size_text",
         "awesome_notifications",
