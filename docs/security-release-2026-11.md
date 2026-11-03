@@ -1,6 +1,6 @@
 # eMudhra security release
 
-Prepared version: **3.0.3 (57)**. Confirm that build 57 is higher than every build
+Prepared version: **3.0.3 (58)**. Confirm that build 58 is higher than every build
 already uploaded to App Store Connect and Google Play before uploading.
 
 ## Why both mobile apps need a release
@@ -76,7 +76,11 @@ Do not bypass the minimum SDK constraints with an older Flutter installation.
   It does not provide a valid application smoke test.
 - iOS release compilation passed with codesigning disabled. The app is at
   `build/ios/iphoneos/Runner.app`; a signed archive and device testing are still
-  required before submission. Its embedded version is **3.0.3 (57)**.
+  required before submission. Its embedded version is **3.0.3 (58)**.
+- Build 58 aligns the Firebase app ID, bundle ID, and Google Sign-In client ID
+  in `firebase_options.dart` and `Info.plist` with the production
+  `GoogleService-Info.plist`. Build 57 contained conflicting iOS configuration
+  values and can fail before the Flutter UI starts.
 - Android release compilation passed. The unsigned bundle is at
   `build/app/outputs/bundle/release/app-release.aab`. Rebuild with the release
   signing configuration, or use the existing GitHub workflow, before upload.

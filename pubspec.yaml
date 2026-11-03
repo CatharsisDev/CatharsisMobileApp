@@ -2,7 +2,7 @@ name: catharsis_cards
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 3.0.3+57
+version: 3.0.3+58
 
 environment:
   # Minimum SDKs containing the eMudhra TLS security fix.

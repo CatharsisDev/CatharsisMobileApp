@@ -53,12 +53,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDvjMgWXscMuPNBAmVA7CWn6h40sQ8Ws8o',
-    appId: '1:40399565067:ios:fd035a779d6e1a8f61720e',
+    appId: '1:40399565067:ios:47c582874ce6b12d61720e',
     messagingSenderId: '40399565067',
     projectId: 'catharsiscards',
     storageBucket: 'catharsiscards.firebasestorage.app',
-    iosClientId: '40399565067-35uf43031oo3rp9s8gq8l98nu9t4j2i4.apps.googleusercontent.com',
-    iosBundleId: 'com.example.catharsismobileapp',
+    iosClientId: '40399565067-qjj21q9agalol4k1njlqvamk1k5kjsnl.apps.googleusercontent.com',
+    iosBundleId: 'com.catharsis.cards',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
