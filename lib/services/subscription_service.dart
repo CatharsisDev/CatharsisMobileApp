@@ -151,6 +151,7 @@ class SubscriptionService {
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
           // Determine subscription duration based on product ID
+          Duration? subscriptionDuration;
           if (purchase.productID.contains('monthly')) {
             subscriptionDuration = Duration(days: 30);
           } else if (purchase.productID.contains('annual') || purchase.productID.contains('yearly')) {
