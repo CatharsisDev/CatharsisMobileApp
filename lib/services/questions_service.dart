@@ -3,14 +3,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../questions_model.dart';
 import 'openai_service.dart';
+import 'question_quality.dart';
 
 class QuestionsService {
   static Future<List<Question>> loadQuestions() async {
     try {
       final rawData = await rootBundle.loadString('assets/Card_Statements_Questions.csv');
-      
-      List<List<dynamic>> csvTable = const CsvToListConverter(fieldDelimiter: ';')
-          .convert(rawData);
+
+      // The CSV uses Unix (\n) line endings since the circle-mode update, but
+      // CsvToListConverter defaults to \r\n — without this the whole file parses
+      // as one row and zero questions load. Normalise and set eol explicitly.
+      final normalised = rawData.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+      List<List<dynamic>> csvTable = const CsvToListConverter(
+        fieldDelimiter: ';',
+        eol: '\n',
+      ).convert(normalised);
       
       for (var i = 0; i < 5 && i < csvTable.length; i++) {
         print(csvTable[i]);
@@ -22,11 +29,10 @@ class QuestionsService {
           .map((row) {
             // Normalize both text and category so the same question
             // is never stored under two different string representations.
-            final text = row[0]
-                .toString()
-                .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
-                .replaceAll(RegExp(r'\s+'), ' ')
-                .trim();
+            // Text goes through QuestionQuality; invalid rows become '' and
+            // are dropped by the filter below.
+            final text =
+                QuestionQuality.cleanOrNull(row[0].toString()) ?? '';
             final category = row[1]
                 .toString()
                 .replaceAll(RegExp(r'[^\x20-\x7E]'), '')

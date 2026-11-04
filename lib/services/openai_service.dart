@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../questions_model.dart';
+import 'question_quality.dart';
 
 /// Generates AI-powered questions by calling the `generateQuestions` Firebase Cloud Function.
 ///
@@ -32,19 +33,14 @@ class OpenAIService {
       });
 
       final rawList = result.data['questions'] as List<dynamic>? ?? [];
+      // Clean each line and drop anything incomplete or malformed (cut-off
+      // text, intro lines, stray fragments). See QuestionQuality.
       return rawList
-          .cast<String>()
-          .map((raw) {
-            // Strip leading bullets/dashes in case the model included them
-            // despite instructions ("- Do you..." → "Do you...")
-            final text = raw
-                .trim()
-                .replaceFirst(RegExp(r'^[\d]+\.?\s*'), '')
-                .replaceFirst(RegExp(r'^[-–—•*]\s*'), '')
-                .trim();
-            return Question(text: text, category: category);
-          })
-          .where((q) => q.text.isNotEmpty)
+          .whereType<String>()
+          .map(QuestionQuality.cleanOrNull)
+          .whereType<String>()
+          .toSet() // drop duplicates within the batch
+          .map((text) => Question(text: text, category: category))
           .toList();
     } on FirebaseFunctionsException catch (e) {
       throw Exception('[OpenAI] Function error (${e.code}): ${e.message}');

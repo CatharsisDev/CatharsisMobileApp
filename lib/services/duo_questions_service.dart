@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:hive/hive.dart';
 import '../questions_model.dart';
+import 'question_quality.dart';
 
 /// Loads and generates questions specifically designed for Duo Mode.
 ///
@@ -32,7 +33,7 @@ class DuoQuestionsService {
         .skip(1) // header row
         .where((r) => r.length >= 2)
         .map((r) {
-          final text = r[0].toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+          final text = QuestionQuality.cleanOrNull(r[0].toString()) ?? '';
           final category =
               r[1].toString().replaceAll(RegExp(r'\s+'), ' ').trim();
           return Question(text: text, category: category);
@@ -55,7 +56,8 @@ class DuoQuestionsService {
   static Future<List<Question>> loadFromCache() async {
     try {
       final box = await _openBox();
-      return box.values.toList();
+      // Skip anything cached before quality checks existed.
+      return box.values.where((q) => QuestionQuality.isValid(q.text)).toList();
     } catch (e) {
       return [];
     }
@@ -106,7 +108,10 @@ class DuoQuestionsService {
       });
       final rawList = result.data['questions'] as List<dynamic>? ?? [];
       return rawList
-          .cast<String>()
+          .whereType<String>()
+          .map(QuestionQuality.cleanOrNull)
+          .whereType<String>()
+          .toSet()
           .map((text) => Question(text: text, category: category))
           .toList();
     } catch (_) {

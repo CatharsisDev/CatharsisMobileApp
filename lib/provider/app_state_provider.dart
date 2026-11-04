@@ -14,6 +14,7 @@ import 'package:catharsis_cards/services/category_stats_service.dart';
 import 'seen_cards_provider.dart';
 import 'dart:io';
 import 'dart:async';
+import '../services/question_quality.dart';
 
 const int SWIPE_LIMIT = 25;
 const Duration RESET_DURATION = Duration(minutes: 60, seconds: 0);
@@ -408,7 +409,8 @@ Future<void> _syncSwipeLimitFromFirestore() async {
     }
   }
 
-  /// One-time cleanup: removes duplicate questions from the Hive cache.
+  /// Startup cleanup: removes duplicate questions and anything failing
+  /// QuestionQuality (e.g. cut-off AI text cached by older app versions).
   /// Runs on every startup but is cheap — it's a simple in-memory pass.
   Future<void> _deduplicateCache() async {
     if (!Hive.isBoxOpen(cacheBox.name)) return;
@@ -416,13 +418,14 @@ Future<void> _syncSwipeLimitFromFirestore() async {
     final seen = <String>{};
     final unique = <Question>[];
     for (final q in all) {
+      if (!QuestionQuality.isValid(q.text)) continue;
       final key = '${_normalizeCategory(q.category).toLowerCase()}|${q.text.trim().toLowerCase()}';
       if (seen.add(key)) unique.add(q);
     }
     if (unique.length < all.length) {
       await cacheBox.clear();
       await cacheBox.addAll(unique);
-      print('[Cache] Deduped ${all.length - unique.length} duplicate questions');
+      print('[Cache] Removed ${all.length - unique.length} duplicate/invalid questions');
     }
   }
 
