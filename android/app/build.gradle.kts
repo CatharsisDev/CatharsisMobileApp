@@ -58,8 +58,11 @@ android {
             if (releaseConfig != null) {
                 signingConfig = releaseConfig
             }
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8: shrinks, optimises and obfuscates the Java/Kotlin (DEX) code.
+            // Required by Google Play's code-optimisation check. Keep rules for
+            // libraries that use reflection live in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
