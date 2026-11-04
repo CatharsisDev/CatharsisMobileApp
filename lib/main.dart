@@ -37,6 +37,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
 import 'provider/reflection_provider.dart';
 import 'services/duo_questions_service.dart';
+import 'components/force_update_gate.dart';
 // import 'package:device_preview/device_preview.dart';
 
 /// Singleton ChangeNotifier that wraps Firebase Auth state changes.
@@ -192,7 +193,9 @@ class _MyAppState extends ConsumerState<MyApp> {
               // large accessibility text sizes, while still respecting user prefs.
               textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3),
             ),
-            child: child!,
+            // Blocks the app with an "update required" screen when this build
+            // is below the minimum set in Firestore (config/app).
+            child: ForceUpdateGate(child: child!),
           ),
         );
       },

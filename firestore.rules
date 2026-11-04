@@ -80,6 +80,14 @@ service cloud.firestore {
                             && resource.data.participants.size() < resource.data.maxPlayers));
     }
 
+    // App config (e.g. config/app → minimum required build number).
+    // Readable by everyone, including signed-out users on the login screen,
+    // so the force-update check works before sign-in. Edit in the console only.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write, delete: if false;
