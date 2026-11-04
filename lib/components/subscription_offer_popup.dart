@@ -500,7 +500,7 @@ class _OfferBenefitRow extends StatelessWidget {
 // Legal links (Privacy Policy + Terms of Use) — required by App Store
 // ---------------------------------------------------------------------------
 
-const _kPrivacyUrl = 'https://catharsisdev.github.io/CatharsisMobileApp/';
+const _kPrivacyUrl = 'https://catharsisdev.github.io/CatharsisCardsPrivacyPolicy/';
 const _kTermsUrl   = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 
 Future<void> _openUrl(String url) async {

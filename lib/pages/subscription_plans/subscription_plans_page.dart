@@ -941,7 +941,7 @@ class _CompactPlanCard extends StatelessWidget {
 // Legal links widget — required by App Store guideline 3.1.2(c)
 // ---------------------------------------------------------------------------
 
-const _kPrivacyUrl = 'https://catharsisdev.github.io/CatharsisMobileApp/';
+const _kPrivacyUrl = 'https://catharsisdev.github.io/CatharsisCardsPrivacyPolicy/';
 const _kTermsUrl   = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 
 Future<void> _openLegalUrl(String url) async {
